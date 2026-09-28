@@ -233,6 +233,8 @@ export function ActionsNeededConfigInteractive({
             ["theme_color_light", "Theme colour, light (header gradient end)"],
             ["theme_color_dark", "Theme colour, dark (button hover)"],
             ["servants_qr_color", "Servants QR code colour"],
+            ["my_assigned_header_color", "\u201cMy Assigned List\u201d header colour"],
+            ["my_assigned_header_color_light", "\u201cMy Assigned List\u201d header colour, light (gradient end)"],
           ] as const
         ).map(([field, label]) => (
           <label key={field} className="text-xs text-[#666]">

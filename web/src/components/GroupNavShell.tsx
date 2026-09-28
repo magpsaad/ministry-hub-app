@@ -62,7 +62,7 @@ export function GroupNavShell({
         <header
           className={`text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative transition-colors ${
             filtered
-              ? "bg-gradient-to-br from-[#c2185b] to-[#d81b60]"
+              ? "bg-gradient-to-br from-my-assigned to-my-assigned-light"
               : "bg-gradient-to-br from-brand to-brand-light"
           }`}
         >

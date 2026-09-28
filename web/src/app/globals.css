@@ -6,11 +6,10 @@
 
 :root {
   /* Brand colours are NOT set here -- the root layout (app/layout.tsx)
-     writes --brand / --brand-light / --brand-dark onto <html> from App
-     Settings (theme_color / theme_color_light / theme_color_dark), so each
-     ministry's colours come from its own settings, never from code. */
-  --color-filtered-pink: #c2185b;
-  --color-filtered-pink-dark: #d81b60;
+     writes --brand / --brand-light / --brand-dark and the "My Assigned
+     List" header pair --my-assigned / --my-assigned-light onto <html> from
+     App Settings, so each ministry's colours come from its own settings,
+     never from code. */
 
   --background: #f5f5f5;
   --foreground: #333333;
@@ -30,6 +29,8 @@
   --color-brand: var(--brand);
   --color-brand-light: var(--brand-light);
   --color-brand-dark: var(--brand-dark);
+  --color-my-assigned: var(--my-assigned);
+  --color-my-assigned-light: var(--my-assigned-light);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);

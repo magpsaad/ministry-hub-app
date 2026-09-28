@@ -120,7 +120,14 @@ const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
  * whitelisted form fields are written -- the client may hold the full
  * settings object, and extra fields must never ride along. */
 export async function updateAppSettingsAction(input: AppSettingsFormInput) {
-  for (const c of [input.theme_color, input.theme_color_light, input.theme_color_dark, input.servants_qr_color]) {
+  for (const c of [
+    input.theme_color,
+    input.theme_color_light,
+    input.theme_color_dark,
+    input.servants_qr_color,
+    input.my_assigned_header_color,
+    input.my_assigned_header_color_light,
+  ]) {
     if (!HEX_COLOR.test(c)) return { error: `"${c}" isn't a valid colour -- use the #RRGGBB form.` };
   }
   try {
@@ -138,6 +145,8 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     theme_color_light: input.theme_color_light,
     theme_color_dark: input.theme_color_dark,
     servants_qr_color: input.servants_qr_color,
+    my_assigned_header_color: input.my_assigned_header_color,
+    my_assigned_header_color_light: input.my_assigned_header_color_light,
     group_label: input.group_label,
     member_label: input.member_label,
     birthday_window_days_before: input.birthday_window_days_before,

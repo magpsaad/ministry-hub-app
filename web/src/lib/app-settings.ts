@@ -22,6 +22,10 @@ export type AppSettings = {
   theme_color_dark: string;
   /** Frame colour of the group-less Servants check-in QR code. */
   servants_qr_color: string;
+  /** Group-page header gradient (start / end) shown while "My Assigned
+   * List" is ticked (was a hard-coded pink). */
+  my_assigned_header_color: string;
+  my_assigned_header_color_light: string;
   group_label: string;
   member_label: string;
   app_version: string;
@@ -61,7 +65,7 @@ export type AppSettings = {
 };
 
 const SETTINGS_COLUMNS =
-  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, youth_attendance_window_weeks, servant_attendance_window_weeks";
+  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, my_assigned_header_color, my_assigned_header_color_light, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, youth_attendance_window_weeks, servant_attendance_window_weeks";
 
 /**
  * REQUIREMENTS.md §2 -- everything about the app's identity, vocabulary,

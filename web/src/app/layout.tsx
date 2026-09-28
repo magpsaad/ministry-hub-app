@@ -53,6 +53,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     "--brand": settings.theme_color,
     "--brand-light": settings.theme_color_light,
     "--brand-dark": settings.theme_color_dark,
+    "--my-assigned": settings.my_assigned_header_color,
+    "--my-assigned-light": settings.my_assigned_header_color_light,
   } as React.CSSProperties;
 
   return (
