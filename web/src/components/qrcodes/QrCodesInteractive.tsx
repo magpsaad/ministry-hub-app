@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import type { QrCodeForPrinting } from "@/lib/qrcodes";
-import { markPrintedAction } from "@/app/qr-codes/actions";
 
 function contrastText(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -15,26 +13,8 @@ function contrastText(hex: string): string {
 /** REQUIREMENTS.md §6.15 -- print-optimized layout for every current QR
  * code, real scannable images generated on the fly (no external service).
  * Colored frame/label matches the old app's actual look (colors sampled
- * directly from its real QR image files, not guessed). "Needs Reprint"
- * flags whenever a code's label/state has changed since it was last
- * marked printed. */
-export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPrinting[] }) {
-  const [qrCodes, setQrCodes] = useState(initial);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
-
-  function handleMarkPrinted(id: string) {
-    setPendingId(id);
-    startTransition(async () => {
-      const result = await markPrintedAction(id);
-      setPendingId(null);
-      if (result.error) {
-        alert(result.error);
-        return;
-      }
-      setQrCodes((prev) => prev.map((q) => (q.id === id ? { ...q, needsReprint: false } : q)));
-    });
-  }
+ * directly from its real QR image files, not guessed). */
+export function QrCodesInteractive({ qrCodes }: { qrCodes: QrCodeForPrinting[] }) {
 
   return (
     <div>
@@ -42,7 +22,7 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
         <button
           type="button"
           onClick={() => window.print()}
-          className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
         >
           Print All
         </button>
@@ -100,19 +80,7 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
               >
                 {q.label}
               </div>
-              {q.needsReprint && (
-                <span className="print:hidden mt-2 rounded-full bg-[#fff3cd] text-[#856404] text-[11px] font-semibold px-2 py-0.5">
-                  Needs Reprint
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => handleMarkPrinted(q.id)}
-                disabled={pendingId === q.id}
-                className="print:hidden mt-2 rounded-md bg-[#f0f0f0] px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#e0e0e0] disabled:opacity-60"
-              >
-                {pendingId === q.id ? "Marking…" : "Mark as Printed"}
-              </button>
+
             </div>
           );
         })}

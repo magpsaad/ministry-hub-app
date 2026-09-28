@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { AuditLogRow, AuditConfigRow, AuditLogUser } from "@/app/admin/audit-logs/actions";
 import { getAuditLogsAction, toggleAuditConfigAction, archiveAuditLogAction } from "@/app/admin/audit-logs/actions";
 import { DateFilterModal } from "@/components/outreach/DateFilterModal";
-import { formatEasternDateTime } from "@/lib/timezone";
+import { formatDateTimeInZone } from "@/lib/timezone";
+import { useTimezone } from "@/components/TimezoneProvider";
 
-function formatWhen(iso: string): string {
-  return formatEasternDateTime(iso, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+function formatWhen(iso: string, timeZone: string): string {
+  return formatDateTimeInZone(iso, timeZone, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 export function AuditLogsInteractive({
@@ -21,6 +22,7 @@ export function AuditLogsInteractive({
   users: AuditLogUser[];
   initialConfig: AuditConfigRow[];
 }) {
+  const timeZone = useTimezone();
   const [logs, setLogs] = useState(initialLogs);
   const [config, setConfig] = useState(initialConfig);
   const [actionType, setActionType] = useState("");
@@ -32,7 +34,15 @@ export function AuditLogsInteractive({
   const [archiveMsg, setArchiveMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // The page already server-rendered the unfiltered list (initialLogs), so
+  // skip the effect's first run -- it used to fetch the same 300 rows again
+  // straight after the page loaded. Only real filter changes re-fetch.
+  const isFirstRun = useRef(true);
   useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
     startTransition(async () => {
       const rows = await getAuditLogsAction({
         actionType: actionType || undefined,
@@ -42,7 +52,6 @@ export function AuditLogsInteractive({
       });
       setLogs(rows);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionType, userId, dateFrom, dateTo]);
 
   function handleToggleConfig(type: string, enabled: boolean) {
@@ -77,7 +86,7 @@ export function AuditLogsInteractive({
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <p className="text-sm font-semibold text-[#1e3a5f] mb-3">
+        <p className="text-sm font-semibold text-brand mb-3">
           {logs.length} entr{logs.length === 1 ? "y" : "ies"} shown{logs.length === 300 ? " (most recent 300 matching)" : ""}
         </p>
         <div className="flex flex-wrap items-end gap-3 mb-2">
@@ -86,7 +95,7 @@ export function AuditLogsInteractive({
             <select
               value={actionType}
               onChange={(e) => setActionType(e.target.value)}
-              className="mt-1 block rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+              className="mt-1 block rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
             >
               <option value="">All</option>
               {actionTypes.map((t) => (
@@ -101,7 +110,7 @@ export function AuditLogsInteractive({
             <select
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
-              className="mt-1 block rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+              className="mt-1 block rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
             >
               <option value="">All users</option>
               {users.map((u) => (
@@ -117,7 +126,7 @@ export function AuditLogsInteractive({
             className="flex items-center gap-1 rounded-md border border-[#ddd] px-3 py-2 text-sm text-[#333] hover:bg-[#f5f5f5] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
           >
             Date Filter
-            {dateFilterActive && <span className="rounded-full bg-[#1e3a5f] text-white text-[10px] px-1.5 py-0.5">1</span>}
+            {dateFilterActive && <span className="rounded-full bg-brand text-white text-[10px] px-1.5 py-0.5">1</span>}
             <span className="text-[#999]">▾</span>
           </button>
           <button
@@ -147,7 +156,7 @@ export function AuditLogsInteractive({
       </div>
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h3 className="text-sm font-bold text-[#1e3a5f] mb-2">Archive Old Entries</h3>
+        <h3 className="text-sm font-bold text-brand mb-2">Archive Old Entries</h3>
         <p className="text-xs text-[#666] mb-3">Permanently deletes log entries older than the selected age. Cannot be undone.</p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -191,7 +200,7 @@ export function AuditLogsInteractive({
           <tbody className="divide-y divide-[#f0f0f0]">
             {logs.map((log) => (
               <tr key={log.id}>
-                <td className="px-4 py-2 whitespace-nowrap text-[#666]">{formatWhen(log.occurred_at)}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-[#666]">{formatWhen(log.occurred_at, timeZone)}</td>
                 <td className="px-4 py-2 font-mono text-xs text-[#333]">{log.action_type}</td>
                 <td className="px-4 py-2 text-[#333]">
                   {log.user_name ?? (

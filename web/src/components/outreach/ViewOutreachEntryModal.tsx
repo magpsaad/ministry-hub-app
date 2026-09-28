@@ -1,7 +1,8 @@
 "use client";
 
 import type { OutreachEntryFull } from "@/lib/outreach";
-import { formatEasternDateTime } from "@/lib/timezone";
+import { formatDateTimeInZone } from "@/lib/timezone";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 /** REQUIREMENTS.md §6.3/§7.1 -- read-only reminder of what a past outreach
  * entry actually said, opened from a Follow-up Due Actions Needed card's
@@ -15,6 +16,7 @@ export function ViewOutreachEntryModal({
   entry: OutreachEntryFull;
   onClose: () => void;
 }) {
+  const timeZone = useTimezone();
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
@@ -22,7 +24,7 @@ export function ViewOutreachEntryModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
-          <h2 className="text-lg font-bold text-[#1e3a5f]">Outreach Entry — {entry.member_name}</h2>
+          <h2 className="text-lg font-bold text-brand">Outreach Entry — {entry.member_name}</h2>
           <button onClick={onClose} className="text-[#999] hover:text-[#333] text-xl leading-none">
             ×
           </button>
@@ -34,7 +36,7 @@ export function ViewOutreachEntryModal({
           </p>
           <p>
             <span className="font-semibold">Date &amp; Time:</span>{" "}
-            {formatEasternDateTime(entry.occurred_at, { dateStyle: "medium", timeStyle: "short" })}
+            {formatDateTimeInZone(entry.occurred_at, timeZone, { dateStyle: "medium", timeStyle: "short" })}
           </p>
           <p>
             <span className="font-semibold">Type:</span> {entry.type ?? "—"}

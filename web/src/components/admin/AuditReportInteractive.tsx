@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import type { AuditReportRow, AuditReportUser } from "@/app/admin/audit-report/actions";
-import { easternDateKey, formatDateKey } from "@/lib/timezone";
+import { dateKeyInZone, formatDateKey } from "@/lib/timezone";
+import { useTimezone } from "@/components/TimezoneProvider";
 import { DateFilterModal } from "@/components/outreach/DateFilterModal";
 
 function formatDay(dateKey: string): string {
@@ -17,6 +18,7 @@ function formatDay(dateKey: string): string {
  * accessed" if none). Filtering to one user narrows "By Date" to just the
  * days they have activity, and narrows "By User" to just that one row. */
 export function AuditReportInteractive({ initial, users }: { initial: AuditReportRow[]; users: AuditReportUser[] }) {
+  const timeZone = useTimezone();
   const [view, setView] = useState<"byDate" | "byUser">("byDate");
   const [userId, setUserId] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -28,8 +30,8 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
     const days = new Map<string, Map<string, number>>(); // day -> (userLabel -> count)
     for (const r of initial) {
       if (userId && r.user_id !== userId) continue;
-      const day = easternDateKey(r.occurred_at);
-      // Same "YYYY-MM-DD" Eastern-calendar-day filter as the Audit Log's
+      const day = dateKeyInZone(r.occurred_at, timeZone);
+      // Same "YYYY-MM-DD" calendar-day (ministry timezone) filter as the Audit Log's
       // Date Filter (DateFilterModal) -- comparable directly as strings
       // since `day` and the picker values are already same-format date keys.
       if (dateFrom && day < dateFrom) continue;
@@ -45,14 +47,14 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
         day,
         users: Array.from(userCounts.entries()).sort((a, b) => b[1] - a[1]),
       }));
-  }, [initial, userId, dateFrom, dateTo]);
+  }, [initial, userId, dateFrom, dateTo, timeZone]);
 
   const byUser = useMemo(() => {
     const lastAccess = new Map<string, string>(); // user_id -> latest matching day
     for (const r of initial) {
       if (!r.user_id) continue;
       if (userId && r.user_id !== userId) continue;
-      const day = easternDateKey(r.occurred_at);
+      const day = dateKeyInZone(r.occurred_at, timeZone);
       if (dateFrom && day < dateFrom) continue;
       if (dateTo && day > dateTo) continue;
       const existing = lastAccess.get(r.user_id);
@@ -62,7 +64,7 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
       .filter((u) => !userId || u.id === userId)
       .map((u) => ({ id: u.id, full_name: u.full_name, lastAccessed: lastAccess.get(u.id) ?? null }))
       .sort((a, b) => a.full_name.localeCompare(b.full_name));
-  }, [initial, users, userId, dateFrom, dateTo]);
+  }, [initial, users, userId, dateFrom, dateTo, timeZone]);
 
   return (
     <div className="space-y-4">
@@ -83,7 +85,7 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
             <select
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
-              className="mt-1 block rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+              className="mt-1 block rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
             >
               <option value="">All users</option>
               {users.map((u) => (
@@ -99,7 +101,7 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
             className="flex items-center gap-1 rounded-md border border-[#ddd] px-3 py-2 text-sm text-[#333] hover:bg-[#f5f5f5] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
           >
             Date Filter
-            {dateFilterActive && <span className="rounded-full bg-[#1e3a5f] text-white text-[10px] px-1.5 py-0.5">1</span>}
+            {dateFilterActive && <span className="rounded-full bg-brand text-white text-[10px] px-1.5 py-0.5">1</span>}
             <span className="text-[#999]">▾</span>
           </button>
         </div>
@@ -127,7 +129,7 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
         <div className="space-y-3">
           {byDay.map(({ day, users: dayUsers }) => (
             <div key={day} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-              <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{formatDay(day)}</h3>
+              <h3 className="text-sm font-bold text-brand mb-3">{formatDay(day)}</h3>
               <div className="divide-y divide-[#f0f0f0]">
                 {dayUsers.map(([label, count]) => (
                   <div key={label} className="py-1.5 flex items-center justify-between text-sm">

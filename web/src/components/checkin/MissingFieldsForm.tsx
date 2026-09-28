@@ -3,10 +3,11 @@
 import { useState } from "react";
 import type { University } from "@/lib/universities";
 import { fillMissingMemberFieldsAction, type MissingFieldsInput, type MissingMemberFields } from "@/app/checkin/actions";
-import { todayEastern } from "@/lib/timezone";
+import { todayInZone } from "@/lib/timezone";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 const inputClass =
-  "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10";
+  "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
 const EMPTY: MissingFieldsInput = {
   phone: null,
@@ -41,6 +42,7 @@ export function MissingFieldsForm({
   programLabel: string;
   onDone: () => void;
 }) {
+  const timeZone = useTimezone();
   const [form, setForm] = useState<MissingFieldsInput>(EMPTY);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export function MissingFieldsForm({
 
   return (
     <div className="mt-5 rounded-lg border border-[#ddd] bg-[#f9f9f9] p-4 text-left">
-      <h3 className="text-sm font-bold text-[#1e3a5f]">Help us complete your record</h3>
+      <h3 className="text-sm font-bold text-brand">Help us complete your record</h3>
       <p className="mt-1 text-xs text-[#666]">
         A few details are missing. Fill in whatever you&rsquo;d like below — the rest can stay blank.
       </p>
@@ -106,7 +108,7 @@ export function MissingFieldsForm({
           <Field label="Date of Birth">
             <input
               type="date"
-              max={todayEastern()}
+              max={todayInZone(timeZone)}
               value={form.date_of_birth ?? ""}
               onChange={(e) => field("date_of_birth", e.target.value || null)}
               className={inputClass}
@@ -124,7 +126,7 @@ export function MissingFieldsForm({
           type="button"
           onClick={handleSave}
           disabled={pending || !hasAnyInput}
-          className="flex-1 rounded-md bg-[#1e3a5f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-50 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          className="flex-1 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
         >
           {pending ? "Saving…" : "Save"}
         </button>

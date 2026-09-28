@@ -40,18 +40,37 @@ export async function getAnalyticsRawData(groupId: string | string[]): Promise<A
   // PostgREST's 1000-row cap once the combined member count crosses it (see
   // lib/members.ts's getGroupMembers for the full story). Ordered by `id`
   // purely so paging has a stable, deterministic sort to page across.
-  const memberRows = await fetchAllRows((from, to) => {
-    let q = supabase
-      .from("members")
-      .select(
-        "id, assigned_servant_id, is_visitor, join_date, group_id, gender, phone, email, date_of_birth, father_of_confession, photo_path, university:universities(proximity)",
-      )
-      .eq("status", "active")
-      .order("id")
-      .range(from, to);
-    q = Array.isArray(groupId) ? q.in("group_id", groupId) : q.eq("group_id", groupId);
-    return q;
-  });
+  //
+  // The attendance read is independent of the member read, so both run in
+  // parallel (the attendance read used to wait for the members first).
+  // Attendance is filtered by group_id(s) via a join, not `.in("member_id",
+  // ids)` (owner-reported: ~900 UUIDs in one filter is a request the
+  // Supabase API rejects), and ordered by id so pages can't overlap.
+  const [memberRows, attendanceRows] = await Promise.all([
+    fetchAllRows((from, to) => {
+      let q = supabase
+        .from("members")
+        .select(
+          "id, assigned_servant_id, is_visitor, join_date, group_id, gender, phone, email, date_of_birth, father_of_confession, photo_path, university:universities(proximity)",
+        )
+        .eq("status", "active")
+        .order("id")
+        .range(from, to);
+      q = Array.isArray(groupId) ? q.in("group_id", groupId) : q.eq("group_id", groupId);
+      return q;
+    }),
+    fetchAllRows((from, to) => {
+      let q = supabase
+        .from("attendance_records")
+        .select("member_id, service_date, member:members!inner(group_id, status)")
+        .eq("attendee_type", "member")
+        .eq("member.status", "active")
+        .order("id")
+        .range(from, to);
+      q = Array.isArray(groupId) ? q.in("member.group_id", groupId) : q.eq("member.group_id", groupId);
+      return q;
+    }),
+  ]);
 
   const members: MemberAnalyticsRow[] = (memberRows ?? []).map((m) => ({
     id: m.id,
@@ -68,26 +87,8 @@ export async function getAnalyticsRawData(groupId: string | string[]): Promise<A
     hasPhoto: !!m.photo_path,
   }));
 
-  let attendance: AttendanceDateRow[] = [];
-  if (members.length > 0) {
-    // Filtered by group_id(s) via a join, not `.in("member_id", ids)` --
-    // see lib/members.ts's getGroupMembers for why (owner-reported: this
-    // exact pattern silently broke the "all cohorts combined" view's
-    // Average Attendance by Month, ~900 UUIDs in one filter is a request
-    // the Supabase API flatly rejects). Paged via fetchAllRows -- a single
-    // cohort alone can already exceed one page (lib/pagination.ts).
-    const rows = await fetchAllRows((from, to) => {
-      let q = supabase
-        .from("attendance_records")
-        .select("member_id, service_date, member:members!inner(group_id, status)")
-        .eq("attendee_type", "member")
-        .eq("member.status", "active")
-        .range(from, to);
-      q = Array.isArray(groupId) ? q.in("member.group_id", groupId) : q.eq("member.group_id", groupId);
-      return q;
-    });
-    attendance = rows.map((r) => ({ memberId: r.member_id, serviceDate: r.service_date }));
-  }
+  const attendance: AttendanceDateRow[] =
+    members.length > 0 ? attendanceRows.map((r) => ({ memberId: r.member_id, serviceDate: r.service_date })) : [];
 
   return { members, attendance };
 }
@@ -104,11 +105,10 @@ export type ServantAssignments = {
 export async function getServantAssignments(groupId: string | string[]): Promise<ServantAssignments> {
   const supabase = await createClient();
 
-  const servants = await getServantsForGroup(groupId);
-
   let query = supabase.from("members").select("id", { count: "exact", head: true }).eq("status", "active").is("assigned_servant_id", null);
   query = Array.isArray(groupId) ? query.in("group_id", groupId) : query.eq("group_id", groupId);
-  const { count } = await query;
+  // Independent reads -- run in parallel (they used to be sequential).
+  const [servants, { count }] = await Promise.all([getServantsForGroup(groupId), query]);
 
   return { servants, unassignedCount: count ?? 0 };
 }

@@ -84,7 +84,7 @@ export function VersesMaintenanceInteractive({ initial }: { initial: Verse[] }) 
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Bible Verses</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">Bible Verses</h2>
       <p className="text-sm text-[#666] mb-3">
         A random active verse is shown while a group&rsquo;s data loads. Uncheck a verse to keep it without showing it.
       </p>
@@ -99,7 +99,7 @@ export function VersesMaintenanceInteractive({ initial }: { initial: Verse[] }) 
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                   rows={2}
-                  className="w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  className="w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                 />
                 <div className="flex items-center gap-2">
                   <input
@@ -107,7 +107,7 @@ export function VersesMaintenanceInteractive({ initial }: { initial: Verse[] }) 
                     placeholder="Reference (e.g. John 3:16)"
                     value={editReference}
                     onChange={(e) => setEditReference(e.target.value)}
-                    className="flex-1 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                    className="flex-1 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                   />
                   <button
                     type="button"
@@ -134,7 +134,7 @@ export function VersesMaintenanceInteractive({ initial }: { initial: Verse[] }) 
                   <p className={v.is_active ? "text-[#333]" : "text-[#aaa] line-through"}>{v.text}</p>
                   {v.reference && <p className="text-xs text-[#666] mt-0.5">{v.reference}</p>}
                 </div>
-                <button type="button" onClick={() => startEdit(v)} className="text-[#1e3a5f] text-xs font-semibold shrink-0">
+                <button type="button" onClick={() => startEdit(v)} className="text-brand text-xs font-semibold shrink-0">
                   Edit
                 </button>
                 <button
@@ -158,7 +158,7 @@ export function VersesMaintenanceInteractive({ initial }: { initial: Verse[] }) 
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
           rows={2}
-          className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         />
         <div className="flex items-center gap-2">
           <input
@@ -166,13 +166,13 @@ export function VersesMaintenanceInteractive({ initial }: { initial: Verse[] }) 
             placeholder="Reference (e.g. John 3:16)"
             value={newReference}
             onChange={(e) => setNewReference(e.target.value)}
-            className="flex-1 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="flex-1 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
           />
           <button
             type="button"
             onClick={handleAdd}
             disabled={pending}
-            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             Add
           </button>

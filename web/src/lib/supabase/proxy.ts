@@ -74,24 +74,31 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Touches the session so expired tokens get refreshed.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  // Public assets never need a session -- return before any auth work
+  // (this check used to run after the auth call, so every manifest fetch
+  // paid for a round trip it didn't use).
   const pathname = request.nextUrl.pathname;
   if (PUBLIC_ASSET_PATHS.includes(pathname)) {
     return response;
   }
 
-  if (!user && !isGateExempt(pathname)) {
+  // Touches the session so expired tokens get refreshed. getClaims()
+  // verifies the sign-in token locally against the project's published
+  // signing keys (this project uses asymmetric ES256 keys), instead of
+  // getUser()'s network round trip to the Auth server on every single
+  // request, prefetch and form submit -- Supabase's recommended check for
+  // exactly this spot.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub ?? null;
+
+  if (!userId && !isGateExempt(pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (user && !isGateExempt(pathname)) {
+  if (userId && !isGateExempt(pathname)) {
     const [{ data: profile }, { count: roleCount }] = await Promise.all([
-      supabase.from("profiles").select("phone, gender").eq("id", user.id).maybeSingle(),
-      supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("profiles").select("phone, gender").eq("id", userId).maybeSingle(),
+      supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("user_id", userId),
     ]);
     const isComplete = !!profile && !!profile.phone && !!profile.gender && (roleCount ?? 0) > 0;
     if (!isComplete) {

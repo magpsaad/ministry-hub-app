@@ -11,7 +11,8 @@ import { PencilIcon, TrashIcon } from "@/components/icons";
 import { AddOutreachEntryModal } from "./AddOutreachEntryModal";
 import { EditOutreachEntryModal } from "./EditOutreachEntryModal";
 import { DateFilterModal } from "./DateFilterModal";
-import { easternDateKey, formatEasternDateTime } from "@/lib/timezone";
+import { dateKeyInZone, formatDateTimeInZone } from "@/lib/timezone";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 /** REQUIREMENTS.md §6.6 -- full Outreach tab: search + filter (Member,
  * Servant, Date range, My Assigned List), "+ Add Outreach Entry", Edit/
@@ -36,6 +37,7 @@ export function OutreachInteractive({
   currentUserId: string;
   currentUserName: string;
 }) {
+  const timeZone = useTimezone();
   const router = useRouter();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const [q, setQ] = useState("");
@@ -59,10 +61,10 @@ export function OutreachInteractive({
     }
     if (memberId) result = result.filter((e) => e.member_id === memberId);
     if (servantId) result = result.filter((e) => e.servant_id === servantId);
-    if (dateFrom) result = result.filter((e) => easternDateKey(e.occurred_at) >= dateFrom);
-    if (dateTo) result = result.filter((e) => easternDateKey(e.occurred_at) <= dateTo);
+    if (dateFrom) result = result.filter((e) => dateKeyInZone(e.occurred_at, timeZone) >= dateFrom);
+    if (dateTo) result = result.filter((e) => dateKeyInZone(e.occurred_at, timeZone) <= dateTo);
     return result;
-  }, [entries, hydrated, myAssignedOnly, currentUserId, q, memberId, servantId, dateFrom, dateTo]);
+  }, [entries, hydrated, myAssignedOnly, currentUserId, q, memberId, servantId, dateFrom, dateTo, timeZone]);
 
   function handleDelete(entry: OutreachEntryFull) {
     if (!confirm(`Delete this outreach entry for ${entry.member_name}?`)) return;
@@ -87,12 +89,12 @@ export function OutreachInteractive({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={`Search ${memberLabel.toLowerCase()}…`}
-            className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+            className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
           />
           <select
             value={memberId}
             onChange={(e) => setMemberId(e.target.value)}
-            className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
           >
             <option value="">All {memberLabel}s</option>
             {members.map((m) => (
@@ -104,7 +106,7 @@ export function OutreachInteractive({
           <select
             value={servantId}
             onChange={(e) => setServantId(e.target.value)}
-            className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
           >
             <option value="">All Servants</option>
             {servants.map((s) => (
@@ -120,7 +122,7 @@ export function OutreachInteractive({
           >
             Date Filter
             {dateFilterActive && (
-              <span className="rounded-full bg-[#1e3a5f] text-white text-[10px] px-1.5 py-0.5">1</span>
+              <span className="rounded-full bg-brand text-white text-[10px] px-1.5 py-0.5">1</span>
             )}
             <span className="text-[#999]">▾</span>
           </button>
@@ -128,7 +130,7 @@ export function OutreachInteractive({
         <button
           type="button"
           onClick={() => setShowAdd(true)}
-          className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
         >
           + Add Outreach Entry
         </button>
@@ -147,12 +149,12 @@ export function OutreachInteractive({
                   the buttons pinned on the same row via justify-between. */}
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-semibold text-[#1e3a5f]">
+                  <p className="font-semibold text-brand">
                     {entry.member_name}
                     {entry.type ? ` — ${entry.type}` : ""}
                   </p>
                   <p className="text-xs text-[#666]">
-                    {formatEasternDateTime(entry.occurred_at, { dateStyle: "medium", timeStyle: "short" })}{" "}
+                    {formatDateTimeInZone(entry.occurred_at, timeZone, { dateStyle: "medium", timeStyle: "short" })}{" "}
                     · By {entry.servant_name}
                   </p>
                   {entry.notes && <p className="mt-1 text-sm text-[#333] break-words">{entry.notes}</p>}

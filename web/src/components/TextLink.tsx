@@ -9,7 +9,7 @@ export function TextLink({ phone, className }: { phone: string | null; className
     <a
       href={`sms:${phone.replace(/[^\d+]/g, "")}`}
       onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center gap-1 text-[#1e3a5f] hover:underline ${className ?? ""}`}
+      className={`inline-flex items-center gap-1 text-brand hover:underline ${className ?? ""}`}
     >
       <MessageIcon className="h-3 w-3" />
       Text

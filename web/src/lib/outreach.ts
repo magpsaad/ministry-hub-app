@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { todayEastern } from "@/lib/timezone";
+import { fetchAllRows } from "@/lib/pagination";
+import { todayInZone } from "@/lib/timezone";
+import { getAppSettings } from "@/lib/app-settings";
 
 export type OutreachEntry = {
   id: string;
@@ -44,16 +46,23 @@ export type OutreachEntryFull = {
 export async function getOutreachEntries(groupId: string | string[]): Promise<OutreachEntryFull[]> {
   const supabase = await createClient();
 
-  let query = supabase
-    .from("outreach_entries")
-    .select(
-      "id, member_id, servant_id, occurred_at, type, notes, follow_up_due, member:members!inner(full_name, phone, assigned_servant_id, group_id), servant:profiles(full_name)",
-    )
-    .order("occurred_at", { ascending: false });
-  query = Array.isArray(groupId) ? query.in("member.group_id", groupId) : query.eq("member.group_id", groupId);
-  const { data } = await query;
+  // Paged (lib/pagination.ts): a cohort's outreach history passes
+  // PostgREST's 1000-row cap over time, and this used to silently drop the
+  // oldest entries past that point.
+  const data = await fetchAllRows((from, to) => {
+    let query = supabase
+      .from("outreach_entries")
+      .select(
+        "id, member_id, servant_id, occurred_at, type, notes, follow_up_due, member:members!inner(full_name, phone, assigned_servant_id, group_id), servant:profiles(full_name)",
+      )
+      .order("occurred_at", { ascending: false })
+      .order("id")
+      .range(from, to);
+    query = Array.isArray(groupId) ? query.in("member.group_id", groupId) : query.eq("member.group_id", groupId);
+    return query;
+  });
 
-  return ((data ?? []) as unknown as {
+  return (data as unknown as {
     id: string;
     member_id: string;
     servant_id: string;
@@ -88,8 +97,8 @@ export type FollowUpDueEntry = OutreachEntryFull & { member_photo_path: string |
  * needs so the Dashboard's "view original entry" link can open it without a
  * second fetch. */
 export async function getFollowUpsDue(groupId: string): Promise<FollowUpDueEntry[]> {
-  const supabase = await createClient();
-  const today = todayEastern();
+  const [supabase, settings] = await Promise.all([createClient(), getAppSettings()]);
+  const today = todayInZone(settings.timezone);
 
   const { data } = await supabase
     .from("outreach_entries")

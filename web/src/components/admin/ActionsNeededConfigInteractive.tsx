@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { ActionsNeededConfigRow, AppSettingsFormInput, AdminGroupRow } from "@/app/admin/actions-needed-config/actions";
 import {
   updateActionsNeededConfigAction,
+  updateActionsNeededLookbackAction,
   updateAttendanceWindowSettingsAction,
   updateAppSettingsAction,
 } from "@/app/admin/actions-needed-config/actions";
@@ -18,11 +19,13 @@ export function ActionsNeededConfigInteractive({
   initialWindowSettings,
   initialAppSettings,
   initialGroups,
+  initialLookbackMonths,
 }: {
   initial: ActionsNeededConfigRow[];
   initialWindowSettings: AttendanceWindowSettings;
   initialAppSettings: AppSettingsFormInput;
   initialGroups: AdminGroupRow[];
+  initialLookbackMonths: number;
 }) {
   const [rows, setRows] = useState(initial);
   const [pending, startTransition] = useTransition();
@@ -37,6 +40,23 @@ export function ActionsNeededConfigInteractive({
   const [appSettingsSaved, setAppSettingsSaved] = useState(false);
   const [appSettingsError, setAppSettingsError] = useState<string | null>(null);
 
+  const [lookbackMonths, setLookbackMonths] = useState(initialLookbackMonths);
+  const [lookbackSaved, setLookbackSaved] = useState(false);
+  const [lookbackError, setLookbackError] = useState<string | null>(null);
+
+  function handleSaveLookback() {
+    setLookbackError(null);
+    setLookbackSaved(false);
+    startTransition(async () => {
+      const res = await updateActionsNeededLookbackAction(lookbackMonths);
+      if (res.error) {
+        setLookbackError(res.error);
+        return;
+      }
+      setLookbackSaved(true);
+    });
+  }
+
   function updateAppField<K extends keyof AppSettingsFormInput>(field: K, value: AppSettingsFormInput[K]) {
     setAppSettings((prev) => ({ ...prev, [field]: value }));
   }
@@ -50,8 +70,9 @@ export function ActionsNeededConfigInteractive({
     setAppSettingsSaved(false);
     const universityLabel = appSettings.university_label.trim();
     const programLabel = appSettings.program_label.trim();
-    if (!universityLabel || !programLabel) {
-      setAppSettingsError("The school and field-of-focus labels can't be blank.");
+    const positionLabel = appSettings.ladder_position_label.trim();
+    if (!universityLabel || !programLabel || !positionLabel) {
+      setAppSettingsError("The position, school and field-of-focus labels can't be blank.");
       return;
     }
     startTransition(async () => {
@@ -59,6 +80,7 @@ export function ActionsNeededConfigInteractive({
         ...appSettings,
         university_label: universityLabel,
         program_label: programLabel,
+        ladder_position_label: positionLabel,
       });
       if (res.error) {
         setAppSettingsError(res.error);
@@ -101,10 +123,11 @@ export function ActionsNeededConfigInteractive({
   return (
     <div className="space-y-4">
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">App Labels &amp; Branding</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">App Labels &amp; Branding</h2>
       <p className="text-sm text-[#666] mb-4">
-        The app&rsquo;s identity and vocabulary, used everywhere it&rsquo;s displayed &mdash; e.g. Group Label
-        &ldquo;Youth&rdquo;, Ministry Label &ldquo;St Arsanius Youth Ministry&rdquo;.
+        The app&rsquo;s identity, vocabulary and colours, used everywhere they&rsquo;re displayed &mdash; e.g.
+        Ministry Label &ldquo;High School Ministry&rdquo;, Group Label &ldquo;Grade&rdquo;, Member Label
+        &ldquo;Student&rdquo;.
       </p>
       {appSettingsError && <p className="mb-3 text-sm text-[#dc3545]">{appSettingsError}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -113,7 +136,7 @@ export function ActionsNeededConfigInteractive({
           <input
             value={appSettings.app_title_long}
             onChange={(e) => updateAppField("app_title_long", e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
@@ -121,7 +144,7 @@ export function ActionsNeededConfigInteractive({
           <input
             value={appSettings.app_title_short}
             onChange={(e) => updateAppField("app_title_short", e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
@@ -129,23 +152,31 @@ export function ActionsNeededConfigInteractive({
           <input
             value={appSettings.app_subtitle}
             onChange={(e) => updateAppField("app_subtitle", e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
-          Group Label (e.g. &ldquo;Cohort&rdquo;)
+          Group Label (e.g. &ldquo;Cohort&rdquo;, &ldquo;Grade&rdquo;, &ldquo;Class&rdquo;)
           <input
             value={appSettings.group_label}
             onChange={(e) => updateAppField("group_label", e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
-          Member Label (e.g. &ldquo;Youth&rdquo;)
+          Member Label (e.g. &ldquo;Youth&rdquo;, &ldquo;Student&rdquo;, &ldquo;Child&rdquo;)
           <input
             value={appSettings.member_label}
             onChange={(e) => updateAppField("member_label", e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Position Label (e.g. &ldquo;Yr&rdquo;, &ldquo;Grade&rdquo;, &ldquo;Level&rdquo;)
+          <input
+            value={appSettings.ladder_position_label}
+            onChange={(e) => updateAppField("ladder_position_label", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
@@ -153,7 +184,7 @@ export function ActionsNeededConfigInteractive({
           <input
             value={appSettings.university_label}
             onChange={(e) => updateAppField("university_label", e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
@@ -161,7 +192,7 @@ export function ActionsNeededConfigInteractive({
           <input
             value={appSettings.program_label}
             onChange={(e) => updateAppField("program_label", e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
@@ -169,7 +200,7 @@ export function ActionsNeededConfigInteractive({
           <select
             value={appSettings.service_weekday}
             onChange={(e) => updateAppField("service_weekday", Number(e.target.value))}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           >
             {WEEKDAY_LABELS.map((label, i) => (
               <option key={label} value={i + 1}>
@@ -184,7 +215,7 @@ export function ActionsNeededConfigInteractive({
             type="time"
             value={appSettings.same_day_cutoff_time.slice(0, 5)}
             onChange={(e) => updateAppField("same_day_cutoff_time", e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
@@ -192,16 +223,41 @@ export function ActionsNeededConfigInteractive({
           <input
             value={appSettings.timezone}
             onChange={(e) => updateAppField("timezone", e.target.value)}
-            placeholder="America/New_York"
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            placeholder="e.g. America/Toronto"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
+        {(
+          [
+            ["theme_color", "Theme colour (headers, buttons, headings)"],
+            ["theme_color_light", "Theme colour, light (header gradient end)"],
+            ["theme_color_dark", "Theme colour, dark (button hover)"],
+            ["servants_qr_color", "Servants QR code colour"],
+          ] as const
+        ).map(([field, label]) => (
+          <label key={field} className="text-xs text-[#666]">
+            {label}
+            <span className="mt-1 flex items-center gap-2">
+              <input
+                type="color"
+                value={appSettings[field]}
+                onChange={(e) => updateAppField(field, e.target.value)}
+                className="h-8 w-10 cursor-pointer rounded border border-[#ddd] bg-white p-0.5"
+              />
+              <input
+                value={appSettings[field]}
+                onChange={(e) => updateAppField(field, e.target.value)}
+                className="w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm font-mono focus:border-brand focus:outline-none"
+              />
+            </span>
+          </label>
+        ))}
         <label className="text-xs text-[#666] sm:col-span-2">
           Logo URL (blank = no logo)
           <input
             value={appSettings.logo_url ?? ""}
             onChange={(e) => updateAppField("logo_url", e.target.value === "" ? null : e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
       </div>
@@ -216,7 +272,7 @@ export function ActionsNeededConfigInteractive({
           type="button"
           onClick={handleSaveAppSettings}
           disabled={pending}
-          className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
         >
           Save
         </button>
@@ -224,10 +280,14 @@ export function ActionsNeededConfigInteractive({
       </div>
     </div>
 
-    <GroupNamesInteractive initial={initialGroups} />
+    <GroupNamesInteractive
+      initial={initialGroups}
+      positionLabel={appSettings.ladder_position_label}
+      groupLabel={appSettings.group_label}
+    />
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Current Birthdays Window</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">Current Birthdays Window</h2>
       <p className="text-sm text-[#666] mb-4">
         How many days before and after today a birthday counts as &ldquo;upcoming&rdquo; on the Dashboard.
       </p>
@@ -240,7 +300,7 @@ export function ActionsNeededConfigInteractive({
             min={0}
             value={appSettings.birthday_window_days_before}
             onChange={(e) => updateAppField("birthday_window_days_before", Number(e.target.value))}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
@@ -250,7 +310,7 @@ export function ActionsNeededConfigInteractive({
             min={0}
             value={appSettings.birthday_window_days_after}
             onChange={(e) => updateAppField("birthday_window_days_after", Number(e.target.value))}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
       </div>
@@ -259,7 +319,7 @@ export function ActionsNeededConfigInteractive({
           type="button"
           onClick={handleSaveAppSettings}
           disabled={pending}
-          className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
         >
           Save
         </button>
@@ -268,7 +328,7 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Attendance Window Settings</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">Attendance Window Settings</h2>
       <p className="text-sm text-[#666] mb-1">How far back average-attendance % looks, as a rolling number of weeks.</p>
       <ul className="text-sm text-[#666] mb-4 list-disc pl-5 space-y-0.5">
         <li>
@@ -277,12 +337,12 @@ export function ActionsNeededConfigInteractive({
           joined.
         </li>
         <li>Leave a field blank to calculate over that group&rsquo;s entire attendance history instead, with no rolling cap.</li>
-        <li>Youths and servants are configured independently.</li>
+        <li>{appSettings.member_label}s and servants are configured independently.</li>
       </ul>
       {windowError && <p className="mb-3 text-sm text-[#dc3545]">{windowError}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <label className="text-xs text-[#666]">
-          Youth attendance window (weeks, blank = no cap)
+          {appSettings.member_label} attendance window (weeks, blank = no cap)
           <input
             type="number"
             min={1}
@@ -293,7 +353,7 @@ export function ActionsNeededConfigInteractive({
                 youth_attendance_window_weeks: e.target.value === "" ? null : Number(e.target.value),
               }))
             }
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
@@ -308,7 +368,7 @@ export function ActionsNeededConfigInteractive({
                 servant_attendance_window_weeks: e.target.value === "" ? null : Number(e.target.value),
               }))
             }
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
       </div>
@@ -317,7 +377,7 @@ export function ActionsNeededConfigInteractive({
           type="button"
           onClick={handleSaveWindows}
           disabled={pending}
-          className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
         >
           Save
         </button>
@@ -326,7 +386,7 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Proximity</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">Proximity</h2>
       <p className="text-sm text-[#666] mb-3">
         Tags each {appSettings.university_label.toLowerCase()} as Local, Regional or Abroad, so people can be shown,
         filtered and judged by different Actions Needed thresholds. Turn it off for a group where everyone is local:
@@ -359,7 +419,7 @@ export function ActionsNeededConfigInteractive({
           type="button"
           onClick={handleSaveAppSettings}
           disabled={pending}
-          className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
         >
           Save
         </button>
@@ -368,7 +428,7 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Actions Needed Thresholds</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">Actions Needed Thresholds</h2>
       <p className="text-sm text-[#666] mb-2">
         {appSettings.proximity_enabled ? "Per-proximity thresholds" : "Thresholds"} for the Dashboard&rsquo;s &ldquo;Outreach Needed&rdquo; cards. A member is flagged
         once, as of today, their current run of consecutive absences has reached the minimum below, and their most
@@ -378,12 +438,43 @@ export function ActionsNeededConfigInteractive({
         These cards clear themselves automatically &mdash; no one needs to dismiss them by hand. A card disappears
         the moment the member shows up again, or as soon as any servant logs a new outreach entry for them.
       </p>
+      <div className="border border-[#f0f0f0] rounded-lg p-4 mb-4">
+        <h3 className="text-sm font-bold text-brand mb-1">Look-back period</h3>
+        <p className="text-xs text-[#666] mb-3">
+          &ldquo;Min. presence count&rdquo; below counts visits over this many most recent months. Someone who
+          hasn&rsquo;t attended at least that many times in this period isn&rsquo;t flagged.
+        </p>
+        {lookbackError && <p className="mb-2 text-sm text-[#dc3545]">{lookbackError}</p>}
+        <div className="flex items-end gap-3">
+          <label className="text-xs text-[#666]">
+            Months
+            <input
+              type="number"
+              min={1}
+              max={120}
+              value={lookbackMonths}
+              onChange={(e) => setLookbackMonths(Number(e.target.value))}
+              className="mt-1 block w-24 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleSaveLookback}
+            disabled={pending}
+            className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+          >
+            Save
+          </button>
+          {lookbackSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+        </div>
+      </div>
+
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 
       <div className="space-y-4">
         {visibleRows.map((row) => (
           <div key={row.proximity} className="border border-[#f0f0f0] rounded-lg p-4">
-            <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">
+            <h3 className="text-sm font-bold text-brand mb-3">
               {appSettings.proximity_enabled ? row.proximity : `All ${appSettings.member_label.toLowerCase()}s`}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
@@ -394,7 +485,7 @@ export function ActionsNeededConfigInteractive({
                   min={0}
                   value={row.min_presence_count}
                   onChange={(e) => updateField(row.proximity, "min_presence_count", Number(e.target.value))}
-                  className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                 />
               </label>
               <label className="text-xs text-[#666]">
@@ -404,7 +495,7 @@ export function ActionsNeededConfigInteractive({
                   min={0}
                   value={row.min_absence_weeks}
                   onChange={(e) => updateField(row.proximity, "min_absence_weeks", Number(e.target.value))}
-                  className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                 />
               </label>
               <label className="text-xs text-[#666]">
@@ -414,7 +505,7 @@ export function ActionsNeededConfigInteractive({
                   min={0}
                   value={row.min_outreach_weeks}
                   onChange={(e) => updateField(row.proximity, "min_outreach_weeks", Number(e.target.value))}
-                  className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                 />
               </label>
             </div>
@@ -423,7 +514,7 @@ export function ActionsNeededConfigInteractive({
                 type="button"
                 onClick={() => handleSave(row)}
                 disabled={pending}
-                className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+                className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
               >
                 Save
               </button>

@@ -66,10 +66,10 @@ export function MemberGrid({
         return (
           <div
             key={m.id}
-            className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-l-4 border-[#1e3a5f] p-4 hover:-translate-y-1 hover:shadow-[0_4px_15px_rgba(0,0,0,0.15)] transition-all"
+            className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-l-4 border-brand p-4 hover:-translate-y-1 hover:shadow-[0_4px_15px_rgba(0,0,0,0.15)] transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="h-[50px] w-[50px] shrink-0 rounded-full bg-[#1e3a5f] text-white font-bold flex items-center justify-center overflow-hidden">
+              <div className="h-[50px] w-[50px] shrink-0 rounded-full bg-brand text-white font-bold flex items-center justify-center overflow-hidden">
                 {photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={photoUrl} alt={m.full_name} className="h-full w-full object-cover" />
@@ -95,7 +95,7 @@ export function MemberGrid({
                   canDelete={canDelete}
                   canEdit={canEdit}
                   currentUserName={currentUserName}
-                  className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
+                  className="font-semibold text-brand hover:underline text-left truncate block"
                 >
                   {m.full_name}
                   {m.is_visitor && (
@@ -118,7 +118,7 @@ export function MemberGrid({
                 </span>
               )}
               {isCombined && m.group && (
-                <span className="rounded-full bg-[#e2e8f0] text-[#1e3a5f] text-[11px] font-semibold px-2.5 py-0.5 truncate">
+                <span className="rounded-full bg-[#e2e8f0] text-brand text-[11px] font-semibold px-2.5 py-0.5 truncate">
                   {m.group.name}
                 </span>
               )}
@@ -156,7 +156,7 @@ export function MemberGrid({
                       {m.full_name}
                     </MemberDetailLink>
                   }
-                  className="font-semibold text-[#1e3a5f] hover:underline"
+                  className="font-semibold text-brand hover:underline"
                 >
                   {m.avgAttendancePercent}%
                 </MemberAttendanceLink>

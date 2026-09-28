@@ -128,7 +128,7 @@ export function ServantsAttendanceInteractive({
         <select
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         >
           {dateOptions.map((d) => (
             <option key={d.value} value={d.value}>
@@ -141,7 +141,7 @@ export function ServantsAttendanceInteractive({
           placeholder="Search servants..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[160px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          className="flex-1 min-w-[160px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         />
       </div>
 
@@ -182,7 +182,7 @@ export function ServantsAttendanceInteractive({
                       <button
                         type="button"
                         onClick={() => setHistoryMember({ id: m.id, full_name: m.full_name })}
-                        className="text-[#1e3a5f] font-semibold hover:underline"
+                        className="text-brand font-semibold hover:underline"
                       >
                         {m.averageAttendance}%
                       </button>
@@ -250,7 +250,7 @@ function SortableHeader<K extends string>({
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={`inline-flex items-center gap-1 hover:text-[#1e3a5f] ${active ? "text-[#1e3a5f]" : ""}`}
+        className={`inline-flex items-center gap-1 hover:text-brand ${active ? "text-brand" : ""}`}
       >
         {label}
         <span className="text-[10px]">{active ? (dir === "asc" ? "▲" : "▼") : "⇅"}</span>

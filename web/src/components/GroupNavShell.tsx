@@ -63,7 +63,7 @@ export function GroupNavShell({
           className={`text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative transition-colors ${
             filtered
               ? "bg-gradient-to-br from-[#c2185b] to-[#d81b60]"
-              : "bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b]"
+              : "bg-gradient-to-br from-brand to-brand-light"
           }`}
         >
           <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
@@ -93,7 +93,7 @@ export function GroupNavShell({
                 href={href}
                 className={`flex-1 min-w-[100px] text-center px-2.5 py-3.5 text-sm font-medium border-b-[3px] transition-colors whitespace-nowrap ${
                   active
-                    ? "text-[#1e3a5f] border-[#1e3a5f]"
+                    ? "text-brand border-brand"
                     : "text-[#666] border-transparent hover:bg-[#f9f9f9]"
                 }`}
               >
@@ -107,7 +107,7 @@ export function GroupNavShell({
       <div className={`max-w-5xl w-full mx-auto px-4 py-3 flex items-center flex-wrap gap-2 ${combined ? "justify-end" : "justify-between"}`}>
         {!combined && (
           <label className="inline-flex items-center gap-2 text-sm text-[#333]">
-            <input type="checkbox" checked={filtered} onChange={toggle} className="accent-[#1e3a5f]" />
+            <input type="checkbox" checked={filtered} onChange={toggle} className="accent-brand" />
             My Assigned List
           </label>
         )}

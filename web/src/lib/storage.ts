@@ -3,9 +3,19 @@ const CALENDAR_BUCKET = `${process.env.NEXT_PUBLIC_APP_ENV}-calendar`;
 
 /** Public URL for a stored photo path -- predictable for public buckets, no
  * API round-trip needed. Works in both server and client code since
- * NEXT_PUBLIC_* vars are inlined at build time either way. */
+ * NEXT_PUBLIC_* vars are inlined at build time either way.
+ *
+ * A path that is already a full web address (a Google profile picture,
+ * saved at first sign-in by lib/supabase/ensure-profile.ts) is returned
+ * as-is -- it used to be glued onto the storage URL, producing a broken
+ * image (MULTI_TENANT_PLAN.md P12). */
+export function isExternalPhotoUrl(path: string): boolean {
+  return /^https?:\/\//i.test(path);
+}
+
 export function memberPhotoUrl(path: string | null): string | null {
   if (!path) return null;
+  if (isExternalPhotoUrl(path)) return path;
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${PHOTOS_BUCKET}/${path}`;
 }
 

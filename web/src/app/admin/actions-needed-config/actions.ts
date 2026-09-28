@@ -103,15 +103,56 @@ export async function deleteGroupTierAction(groupId: string) {
   return { error: null };
 }
 
-export type AppSettingsFormInput = Omit<AppSettings, "app_version">;
+/** The fields the App Settings form edits. The rolling attendance windows
+ * and the Actions Needed look-back have their own cards and save actions,
+ * so they're deliberately NOT part of this form (saving the branding card
+ * must never overwrite a window/look-back change saved from another card). */
+export type AppSettingsFormInput = Omit<
+  AppSettings,
+  "app_version" | "youth_attendance_window_weeks" | "servant_attendance_window_weeks" | "actions_needed_lookback_months"
+>;
+
+const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 
 /** REQUIREMENTS.md §2/§6.3/§6.14 -- editable form for the app's identity/
- * vocabulary fields (previously only ever set by one-off bootstrap SQL) plus
- * the Current Birthdays date window. RLS restricts writes to Admins
- * regardless of what this screen shows. */
+ * vocabulary/schedule fields plus the Current Birthdays date window. RLS
+ * restricts writes to Admins regardless of what this screen shows. Only the
+ * whitelisted form fields are written -- the client may hold the full
+ * settings object, and extra fields must never ride along. */
 export async function updateAppSettingsAction(input: AppSettingsFormInput) {
+  for (const c of [input.theme_color, input.theme_color_light, input.theme_color_dark, input.servants_qr_color]) {
+    if (!HEX_COLOR.test(c)) return { error: `"${c}" isn't a valid colour -- use the #RRGGBB form.` };
+  }
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: input.timezone });
+  } catch {
+    return { error: `"${input.timezone}" isn't a recognized timezone name (e.g. America/Toronto).` };
+  }
+
+  const update = {
+    app_title_long: input.app_title_long,
+    app_title_short: input.app_title_short,
+    app_subtitle: input.app_subtitle,
+    logo_url: input.logo_url,
+    theme_color: input.theme_color,
+    theme_color_light: input.theme_color_light,
+    theme_color_dark: input.theme_color_dark,
+    servants_qr_color: input.servants_qr_color,
+    group_label: input.group_label,
+    member_label: input.member_label,
+    birthday_window_days_before: input.birthday_window_days_before,
+    birthday_window_days_after: input.birthday_window_days_after,
+    service_weekday: input.service_weekday,
+    same_day_cutoff_time: input.same_day_cutoff_time,
+    timezone: input.timezone,
+    university_label: input.university_label,
+    program_label: input.program_label,
+    proximity_enabled: input.proximity_enabled,
+    show_proximity_on_attendance: input.show_proximity_on_attendance,
+    ladder_position_label: input.ladder_position_label,
+  };
   const supabase = await createClient();
-  const { error } = await supabase.from("app_settings").update(input).eq("id", true);
+  const { error } = await supabase.from("app_settings").update(update).eq("id", true);
   if (error) return { error: error.message };
 
   // Branding fields are read on nearly every page (header, nav shell), so
@@ -132,6 +173,20 @@ export async function updateAttendanceWindowSettingsAction(settings: AttendanceW
       servant_attendance_window_weeks: settings.servant_attendance_window_weeks,
     })
     .eq("id", true);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/actions-needed-config");
+  return { error: null };
+}
+
+/** A12 -- how many months back Actions Needed counts visits for its
+ * "attended at least N times" rule (was a fixed 12 months). */
+export async function updateActionsNeededLookbackAction(months: number) {
+  if (!Number.isInteger(months) || months < 1 || months > 120) {
+    return { error: "The look-back period must be a whole number of months between 1 and 120." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("app_settings").update({ actions_needed_lookback_months: months }).eq("id", true);
   if (error) return { error: error.message };
 
   revalidatePath("/admin/actions-needed-config");

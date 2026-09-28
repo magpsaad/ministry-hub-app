@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/pagination";
 
 export type ServantGroup = { id: string; name: string; ladder_position: number };
 
@@ -37,7 +38,24 @@ export async function getServantsForGroup(groupId: string | string[]): Promise<S
     .select("user_id, group_id, profiles(id, full_name, gender), groups(name, ladder_position)")
     .eq("role", "servant");
   roleQuery = Array.isArray(groupId) ? roleQuery.in("group_id", groupId) : roleQuery.eq("group_id", groupId);
-  const { data: roleRows } = await roleQuery;
+
+  // The caseload count doesn't depend on the role rows (it filters by group,
+  // not by servant), so both are fetched in parallel. Paged: the combined
+  // "all cohorts" view can pass PostgREST's 1000-row cap.
+  const [{ data: roleRows }, members] = await Promise.all([
+    roleQuery,
+    fetchAllRows((from, to) => {
+      let q = supabase
+        .from("members")
+        .select("assigned_servant_id")
+        .eq("status", "active")
+        .not("assigned_servant_id", "is", null)
+        .order("id")
+        .range(from, to);
+      q = Array.isArray(groupId) ? q.in("group_id", groupId) : q.eq("group_id", groupId);
+      return q;
+    }),
+  ]);
 
   const byId = new Map<string, { id: string; full_name: string; gender: string | null; groups: ServantGroup[] }>();
   for (const r of roleRows ?? []) {
@@ -61,12 +79,8 @@ export async function getServantsForGroup(groupId: string | string[]): Promise<S
   const servants = Array.from(byId.values());
   if (servants.length === 0) return [];
 
-  let memberQuery = supabase.from("members").select("assigned_servant_id").eq("status", "active").not("assigned_servant_id", "is", null);
-  memberQuery = Array.isArray(groupId) ? memberQuery.in("group_id", groupId) : memberQuery.eq("group_id", groupId);
-  const { data: members } = await memberQuery;
-
   const caseloadByServant = new Map<string, number>();
-  for (const m of members ?? []) {
+  for (const m of members) {
     if (!m.assigned_servant_id) continue;
     caseloadByServant.set(m.assigned_servant_id, (caseloadByServant.get(m.assigned_servant_id) ?? 0) + 1);
   }

@@ -17,7 +17,16 @@ type Stage = "preview" | "confirming" | "done";
  * optional/skippable servant-assignment review and the QR reprint prompt.
  * The transition itself runs atomically inside run_group_transition()
  * (migration 0028) -- this component just drives the surrounding flow. */
-export function GroupTransitionInteractive({ initialPreview }: { initialPreview: TransitionPreview }) {
+export function GroupTransitionInteractive({
+  initialPreview,
+  positionLabel,
+  groupLabel,
+}: {
+  initialPreview: TransitionPreview;
+  positionLabel: string;
+  groupLabel: string;
+}) {
+  const pos = positionLabel;
   const [preview] = useState(initialPreview);
   const [newCohortYear, setNewCohortYear] = useState(initialPreview.suggestedNewCohortYear);
   const [stage, setStage] = useState<Stage>("preview");
@@ -68,17 +77,18 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
             href="/qr-codes"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            className="inline-block rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             Go to Print QR Codes (opens in a new tab)
           </Link>
         </div>
 
         <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-          <h2 className="text-lg font-bold text-[#1e3a5f] mb-2">Review Servant Assignments (optional)</h2>
+          <h2 className="text-lg font-bold text-brand mb-2">Review Servant Assignments (optional)</h2>
           <p className="text-sm text-[#666] mb-3">
-            Servants and Coordinators who were scoped to the <em>old</em> Yr 5+ group have already been reassigned
-            to the new Yr 1 cohort automatically — the group that just became the new Yr 5+ keeps its own servants,
+            Servants and Coordinators who were scoped to the <em>old</em> terminal group have already been
+            reassigned to the new {pos} 1 {groupLabel.toLowerCase()} automatically — the group that just became the new
+            terminal group keeps its own servants,
             unaffected. Use this to fine-tune anyone&rsquo;s assignment now, or skip and handle it later via Servant
             Assignments.
           </p>
@@ -86,7 +96,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
             <button
               type="button"
               onClick={handleShowReview}
-              className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+              className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
               Review Now
             </button>
@@ -103,7 +113,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">What Will Happen</h2>
+        <h2 className="text-lg font-bold text-brand mb-1">What Will Happen</h2>
         <p className="text-sm text-[#666] mb-4">
           This runs atomically — if anything fails partway through, nothing is changed.
         </p>
@@ -126,14 +136,14 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
         {preview.newTerminalGroupName && (
           <div className="rounded-md bg-[#fff3cd] text-[#856404] text-sm px-3 py-2 mb-4">
             <p>
-              Yr {preview.currentNewTerminalPosition} becomes the new Yr {preview.currentTerminalPosition}+, keeping
+              {pos} {preview.currentNewTerminalPosition} becomes the new {pos} {preview.currentTerminalPosition}+, keeping
               its own name, color, and its own servants unchanged — just like every other year advancing.
               {preview.oldTerminalGroupName && (
                 <>
                   {" "}
-                  <strong>{preview.oldTerminalGroupName}</strong> (the current Yr {preview.currentTerminalPosition}+)
+                  <strong>{preview.oldTerminalGroupName}</strong> (the current {pos} {preview.currentTerminalPosition}+)
                   is absorbed into it and archived: its members join the new terminal roster, and its
-                  Servants/Coordinators/Read-Only roll back to serve the new Yr 1 instead.
+                  Servants/Coordinators/Read-Only roll back to serve the new {pos} 1 instead.
                 </>
               )}
             </p>
@@ -141,12 +151,14 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
         )}
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-semibold text-[#333]">New Yr 0 cohort year</label>
+          <label className="text-sm font-semibold text-[#333]">
+            New {pos} 0 {groupLabel.toLowerCase()} year
+          </label>
           <input
             type="number"
             value={newCohortYear}
             onChange={(e) => setNewCohortYear(Number(e.target.value))}
-            className="w-28 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="w-28 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
           />
         </div>
 

@@ -78,7 +78,7 @@ function Avatar({ photoUrl, fullName }: { photoUrl: string | null; fullName: str
     // eslint-disable-next-line @next/next/no-img-element
     <img src={photoUrl} alt={fullName} className="h-10 w-10 rounded-full object-cover shrink-0" />
   ) : (
-    <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">
+    <div className="h-10 w-10 shrink-0 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">
       {fullName.split(" ").map((w) => w[0]).slice(0, 2).join("")}
     </div>
   );
@@ -97,6 +97,7 @@ export function DashboardInteractive({
   unassigned,
   actionsNeeded,
   actionsNeededConfig,
+  actionsNeededLookbackMonths,
   proximityEnabled,
   universityLabel,
   programLabel,
@@ -117,6 +118,7 @@ export function DashboardInteractive({
   unassigned: UnassignedMember[];
   actionsNeeded: ActionsNeededMember[];
   actionsNeededConfig: ActionsNeededConfigRow[];
+  actionsNeededLookbackMonths: number;
   proximityEnabled: boolean;
   universityLabel: string;
   programLabel: string;
@@ -212,7 +214,7 @@ export function DashboardInteractive({
   return (
     <div className="mt-4 space-y-6">
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-brand mb-4">
           <UsersIcon className="h-5 w-5" /> Overview
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -259,7 +261,7 @@ export function DashboardInteractive({
                         canDelete={canDelete}
                         canEdit={canEdit}
                         currentUserName={currentUserName}
-                        className="font-semibold text-[#1e3a5f] hover:underline text-left truncate"
+                        className="font-semibold text-brand hover:underline text-left truncate"
                       >
                         {m.full_name}
                       </MemberDetailLink>
@@ -278,7 +280,7 @@ export function DashboardInteractive({
                     memberLabel={memberLabel}
                     groupId={groupId}
                     currentUserName={currentUserName}
-                    className="shrink-0 rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45]"
+                    className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
                   />
                 </div>
               );
@@ -319,7 +321,7 @@ export function DashboardInteractive({
                         canDelete={canDelete}
                         canEdit={canEdit}
                         currentUserName={currentUserName}
-                        className="font-semibold text-[#1e3a5f] hover:underline text-left truncate"
+                        className="font-semibold text-brand hover:underline text-left truncate"
                       >
                         {m.full_name}
                       </MemberDetailLink>
@@ -369,7 +371,7 @@ export function DashboardInteractive({
           <div className="space-y-4">
             {actionsNeededByServant.map(([servantName, cards]) => (
               <div key={servantName}>
-                <h3 className="text-sm font-bold text-[#1e3a5f] mb-2">{servantName}</h3>
+                <h3 className="text-sm font-bold text-brand mb-2">{servantName}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {cards.map((card) => {
                     if (card.kind === "outreach") {
@@ -391,7 +393,7 @@ export function DashboardInteractive({
                               canDelete={canDelete}
                               canEdit={canEdit}
                               currentUserName={currentUserName}
-                              className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
+                              className="font-semibold text-brand hover:underline text-left truncate block"
                             >
                               {m.full_name}
                             </MemberDetailLink>
@@ -413,7 +415,7 @@ export function DashboardInteractive({
                             memberLabel={memberLabel}
                             groupId={groupId}
                             currentUserName={currentUserName}
-                            className="shrink-0 rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                            className="shrink-0 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark"
                           />
                         </div>
                       );
@@ -439,7 +441,7 @@ export function DashboardInteractive({
                                 canDelete={canDelete}
                                 canEdit={canEdit}
                                 currentUserName={currentUserName}
-                                className="font-semibold text-[#1e3a5f] hover:underline text-left truncate"
+                                className="font-semibold text-brand hover:underline text-left truncate"
                               >
                                 {m.full_name}
                               </MemberDetailLink>
@@ -476,7 +478,7 @@ export function DashboardInteractive({
                             memberLabel={memberLabel}
                             groupId={groupId}
                             currentUserName={currentUserName}
-                            className="shrink-0 rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                            className="shrink-0 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark"
                           />
                         </div>
                       );
@@ -504,7 +506,7 @@ export function DashboardInteractive({
                             canDelete={canDelete}
                             canEdit={canEdit}
                             currentUserName={currentUserName}
-                            className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
+                            className="font-semibold text-brand hover:underline text-left truncate block"
                           >
                             {f.member_name}
                           </MemberDetailLink>
@@ -539,7 +541,7 @@ export function DashboardInteractive({
                         <button
                           type="button"
                           onClick={() => setOutreachForFollowUp(f)}
-                          className="shrink-0 rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                          className="shrink-0 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark"
                         >
                           Outreach
                         </button>
@@ -554,7 +556,7 @@ export function DashboardInteractive({
       </CollapsibleSection>
 
       <div className="text-center">
-        <Link href={`/g/${groupId}/members`} className="text-sm font-semibold text-[#1e3a5f] hover:underline">
+        <Link href={`/g/${groupId}/members`} className="text-sm font-semibold text-brand hover:underline">
           View all {memberLabel.toLowerCase()}s →
         </Link>
       </div>
@@ -591,7 +593,7 @@ export function DashboardInteractive({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
-                <h2 className="text-lg font-bold text-[#1e3a5f]">What is Actions Needed?</h2>
+                <h2 className="text-lg font-bold text-brand">What is Actions Needed?</h2>
                 <button onClick={() => setShowHelp(false)} className="text-[#999] hover:text-[#333] text-xl leading-none">
                   ×
                 </button>
@@ -629,7 +631,8 @@ export function DashboardInteractive({
                       <>Min.</>
                     )}{" "}
                     {c.min_presence_count} presence
-                    {c.min_presence_count === 1 ? "" : "s"}, {c.min_absence_weeks} consecutive absence
+                    {c.min_presence_count === 1 ? "" : "s"} in the last {actionsNeededLookbackMonths} month
+                    {actionsNeededLookbackMonths === 1 ? "" : "s"}, {c.min_absence_weeks} consecutive absence
                     {c.min_absence_weeks === 1 ? "" : "s"}, outreach stale after {c.min_outreach_weeks} week
                     {c.min_outreach_weeks === 1 ? "" : "s"}.
                   </p>
@@ -662,12 +665,12 @@ export function StatCard({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-t-4 border-[#1e3a5f] p-4">
+    <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-t-4 border-brand p-4">
       <h3 className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-[#666] font-semibold">
         {icon}
         {label}
       </h3>
-      <p className={`mt-1 font-bold text-[#1e3a5f] ${small ? "text-xl" : "text-3xl"}`}>{value}</p>
+      <p className={`mt-1 font-bold text-brand ${small ? "text-xl" : "text-3xl"}`}>{value}</p>
     </div>
   );
 }

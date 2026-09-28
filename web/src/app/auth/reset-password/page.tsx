@@ -28,7 +28,7 @@ export default async function ResetPasswordPage({
     <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6">
-          <h1 className="text-lg font-bold text-[#1e3a5f] mb-1">Set a new password</h1>
+          <h1 className="text-lg font-bold text-brand mb-1">Set a new password</h1>
           <p className="mb-4 text-sm text-[#666]">Signed in as {user.email}.</p>
 
           {error && (
@@ -46,7 +46,7 @@ export default async function ResetPasswordPage({
                 type="password"
                 required
                 minLength={6}
-                className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
               />
             </div>
             <div>
@@ -59,12 +59,12 @@ export default async function ResetPasswordPage({
                 type="password"
                 required
                 minLength={6}
-                className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
               />
             </div>
             <button
               type="submit"
-              className="w-full rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+              className="w-full rounded-md bg-brand py-3 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
               Update password
             </button>

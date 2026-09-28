@@ -135,7 +135,7 @@ export function PossibleDuplicateMemberModal({
           <button
             type="button"
             onClick={() => setStep("resolve")}
-            className="flex-1 rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            className="flex-1 rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             Yes, that&rsquo;s me
           </button>
@@ -155,7 +155,7 @@ export function PossibleDuplicateMemberModal({
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4 space-y-3">
-      <h2 className="text-base font-bold text-[#1e3a5f]">Update your record?</h2>
+      <h2 className="text-base font-bold text-brand">Update your record?</h2>
       <p className="text-xs text-[#666]">Check anything you&rsquo;d like to update -- leave the rest as it is.</p>
       {error && <p className="text-sm text-[#dc3545]">{error}</p>}
 
@@ -206,7 +206,7 @@ export function PossibleDuplicateMemberModal({
         type="button"
         onClick={handleConfirmResolve}
         disabled={pending}
-        className="w-full rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+        className="w-full rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
       >
         {pending ? "Saving…" : "Confirm"}
       </button>
@@ -217,7 +217,7 @@ export function PossibleDuplicateMemberModal({
 function Checkbox({ checked, onChange, children }: { checked: boolean; onChange: () => void; children: React.ReactNode }) {
   return (
     <label className="flex items-start gap-2 text-sm text-[#333]">
-      <input type="checkbox" checked={checked} onChange={onChange} className="mt-0.5 h-4 w-4 accent-[#1e3a5f]" />
+      <input type="checkbox" checked={checked} onChange={onChange} className="mt-0.5 h-4 w-4 accent-brand" />
       <span>{children}</span>
     </label>
   );

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/pagination";
 import { getAppSettings } from "@/lib/app-settings";
@@ -19,19 +20,21 @@ type ConfigRow = { proximity: string; min_presence_count: number; min_absence_we
 
 /** For the Dashboard's "?" help text -- generated from these same live
  * values (REQUIREMENTS.md §6.9), never hardcoded, so an Admin editing a
- * threshold on the config screen immediately updates what's explained here. */
-export async function getActionsNeededConfig(): Promise<ConfigRow[]> {
+ * threshold on the config screen immediately updates what's explained here.
+ * React.cache()-memoized per request: the Dashboard page and
+ * getActionsNeeded() below share one query. */
+export const getActionsNeededConfig = cache(async (): Promise<ConfigRow[]> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("actions_needed_config")
     .select("proximity, min_presence_count, min_absence_weeks, min_outreach_weeks")
     .order("proximity");
   return data ?? [];
-}
+});
 
 /**
  * REQUIREMENTS.md §7.1 -- for each active, non-visitor member: presence_count
- * (trailing 12 months), current_consecutive_absences (owner-defined formula:
+ * (trailing ctions_needed_lookback_months, 12 by default), current_consecutive_absences (owner-defined formula:
  * floor((today - last_present_date) / 7), all-time, not windowed), and
  * whether their outreach is stale (never, or older than that proximity's
  * min_outreach_weeks). Flagged iff all three thresholds hold at once, per
@@ -40,7 +43,7 @@ export async function getActionsNeededConfig(): Promise<ConfigRow[]> {
 export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMember[]> {
   const supabase = await createClient();
 
-  const [{ data: members }, { data: config }, appSettings] = await Promise.all([
+  const [{ data: members }, config, appSettings] = await Promise.all([
     supabase
       .from("members")
       .select(
@@ -48,7 +51,7 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
       )
       .eq("group_id", groupId)
       .eq("status", "active"),
-    supabase.from("actions_needed_config").select("proximity, min_presence_count, min_absence_weeks, min_outreach_weeks"),
+    getActionsNeededConfig(),
     getAppSettings(),
   ]);
   const proximityEnabled = appSettings.proximity_enabled;
@@ -56,68 +59,59 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
   const activeNonVisitors = (members ?? []).filter((m) => !m.is_visitor);
   if (activeNonVisitors.length === 0) return [];
 
-  const configByProximity = new Map((config ?? []).map((c: ConfigRow) => [c.proximity, c]));
+  const configByProximity = new Map(config.map((c: ConfigRow) => [c.proximity, c]));
   const memberIds = activeNonVisitors.map((m) => m.id);
 
-  const twelveMonthsAgo = new Date();
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-  const cutoffISO = twelveMonthsAgo.toISOString().slice(0, 10);
+  // Look-back for presenceCount: App Settings' actions_needed_lookback_months
+  // (was a fixed 12 months -- MULTI_TENANT_PLAN.md §10, A12).
+  const lookbackStart = new Date();
+  lookbackStart.setMonth(lookbackStart.getMonth() - appSettings.actions_needed_lookback_months);
+  const cutoffISO = lookbackStart.toISOString().slice(0, 10);
 
-  // Same PostgREST db-max-rows cap (1000, lib/pagination.ts) as every other
-  // all-rows attendance query in this app -- a single cohort's trailing-
-  // 12-months attendance can already exceed it, which would silently drop
-  // some members' presence and wrongly flag them as needing action.
-  const attendanceRows = await fetchAllRows((from, to) =>
-    supabase
-      .from("attendance_records")
-      .select("member_id, service_date")
-      .eq("attendee_type", "member")
-      .in("member_id", memberIds)
-      .gte("service_date", cutoffISO)
-      .range(from, to),
-  );
+  // One all-time attendance read (paged -- a cohort easily exceeds
+  // PostgREST's 1000-row cap, lib/pagination.ts) and one outreach read, run
+  // in parallel. The look-back presence count is derived from the same
+  // all-time rows (it used to be a second, separately paged query), and the
+  // outreach read is now paged too (it was silently capped at 1000 rows).
+  //
+  // "Weeks absent" is plain calendar math from the member's TRUE all-time
+  // last-present date (owner-reported: counting tracked service occurrences
+  // diverged badly from real elapsed time), which is why the all-time rows
+  // are needed at all.
+  const [allPresentRows, outreachRows] = await Promise.all([
+    fetchAllRows((from, to) =>
+      supabase
+        .from("attendance_records")
+        .select("member_id, service_date")
+        .eq("attendee_type", "member")
+        .in("member_id", memberIds)
+        .order("service_date", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAllRows((from, to) =>
+      supabase
+        .from("outreach_entries")
+        .select("member_id, occurred_at")
+        .in("member_id", memberIds)
+        .order("occurred_at", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
+  ]);
 
   const presentByMember = new Map<string, Set<string>>();
-  for (const row of attendanceRows) {
-    if (!row.member_id) continue;
-    if (!presentByMember.has(row.member_id)) presentByMember.set(row.member_id, new Set());
-    presentByMember.get(row.member_id)!.add(row.service_date);
-  }
-
-  // Owner-reported: "weeks absent" should be plain calendar math -- (today -
-  // last present date) / 7, rounded down -- not a count of tracked SERVICE
-  // OCCURRENCES since their last Present record (what this used to do,
-  // walking the tracked dates backward until hitting one they were present
-  // for), which diverges badly from real elapsed time whenever tracked
-  // dates are sparse or irregular (concrete owner-reported cases: a member
-  // 6 real weeks absent showing "46 weeks", another 7 real weeks absent
-  // showing "5 weeks"). Needs the member's TRUE all-time last-present date,
-  // not scoped to the trailing-12-months window above (that window is a
-  // distinct, unrelated threshold -- presenceCount), so this is a separate,
-  // unscoped query.
-  const allPresentRows = await fetchAllRows((from, to) =>
-    supabase
-      .from("attendance_records")
-      .select("member_id, service_date")
-      .eq("attendee_type", "member")
-      .in("member_id", memberIds)
-      .order("service_date", { ascending: false })
-      .range(from, to),
-  );
   const lastPresentByMember = new Map<string, string>();
   for (const row of allPresentRows) {
     if (!row.member_id) continue;
     if (!lastPresentByMember.has(row.member_id)) lastPresentByMember.set(row.member_id, row.service_date);
+    if (row.service_date >= cutoffISO) {
+      if (!presentByMember.has(row.member_id)) presentByMember.set(row.member_id, new Set());
+      presentByMember.get(row.member_id)!.add(row.service_date);
+    }
   }
-
-  const { data: outreachRows } = await supabase
-    .from("outreach_entries")
-    .select("member_id, occurred_at")
-    .in("member_id", memberIds)
-    .order("occurred_at", { ascending: false });
-
   const latestOutreachByMember = new Map<string, string>();
-  for (const row of outreachRows ?? []) {
+  for (const row of outreachRows) {
     if (!latestOutreachByMember.has(row.member_id)) latestOutreachByMember.set(row.member_id, row.occurred_at);
   }
 

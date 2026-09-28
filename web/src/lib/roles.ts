@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export type Role = "admin" | "general_coordinator" | "sub_coordinator" | "servant" | "read_only";
@@ -19,8 +20,11 @@ export type AccessSummary = {
  * REQUIREMENTS.md §4 -- a user can hold multiple role rows at once; the
  * landing page and every permission check are driven by the union of them,
  * never a single "the" role.
+ *
+ * React.cache()-memoized per request (per userId): the page, its layout and
+ * helpers used to each query user_roles separately for the same person.
  */
-export async function getAccessSummary(userId: string): Promise<AccessSummary> {
+export const getAccessSummary = cache(async (userId: string): Promise<AccessSummary> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("user_roles")
@@ -39,7 +43,7 @@ export async function getAccessSummary(userId: string): Promise<AccessSummary> {
     isReadOnly: has("read_only"),
     isCoordinator: has("general_coordinator") || has("sub_coordinator"),
   };
-}
+});
 
 /**
  * Owner-reported (Read-Only role bug follow-up): whether this person can

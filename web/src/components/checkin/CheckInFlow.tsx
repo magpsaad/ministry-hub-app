@@ -197,7 +197,7 @@ export function CheckInFlow({
     return (
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6 text-center">
         <p className="text-3xl">{attendanceRecorded ? "✅" : "👋"}</p>
-        <h2 className="mt-2 text-lg font-bold text-[#1e3a5f]">
+        <h2 className="mt-2 text-lg font-bold text-brand">
           {attendanceRecorded ? `You’re checked in, ${successName}!` : `Thanks, ${successName}!`}
         </h2>
         <p className="mt-1 text-sm text-[#666]">
@@ -270,7 +270,7 @@ export function CheckInFlow({
           type="checkbox"
           checked={remember}
           onChange={(e) => setRemember(e.target.checked)}
-          className="h-3.5 w-3.5 rounded border-[#ccc] accent-[#1e3a5f]"
+          className="h-3.5 w-3.5 rounded border-[#ccc] accent-brand"
         />
         Remember me on this device
       </label>
@@ -280,7 +280,7 @@ export function CheckInFlow({
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search your name…"
-        className="mt-2 w-full rounded-md border border-[#ddd] px-3 py-3 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+        className="mt-2 w-full rounded-md border border-[#ddd] px-3 py-3 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
       />
       {error && <p className="mt-2 text-sm text-[#dc3545]">{error}</p>}
       <div className="mt-3 max-h-[50vh] overflow-y-auto divide-y divide-[#f0f0f0]">
@@ -294,7 +294,7 @@ export function CheckInFlow({
               onClick={() => handleSelect(p)}
               className={`w-full text-left px-2 py-3 disabled:opacity-50 ${
                 isRemembered
-                  ? "border-l-4 border-[#1e3a5f] bg-[#eef4fa] font-semibold text-[#1e3a5f]"
+                  ? "border-l-4 border-brand bg-[#eef4fa] font-semibold text-brand"
                   : "text-[#333] hover:bg-[#f5f5f5]"
               }`}
             >

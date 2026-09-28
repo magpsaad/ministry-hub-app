@@ -64,12 +64,12 @@ export function AttendanceTrendChart({
         </g>
       ))}
 
-      <path d={areaPath} fill="#1e3a5f" fillOpacity={0.08} stroke="none" />
-      <path d={linePath} fill="none" stroke="#1e3a5f" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      <path d={areaPath} style={{ fill: "var(--brand)" }} fillOpacity={0.08} stroke="none" />
+      <path d={linePath} fill="none" style={{ stroke: "var(--brand)" }} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
 
       {data.map((d, i) => (
         <g key={d.month}>
-          <circle cx={x(i)} cy={y(d.avgPercent)} r={3.5} fill="#1e3a5f">
+          <circle cx={x(i)} cy={y(d.avgPercent)} r={3.5} style={{ fill: "var(--brand)" }}>
             {/* A single template-literal string, not multiple JSX expression
                 children -- an SVG <title> with several {expr} children
                 hydrated with a mismatch in testing (React/Next.js seems to
@@ -78,7 +78,7 @@ export function AttendanceTrendChart({
             <title>{`${d.label}: ${d.avgPercent}%`}</title>
           </circle>
           {showValueLabels && (
-            <text x={x(i)} y={y(d.avgPercent) - 10} textAnchor="middle" style={{ fill: "#1e3a5f", fontSize: 10, fontWeight: 700 }}>
+            <text x={x(i)} y={y(d.avgPercent) - 10} textAnchor="middle" style={{ fill: "var(--brand)", fontSize: 10, fontWeight: 700 }}>
               {d.avgPercent}%
             </text>
           )}

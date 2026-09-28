@@ -26,7 +26,7 @@ export default async function LoginPage({
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-6">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={60} />
-          <h1 className="mt-4 text-2xl font-bold text-[#1e3a5f] text-center">
+          <h1 className="mt-4 text-2xl font-bold text-brand text-center">
             {settings.app_title_long}
           </h1>
           <p className="mt-1 text-sm text-[#666] text-center">{settings.app_subtitle}</p>
@@ -59,18 +59,18 @@ export default async function LoginPage({
                     name="email"
                     type="email"
                     required
-                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                  className="w-full rounded-md bg-brand py-3 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
                 >
                   Send reset link
                 </button>
               </form>
               <p className="mt-4 text-center text-sm text-[#666]">
-                <Link href="/login" className="font-semibold text-[#1e3a5f]">
+                <Link href="/login" className="font-semibold text-brand">
                   Back to sign in
                 </Link>
               </p>
@@ -80,7 +80,7 @@ export default async function LoginPage({
               <form action={signInWithGoogle}>
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center gap-2 rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                  className="w-full flex items-center justify-center gap-2 rounded-md bg-brand py-3 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
                 >
                   <GoogleIcon />
                   Continue with Google
@@ -104,7 +104,7 @@ export default async function LoginPage({
                       name="full_name"
                       type="text"
                       required
-                      className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                      className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
                     />
                   </div>
                 )}
@@ -117,7 +117,7 @@ export default async function LoginPage({
                     name="email"
                     type="email"
                     required
-                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
                   />
                 </div>
                 <div>
@@ -126,7 +126,7 @@ export default async function LoginPage({
                       Password
                     </label>
                     {!isSignUp && (
-                      <Link href="/login?mode=forgot" className="text-xs font-semibold text-[#1e3a5f]">
+                      <Link href="/login?mode=forgot" className="text-xs font-semibold text-brand">
                         Forgot password?
                       </Link>
                     )}
@@ -137,12 +137,12 @@ export default async function LoginPage({
                     type="password"
                     required
                     minLength={6}
-                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full rounded-md border border-[#1e3a5f] bg-white py-3 text-sm font-semibold text-[#1e3a5f] hover:bg-[#f0f4f8] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+                  className="w-full rounded-md border border-brand bg-white py-3 text-sm font-semibold text-brand hover:bg-[#f0f4f8] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
                 >
                   {isSignUp ? "Create account" : "Sign in"}
                 </button>
@@ -152,14 +152,14 @@ export default async function LoginPage({
                 {isSignUp ? (
                   <>
                     Already have an account?{" "}
-                    <Link href="/login" className="font-semibold text-[#1e3a5f]">
+                    <Link href="/login" className="font-semibold text-brand">
                       Sign in
                     </Link>
                   </>
                 ) : (
                   <>
                     New here?{" "}
-                    <Link href="/login?mode=signup" className="font-semibold text-[#1e3a5f]">
+                    <Link href="/login?mode=signup" className="font-semibold text-brand">
                       Create an account
                     </Link>
                   </>

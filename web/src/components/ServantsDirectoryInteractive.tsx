@@ -99,20 +99,20 @@ export function ServantsDirectoryInteractive({
           placeholder="Search servants..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[180px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          className="flex-1 min-w-[180px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         />
         <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
           <button
             type="button"
             onClick={() => setViewMode("categorical")}
-            className={`px-3 py-2 font-semibold ${viewMode === "categorical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+            className={`px-3 py-2 font-semibold ${viewMode === "categorical" ? "bg-brand text-white" : "bg-white text-[#333]"}`}
           >
             Categorical
           </button>
           <button
             type="button"
             onClick={() => setViewMode("alphabetical")}
-            className={`px-3 py-2 font-semibold ${viewMode === "alphabetical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+            className={`px-3 py-2 font-semibold ${viewMode === "alphabetical" ? "bg-brand text-white" : "bg-white text-[#333]"}`}
           >
             Alphabetical
           </button>
@@ -124,7 +124,7 @@ export function ServantsDirectoryInteractive({
       {viewMode === "categorical"
         ? buckets.map((bucket) => (
             <div key={bucket.label} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-              <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
+              <h3 className="text-sm font-bold text-brand mb-3">{bucket.label}</h3>
               <ServantCards entries={bucket.entries} onPhotoUploaded={handlePhotoUploaded} />
             </div>
           ))
@@ -201,7 +201,7 @@ function ServantAvatar({
   }
 
   const avatar = (
-    <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-sm font-bold flex items-center justify-center overflow-hidden">
+    <div className="h-10 w-10 shrink-0 rounded-full bg-brand text-white text-sm font-bold flex items-center justify-center overflow-hidden">
       {photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={photoUrl} alt={servant.full_name} className="h-full w-full object-cover" />
@@ -223,7 +223,7 @@ function ServantAvatar({
         disabled={uploading}
         title="Add photo"
         aria-label="Add photo"
-        className="flex h-4 w-4 items-center justify-center rounded-full bg-[#1e3a5f] text-white text-[11px] font-bold leading-none hover:bg-[#152a45] disabled:opacity-60"
+        className="flex h-4 w-4 items-center justify-center rounded-full bg-brand text-white text-[11px] font-bold leading-none hover:bg-brand-dark disabled:opacity-60"
       >
         +
       </button>

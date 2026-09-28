@@ -119,7 +119,7 @@ export function CalendarMaintenanceInteractive({
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">Preload Holidays &amp; Feast Days</h2>
+        <h2 className="text-lg font-bold text-brand mb-3">Preload Holidays &amp; Feast Days</h2>
         <p className="text-sm text-[#666] mb-3">
           Computes the sets below for the selected year (fixed feasts, Pascha-relative movable feasts, and any
           custom feasts/fasts you&rsquo;ve added, all calculated algorithmically). Review the preview before adding
@@ -141,13 +141,13 @@ export function CalendarMaintenanceInteractive({
             type="number"
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="w-28 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="w-28 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
           />
           <button
             type="button"
             onClick={handlePreload}
             disabled={pending}
-            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             {pending ? "Adding…" : `Add ${year} Holidays to Calendar`}
           </button>
@@ -162,7 +162,7 @@ export function CalendarMaintenanceInteractive({
       </div>
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">Preview for {year}</h3>
+        <h3 className="text-sm font-bold text-brand mb-3">Preview for {year}</h3>
         <div className="divide-y divide-[#f0f0f0]">
           {preview.map((h) => (
             <div key={`${h.title}-${h.startDate}`} className="py-2 flex items-center justify-between text-sm">
@@ -175,7 +175,7 @@ export function CalendarMaintenanceInteractive({
       </div>
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h3 className="text-sm font-bold text-[#1e3a5f] mb-1">Custom Feasts &amp; Fasts</h3>
+        <h3 className="text-sm font-bold text-brand mb-1">Custom Feasts &amp; Fasts</h3>
         <p className="text-xs text-[#666] mb-3">
           Add a feast or fast (e.g. St. Mary&rsquo;s Fast) and its date will be computed automatically every year --
           either a fixed date, or a number of days relative to that year&rsquo;s Pascha, optionally spanning multiple
@@ -222,13 +222,13 @@ export function CalendarMaintenanceInteractive({
             placeholder="Title (e.g. St. Mary's Fast)"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
           />
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={newBasis}
               onChange={(e) => setNewBasis(e.target.value as "fixed" | "pascha")}
-              className="rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+              className="rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-brand focus:outline-none"
             >
               <option value="fixed">Fixed date</option>
               <option value="pascha">Relative to Pascha</option>
@@ -239,7 +239,7 @@ export function CalendarMaintenanceInteractive({
                 <select
                   value={newMonth}
                   onChange={(e) => setNewMonth(Number(e.target.value))}
-                  className="rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  className="rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-brand focus:outline-none"
                 >
                   {MONTHS.map((m, i) => (
                     <option key={m} value={i + 1}>
@@ -253,7 +253,7 @@ export function CalendarMaintenanceInteractive({
                   max={31}
                   value={newDay}
                   onChange={(e) => setNewDay(Number(e.target.value))}
-                  className="w-16 rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  className="w-16 rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-brand focus:outline-none"
                 />
               </>
             ) : (
@@ -263,7 +263,7 @@ export function CalendarMaintenanceInteractive({
                   type="number"
                   value={newOffset}
                   onChange={(e) => setNewOffset(Number(e.target.value))}
-                  className="w-20 rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  className="w-20 rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-brand focus:outline-none"
                 />
               </div>
             )}
@@ -275,7 +275,7 @@ export function CalendarMaintenanceInteractive({
                 min={1}
                 value={newDuration}
                 onChange={(e) => setNewDuration(Number(e.target.value))}
-                className="w-16 rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                className="w-16 rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-brand focus:outline-none"
               />
             </div>
 
@@ -283,7 +283,7 @@ export function CalendarMaintenanceInteractive({
               type="button"
               onClick={handleAddRule}
               disabled={rulePending}
-              className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+              className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
               Add
             </button>

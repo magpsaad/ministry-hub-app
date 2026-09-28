@@ -32,7 +32,7 @@ export function CardSkeleton({ children, className = "" }: { children: React.Rea
  * block avoids a blank white top strip while data loads. */
 export function HeaderSkeleton() {
   return (
-    <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
+    <div className="bg-gradient-to-br from-brand to-brand-light px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
       <div className="mx-auto h-6 w-40 rounded-md bg-white/20 animate-pulse" />
       <div className="mx-auto mt-2 h-3.5 w-24 rounded-md bg-white/15 animate-pulse" />
     </div>

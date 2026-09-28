@@ -57,7 +57,7 @@ export default async function RegisterPage() {
 
   return (
     <div className="min-h-full flex flex-col bg-[#f5f5f5]">
-      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
+      <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
         <div className="flex justify-center">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={60} />
         </div>
@@ -69,7 +69,7 @@ export default async function RegisterPage() {
       <main className="flex-1 max-w-md w-full mx-auto px-4 py-6 space-y-4">
         {awaitingApproval ? (
           <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center space-y-2">
-            <h2 className="text-base font-bold text-[#1e3a5f]">Awaiting approval</h2>
+            <h2 className="text-base font-bold text-brand">Awaiting approval</h2>
             <p className="text-sm text-[#666]">
               Thanks, {fullName} — your registration is in and waiting for a Coordinator or System Admin to review it.
               There&rsquo;s nothing else to do right now; check back once they&rsquo;ve approved it.

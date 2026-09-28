@@ -12,10 +12,11 @@ import {
   removeEventAttachmentAction,
   type EventInput,
 } from "@/app/calendar/actions";
-import { todayEastern } from "@/lib/timezone";
+import { todayInZone } from "@/lib/timezone";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 const inputClass =
-  "w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10";
+  "w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
 /** REQUIREMENTS.md §6.8 -- auto-template suggestions for Speaker Session /
  * Group Discussion, only applied when the description is still empty (a
@@ -41,12 +42,13 @@ export function EventForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const timeZone = useTimezone();
   const [form, setForm] = useState<EventInput>({
     title: event?.title ?? "",
     description: event?.description ?? "",
     event_type: event?.event_type ?? "Event",
-    start_date: event?.start_date ?? defaultDate ?? todayEastern(),
-    end_date: event?.end_date ?? defaultDate ?? todayEastern(),
+    start_date: event?.start_date ?? defaultDate ?? todayInZone(timeZone),
+    end_date: event?.end_date ?? defaultDate ?? todayInZone(timeZone),
     all_day: event?.all_day ?? true,
     start_time: event?.start_time ?? null,
     end_time: event?.end_time ?? null,
@@ -168,7 +170,7 @@ export function EventForm({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
-          <h2 className="text-lg font-bold text-[#1e3a5f]">{event ? "Edit Event" : "New Event"}</h2>
+          <h2 className="text-lg font-bold text-brand">{event ? "Edit Event" : "New Event"}</h2>
           <button onClick={onClose} className="text-[#999] hover:text-[#333] text-xl leading-none">
             ×
           </button>
@@ -227,7 +229,7 @@ export function EventForm({
               type="checkbox"
               checked={form.all_day}
               onChange={(e) => field("all_day", e.target.checked)}
-              className="accent-[#1e3a5f]"
+              className="accent-brand"
             />
             All Day
           </label>
@@ -266,7 +268,7 @@ export function EventForm({
             <label className="block font-semibold mb-1">Attachment</label>
             {attachmentUrl && !pendingFile ? (
               <div className="flex items-center gap-2">
-                <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-[#1e3a5f] hover:underline truncate">
+                <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline truncate">
                   View attachment
                 </a>
                 <button type="button" onClick={handleRemoveAttachment} disabled={pending} className="text-xs font-semibold text-[#dc3545] hover:underline">
@@ -277,7 +279,7 @@ export function EventForm({
               <input
                 type="file"
                 onChange={(e) => setPendingFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-[#333] file:mr-3 file:rounded-md file:border-0 file:bg-[#1e3a5f] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-[#152a45]"
+                className="w-full text-sm text-[#333] file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-dark"
               />
             )}
           </div>
@@ -288,7 +290,7 @@ export function EventForm({
             <button
               onClick={handleSave}
               disabled={pending}
-              className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+              className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
               {pending ? "Saving…" : "Save"}
             </button>

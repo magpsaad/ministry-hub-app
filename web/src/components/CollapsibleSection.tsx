@@ -33,7 +33,7 @@ export function CollapsibleSection({
   return (
     <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-[#1e3a5f]">{title}</h2>
+        <h2 className="text-lg font-bold text-brand">{title}</h2>
         <button
           onClick={toggle}
           aria-label={open ? "Collapse section" : "Expand section"}

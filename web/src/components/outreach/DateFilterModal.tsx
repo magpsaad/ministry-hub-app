@@ -25,7 +25,7 @@ export function DateFilterModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
-          <h2 className="text-base font-bold text-[#1e3a5f]">Date Filter</h2>
+          <h2 className="text-base font-bold text-brand">Date Filter</h2>
           <button onClick={onClose} className="text-[#999] hover:text-[#333] text-xl leading-none">
             ×
           </button>
@@ -37,7 +37,7 @@ export function DateFilterModal({
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-[#1e3a5f] focus:outline-none"
+              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-brand focus:outline-none"
             />
           </div>
           <div>
@@ -46,14 +46,14 @@ export function DateFilterModal({
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-[#1e3a5f] focus:outline-none"
+              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-brand focus:outline-none"
             />
           </div>
         </div>
         <div className="mt-5 flex gap-2 border-t border-[#f0f0f0] pt-4">
           <button
             onClick={() => onApply(from, to)}
-            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             Apply
           </button>

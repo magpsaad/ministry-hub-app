@@ -9,8 +9,11 @@
  * Separate cookies for the two flows: a device used for both (e.g. a
  * coordinator who also happens to be a group's Servant) shouldn't have one
  * flow's remembered person bleed into the other's list. */
-export const SERVANT_CHECKIN_COOKIE = "say_servant_checkin";
-export const MEMBER_CHECKIN_COOKIE = "say_member_checkin";
+// Neutral names (were "say_..."): each ministry's own web address keeps its
+// own cookies anyway. One-time effect of the rename: a device that ticked
+// "Remember me" is simply asked to pick its name once more.
+export const SERVANT_CHECKIN_COOKIE = "servant_checkin";
+export const MEMBER_CHECKIN_COOKIE = "member_checkin";
 export const CHECKIN_REMEMBER_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
 export type RememberedCheckinPerson = { id: string; kind: "member" | "servant" | "pending" };

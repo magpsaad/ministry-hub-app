@@ -218,7 +218,7 @@ export function MemberDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
-          <h2 className="text-lg font-bold text-[#1e3a5f]">{member.full_name}</h2>
+          <h2 className="text-lg font-bold text-brand">{member.full_name}</h2>
           <button onClick={onClose} className="text-[#999] hover:text-[#333] text-xl leading-none">
             ×
           </button>
@@ -230,7 +230,7 @@ export function MemberDetailModal({
             checked={form.is_visitor}
             onChange={(e) => field("is_visitor", e.target.checked)}
             disabled={!editing}
-            className="accent-[#1e3a5f]"
+            className="accent-brand"
           />
           Visitor
         </label>
@@ -240,7 +240,7 @@ export function MemberDetailModal({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoUrl} alt={member.full_name} className="h-[100px] w-[100px] rounded-full object-cover" />
           ) : (
-            <div className="h-[100px] w-[100px] rounded-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] flex items-center justify-center text-white text-2xl font-bold">
+            <div className="h-[100px] w-[100px] rounded-full bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white text-2xl font-bold">
               {member.full_name
                 .split(" ")
                 .map((w) => w[0])
@@ -276,7 +276,7 @@ export function MemberDetailModal({
                 onClick={handleAddOrReplaceClick}
                 disabled={pending}
                 title={photoUrl ? "Replace photo" : "Add photo"}
-                className="flex items-center gap-1 text-xs font-semibold text-[#1e3a5f] hover:underline"
+                className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
               >
                 <CameraIcon className="h-3.5 w-3.5" />
                 {photoUrl ? "Replace" : "Add"} Photo
@@ -438,7 +438,7 @@ export function MemberDetailModal({
               canEdit && (
                 <button
                   onClick={() => setEditing(true)}
-                  className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                  className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
                 >
                   Edit
                 </button>
@@ -448,7 +448,7 @@ export function MemberDetailModal({
                 <button
                   onClick={handleSave}
                   disabled={pending}
-                  className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                  className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
                 >
                   {pending ? "Saving…" : "Save"}
                 </button>

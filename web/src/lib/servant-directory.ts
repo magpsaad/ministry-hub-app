@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/pagination";
 import { getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
 
 export type ServantDirectoryEntry = {
@@ -34,7 +35,16 @@ export type ServantDirectoryEntry = {
  */
 export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const supabase = await createClient();
-  const windowSettings = await getAttendanceWindowSettings();
+  // Settings, role grants and profiles don't depend on each other -- one
+  // parallel batch (they used to be three sequential round trips).
+  const [windowSettings, { data: roleRows }, { data: profileRows }] = await Promise.all([
+    getAttendanceWindowSettings(),
+    supabase
+      .from("user_roles")
+      .select("user_id, role, group_id, groups(name, ladder_position)")
+      .in("role", ["servant", "sub_coordinator", "general_coordinator"]),
+    supabase.from("profiles").select("id, full_name, phone, email, photo_path, gender, father_of_confession, join_date"),
+  ]);
   const windowWeeks = windowSettings.servant_attendance_window_weeks;
   let queryFloorISO: string | null = null;
   if (windowWeeks !== null) {
@@ -42,15 +52,6 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     windowStart.setDate(windowStart.getDate() - windowWeeks * 7);
     queryFloorISO = windowStart.toISOString().slice(0, 10);
   }
-
-  const { data: roleRows } = await supabase
-    .from("user_roles")
-    .select("user_id, role, group_id, groups(name, ladder_position)")
-    .in("role", ["servant", "sub_coordinator", "general_coordinator"]);
-
-  const { data: profileRows } = await supabase
-    .from("profiles")
-    .select("id, full_name, phone, email, photo_path, gender, father_of_confession, join_date");
 
   const profilesById = new Map((profileRows ?? []).map((p) => [p.id, p]));
 
@@ -87,17 +88,22 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const userIds = Array.from(byUser.keys());
   if (userIds.length === 0) return [];
 
-  let attendanceQuery = supabase
-    .from("attendance_records")
-    .select("servant_id, service_date")
-    .eq("attendee_type", "servant")
-    .in("servant_id", userIds);
-  if (queryFloorISO) attendanceQuery = attendanceQuery.gte("service_date", queryFloorISO);
-  const { data: attendanceRows } = await attendanceQuery;
+  // Paged: servant attendance passes PostgREST's 1000-row cap over time.
+  const attendanceRows = await fetchAllRows((from, to) => {
+    let q = supabase
+      .from("attendance_records")
+      .select("servant_id, service_date")
+      .eq("attendee_type", "servant")
+      .in("servant_id", userIds)
+      .order("id")
+      .range(from, to);
+    if (queryFloorISO) q = q.gte("service_date", queryFloorISO);
+    return q;
+  });
 
   const presentByServant = new Map<string, Set<string>>();
   const allTrackedDates = new Set<string>();
-  for (const row of attendanceRows ?? []) {
+  for (const row of attendanceRows) {
     if (!presentByServant.has(row.servant_id)) presentByServant.set(row.servant_id, new Set());
     presentByServant.get(row.servant_id)!.add(row.service_date);
     allTrackedDates.add(row.service_date);

@@ -34,7 +34,7 @@ export async function addReleaseAction(version: string, description: string, rel
     .single();
   if (error) return { error: error.message, id: null };
 
-  revalidatePath("/admin/version-control");
+  revalidatePath("/version-control");
   return { error: null, id: data.id as string };
 }
 
@@ -48,6 +48,6 @@ export async function updateReleaseAction(id: string, version: string, descripti
     .eq("id", id);
   if (error) return { error: error.message };
 
-  revalidatePath("/admin/version-control");
+  revalidatePath("/version-control");
   return { error: null };
 }

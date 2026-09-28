@@ -103,7 +103,7 @@ export function ProximityDonut({
           y={center}
           textAnchor="middle"
           dominantBaseline="central"
-          style={{ fill: "#1e3a5f", fontWeight: 700, fontSize: total > 999 ? 22 : 28 }}
+          style={{ fill: "var(--brand)", fontWeight: 700, fontSize: total > 999 ? 22 : 28 }}
         >
           {total}
         </text>

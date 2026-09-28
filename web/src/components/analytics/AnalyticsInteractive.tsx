@@ -40,6 +40,7 @@ export function AnalyticsInteractive({
   servants,
   unassignedCount,
   memberLabel,
+  groupLabel,
   proximityEnabled,
   currentUserId,
   combined = false,
@@ -51,6 +52,7 @@ export function AnalyticsInteractive({
   servants: ServantOption[];
   unassignedCount: number;
   memberLabel: string;
+  groupLabel: string;
   proximityEnabled: boolean;
   currentUserId: string;
   combined?: boolean;
@@ -216,7 +218,7 @@ export function AnalyticsInteractive({
   return (
     <div className="mt-4 space-y-6">
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-brand mb-4">
           <ClipboardCheckIcon className="h-5 w-5" /> Data Completeness
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -235,7 +237,7 @@ export function AnalyticsInteractive({
       </section>
 
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-brand mb-4">
           <UsersIcon className="h-5 w-5" /> Gender Split
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -251,7 +253,7 @@ export function AnalyticsInteractive({
 
       {proximityEnabled && (
         <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-brand mb-4">
             <MapPinIcon className="h-5 w-5" /> Proximity
           </h2>
           <ProximityDonut
@@ -269,7 +271,7 @@ export function AnalyticsInteractive({
       )}
 
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-brand mb-4">
           <ChartBarIcon className="h-5 w-5" /> Average Attendance by Month
         </h2>
         {monthly.length === 0 ? (
@@ -287,7 +289,7 @@ export function AnalyticsInteractive({
 
         {monthlyByCohort.map(({ group, monthly: cohortMonthly }) => (
           <div key={group.id} className="mt-6 border-t border-[#f0f0f0] pt-4">
-            <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{group.name}</h3>
+            <h3 className="text-sm font-bold text-brand mb-3">{group.name}</h3>
             {cohortMonthly.length === 0 ? (
               <p className="text-sm text-[#666]">No tracked service dates yet.</p>
             ) : (
@@ -301,21 +303,21 @@ export function AnalyticsInteractive({
 
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f]">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-brand">
             <UsersIcon className="h-5 w-5" /> Servant Assignments
           </h2>
           <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
             <button
               type="button"
               onClick={() => setServantsView("categorical")}
-              className={`px-3 py-1.5 font-semibold ${servantsView === "categorical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+              className={`px-3 py-1.5 font-semibold ${servantsView === "categorical" ? "bg-brand text-white" : "bg-white text-[#333]"}`}
             >
               Categorical
             </button>
             <button
               type="button"
               onClick={() => setServantsView("alphabetical")}
-              className={`px-3 py-1.5 font-semibold ${servantsView === "alphabetical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+              className={`px-3 py-1.5 font-semibold ${servantsView === "alphabetical" ? "bg-brand text-white" : "bg-white text-[#333]"}`}
             >
               Alphabetical
             </button>
@@ -360,7 +362,7 @@ export function AnalyticsInteractive({
                   {combined && (
                     <th className="px-4 py-2">
                       <button type="button" onClick={() => handleSort("cohort")} className="font-semibold hover:underline">
-                        Cohort{indicator("cohort")}
+                        {groupLabel}{indicator("cohort")}
                       </button>
                     </th>
                   )}
@@ -411,7 +413,7 @@ function ServantCohortTable({ label, servants, memberLabel }: { label: string; s
   const { female, male, other } = groupByGender(servants, (s) => s.gender);
   return (
     <div>
-      <h3 className="text-sm font-bold text-[#1e3a5f] mb-2">{label}</h3>
+      <h3 className="text-sm font-bold text-brand mb-2">{label}</h3>
       <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
         <table className="w-full text-sm">
           <thead>
@@ -455,9 +457,9 @@ function ServantCohortTable({ label, servants, memberLabel }: { label: string; s
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-t-4 border-[#1e3a5f] p-4">
+    <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-t-4 border-brand p-4">
       <h3 className="text-[11px] uppercase tracking-wide text-[#666] font-semibold">{label}</h3>
-      <p className="mt-1 text-3xl font-bold text-[#1e3a5f]">{value}</p>
+      <p className="mt-1 text-3xl font-bold text-brand">{value}</p>
     </div>
   );
 }

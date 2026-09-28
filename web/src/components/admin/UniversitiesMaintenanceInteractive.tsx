@@ -83,7 +83,7 @@ export function UniversitiesMaintenanceInteractive({
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">{label} List</h2>
+      <h2 className="text-lg font-bold text-brand mb-3">{label} List</h2>
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 
       <div className="divide-y divide-[#f0f0f0] mb-4">
@@ -95,13 +95,13 @@ export function UniversitiesMaintenanceInteractive({
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="flex-1 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  className="flex-1 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                 />
                 {proximityEnabled && (
                   <select
                     value={editProximity}
                     onChange={(e) => setEditProximity(e.target.value)}
-                    className="rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                    className="rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                   >
                     {PROXIMITIES.map((p) => (
                       <option key={p} value={p}>
@@ -126,7 +126,7 @@ export function UniversitiesMaintenanceInteractive({
               <>
                 <span className="flex-1 text-[#333]">{u.name}</span>
                 {proximityEnabled && <span className="text-xs text-[#666] w-20">{u.proximity}</span>}
-                <button type="button" onClick={() => startEdit(u)} className="text-[#1e3a5f] text-xs font-semibold">
+                <button type="button" onClick={() => startEdit(u)} className="text-brand text-xs font-semibold">
                   Edit
                 </button>
                 <button
@@ -150,13 +150,13 @@ export function UniversitiesMaintenanceInteractive({
           placeholder={`New ${labelLower} name`}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          className="flex-1 min-w-[160px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          className="flex-1 min-w-[160px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         />
         {proximityEnabled && (
           <select
             value={newProximity}
             onChange={(e) => setNewProximity(e.target.value)}
-            className="rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            className="rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-brand focus:outline-none"
           >
             {PROXIMITIES.map((p) => (
               <option key={p} value={p}>
@@ -169,7 +169,7 @@ export function UniversitiesMaintenanceInteractive({
           type="button"
           onClick={handleAdd}
           disabled={pending}
-          className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
         >
           Add
         </button>

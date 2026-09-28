@@ -31,7 +31,7 @@ export function CombinedDashboardOverview({ groups, memberLabel }: { groups: Gro
 
         return (
           <section key={groupId} className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-brand mb-4">
               <UsersIcon className="h-5 w-5" /> {groupName}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

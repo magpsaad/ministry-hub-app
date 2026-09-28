@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { getMemberOutreachAction } from "@/app/g/[groupId]/outreach/actions";
 import type { OutreachEntry } from "@/lib/outreach";
-import { formatEasternDateTime } from "@/lib/timezone";
+import { formatDateTimeInZone } from "@/lib/timezone";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 export function PrevOutreachModal({
   memberId,
@@ -14,6 +15,7 @@ export function PrevOutreachModal({
   memberName: string;
   onClose: () => void;
 }) {
+  const timeZone = useTimezone();
   const [entries, setEntries] = useState<OutreachEntry[] | null>(null);
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export function PrevOutreachModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
-          <h2 className="text-lg font-bold text-[#1e3a5f]">Prev. Outreach — {memberName}</h2>
+          <h2 className="text-lg font-bold text-brand">Prev. Outreach — {memberName}</h2>
           <button onClick={onClose} className="text-[#999] hover:text-[#333] text-xl leading-none">
             ×
           </button>
@@ -41,8 +43,8 @@ export function PrevOutreachModal({
           <ul className="space-y-3">
             {entries.map((e) => (
               <li key={e.id} className="rounded-md border border-[#eee] p-3 text-sm">
-                <p className="font-semibold text-[#1e3a5f]">
-                  {formatEasternDateTime(e.occurred_at, { dateStyle: "medium", timeStyle: "short" })}
+                <p className="font-semibold text-brand">
+                  {formatDateTimeInZone(e.occurred_at, timeZone, { dateStyle: "medium", timeStyle: "short" })}
                   {e.type ? ` — ${e.type}` : ""}
                 </p>
                 <p className="text-xs text-[#666]">By {e.servant?.full_name ?? "Unknown"}</p>

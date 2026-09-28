@@ -48,7 +48,9 @@ export async function getTransitionPreview(): Promise<TransitionPreview> {
     supabase.from("app_settings").select("group_name_template").single(),
   ]);
 
-  const template = settings?.group_name_template ?? "{cohort_year} Cohort - Yr {position_label}";
+  // No hard-coded naming fallback (MULTI_TENANT_PLAN.md §10, A5): with no
+  // template configured, names are simply left as they are.
+  const template: string | null = settings?.group_name_template ?? null;
   const rows = groupRows ?? [];
   const positions = rows.map((g) => g.ladder_position);
   const terminalPosition = positions.length > 0 ? Math.max(...positions) : null;
@@ -56,7 +58,7 @@ export async function getTransitionPreview(): Promise<TransitionPreview> {
   const canTransition = terminalPosition !== null && newTerminalPosition !== null && newTerminalPosition >= 1;
 
   function renderName(cohortYear: number | null, positionLabel: string) {
-    if (cohortYear === null) return null;
+    if (cohortYear === null || template === null) return null;
     return template.replace("{cohort_year}", String(cohortYear)).replace("{position_label}", positionLabel);
   }
 
@@ -70,7 +72,7 @@ export async function getTransitionPreview(): Promise<TransitionPreview> {
       // (owner's call, migration 0033: no formula assumed to still apply).
       return { id: g.id, name: g.name, cohortYear: g.cohort_year, ladderPosition: g.ladder_position, nextName: g.name };
     }
-    const nextName = renderName(g.cohort_year, String(g.ladder_position + 1));
+    const nextName = renderName(g.cohort_year, String(g.ladder_position + 1)) ?? g.name;
     return { id: g.id, name: g.name, cohortYear: g.cohort_year, ladderPosition: g.ladder_position, nextName };
   });
 

@@ -50,7 +50,7 @@ export function LoadGroupPanel({
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
           disabled={loading}
-          className="flex-1 min-w-0 rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+          className="flex-1 min-w-0 rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
         >
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
@@ -63,7 +63,7 @@ export function LoadGroupPanel({
       <button
         onClick={handleLoad}
         disabled={loading}
-        className="w-full rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+        className="w-full rounded-md bg-brand py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
       >
         {loading ? "Loading…" : `Load ${memberLabel} Data`}
       </button>

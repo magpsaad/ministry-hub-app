@@ -13,7 +13,15 @@ import { renameGroupAction, addGroupTierAction, deleteGroupTierAction } from "@/
  * from group_name_template, since a cohort's naming convention might look
  * completely different in future years than whatever the template says
  * today (owner's call). */
-export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] }) {
+export function GroupNamesInteractive({
+  initial,
+  positionLabel,
+  groupLabel,
+}: {
+  initial: AdminGroupRow[];
+  positionLabel: string;
+  groupLabel: string;
+}) {
   const [groups, setGroups] = useState(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -80,7 +88,7 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Group Names</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">Group Names</h2>
       <p className="text-sm text-[#666] mb-4">
         Every active group in the cohort ladder, position 0 (pre-entry) through the terminal group. Rename any of
         them directly, or add/remove a tier if this deployment needs more or fewer active years than the default.
@@ -94,20 +102,24 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
           return (
             <div key={g.id} className="py-2 flex items-center gap-3">
               <span className="w-14 shrink-0 text-xs font-semibold text-[#666]">
-                {isPreEntry ? "Yr 0" : isTerminal ? `Yr ${g.ladder_position}+` : `Yr ${g.ladder_position}`}
+                {isPreEntry
+                  ? `${positionLabel} 0`
+                  : isTerminal
+                    ? `${positionLabel} ${g.ladder_position}+`
+                    : `${positionLabel} ${g.ladder_position}`}
               </span>
               {editingId === g.id ? (
                 <>
                   <input
                     value={editingName}
                     onChange={(e) => setEditingName(e.target.value)}
-                    className="flex-1 min-w-0 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                    className="flex-1 min-w-0 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => handleSaveRename(g.id)}
                     disabled={pending}
-                    className="rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+                    className="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
                   >
                     Save
                   </button>
@@ -149,17 +161,17 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
       {showAddForm ? (
         <div className="rounded-md border border-[#ddd] p-3 space-y-2">
           <p className="text-xs text-[#666]">
-            Adds a new active tier just below the current terminal group, which shifts up to make room (e.g. Yr 5+
-            becomes Yr 6+).
+            Adds a new active tier just below the current terminal group, which shifts up to make room (e.g.{" "}
+            {positionLabel} 5+ becomes {positionLabel} 6+).
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <label className="text-xs text-[#666]">
-              Cohort year (optional)
+              {groupLabel} year (optional)
               <input
                 type="number"
                 value={addForm.cohortYear ?? ""}
                 onChange={(e) => setAddForm((prev) => ({ ...prev, cohortYear: e.target.value === "" ? null : Number(e.target.value) }))}
-                className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
               />
             </label>
             <label className="text-xs text-[#666]">
@@ -167,7 +179,7 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
               <input
                 value={addForm.name}
                 onChange={(e) => setAddForm((prev) => ({ ...prev, name: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
               />
             </label>
             <label className="text-xs text-[#666]">
@@ -176,7 +188,7 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
                 type="color"
                 value={addForm.qrColor}
                 onChange={(e) => setAddForm((prev) => ({ ...prev, qrColor: e.target.value }))}
-                className="mt-1 h-9 w-full rounded-md border border-[#ddd] px-2 py-1 focus:border-[#1e3a5f] focus:outline-none"
+                className="mt-1 h-9 w-full rounded-md border border-[#ddd] px-2 py-1 focus:border-brand focus:outline-none"
               />
             </label>
           </div>
@@ -185,7 +197,7 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
               type="button"
               onClick={handleAdd}
               disabled={pending}
-              className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+              className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
             >
               {pending ? "Adding…" : "Add Group"}
             </button>
@@ -202,7 +214,7 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
         <button
           type="button"
           onClick={() => setShowAddForm(true)}
-          className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45]"
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
         >
           + Add Group
         </button>

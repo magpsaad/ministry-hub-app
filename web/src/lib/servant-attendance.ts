@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
+import { fetchAllRows } from "@/lib/pagination";
+import { getAppSettings, getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
+import { nowInZone } from "@/lib/timezone";
 
 export type ServantAttendanceMember = {
   id: string;
@@ -22,22 +24,6 @@ export type ServantAttendanceBundle = {
   todayAvailable: boolean;
 };
 
-function nowInTimezone(timezone: string): { date: string; timeMinutes: number } {
-  const date = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  const timeStr = new Intl.DateTimeFormat("en-GB", {
-    timeZone: timezone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date());
-  const [h, m] = timeStr.split(":").map(Number);
-  return { date, timeMinutes: h * 60 + m };
-}
 
 function toMinutes(hms: string): number {
   const [h, m] = hms.split(":").map(Number);
@@ -53,8 +39,8 @@ function toMinutes(hms: string): number {
 export async function getServantAttendanceBundle(): Promise<ServantAttendanceBundle> {
   const supabase = await createClient();
 
-  const [{ data: settings }, { data: roleRows }, windowSettings] = await Promise.all([
-    supabase.from("app_settings").select("same_day_cutoff_time, timezone").single(),
+  const [settings, { data: roleRows }, windowSettings] = await Promise.all([
+    getAppSettings(),
     supabase
       .from("user_roles")
       .select("user_id, role, group_id, groups(name), profiles(full_name, join_date)")
@@ -62,9 +48,8 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
     getAttendanceWindowSettings(),
   ]);
 
-  const cutoff = settings?.same_day_cutoff_time ?? "21:00:00";
-  const timezone = settings?.timezone ?? "America/New_York";
-  const { date: todayDate, timeMinutes } = nowInTimezone(timezone);
+  const cutoff = settings.same_day_cutoff_time;
+  const { date: todayDate, timeMinutes } = nowInZone(settings.timezone);
 
   const byUser = new Map<string, { full_name: string; join_date: string | null; groupLabel: string }>();
   for (const r of roleRows ?? []) {
@@ -82,13 +67,19 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
   const trackedDatesSet = new Set<string>();
 
   if (ids.length > 0) {
-    const { data: attendance } = await supabase
-      .from("attendance_records")
-      .select("servant_id, service_date")
-      .eq("attendee_type", "servant")
-      .in("servant_id", ids);
+    // Paged: all-time servant attendance passes PostgREST's 1000-row cap
+    // (822 rows in QA already).
+    const attendance = await fetchAllRows((from, to) =>
+      supabase
+        .from("attendance_records")
+        .select("servant_id, service_date")
+        .eq("attendee_type", "servant")
+        .in("servant_id", ids)
+        .order("id")
+        .range(from, to),
+    );
 
-    for (const row of attendance ?? []) {
+    for (const row of attendance) {
       (attendanceByServant[row.servant_id] ??= []).push(row.service_date);
       trackedDatesSet.add(row.service_date);
     }

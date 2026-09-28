@@ -69,7 +69,7 @@ function GroupShellFallback({ groupId, combined }: { groupId: string; combined: 
   const shell = (
     <GroupNavShell
       groupId={groupId}
-      groupName={combined ? "All Cohorts Combined" : ""}
+      groupName=""
       appTitleShort=""
       memberLabel="Member"
       logoUrl={null}
@@ -101,10 +101,14 @@ async function GroupLayoutContent({
 }) {
   const supabase = await createClient();
 
-  const [access, settings, lastServiceDate] = await Promise.all([
+  // The group lookup runs in the same parallel batch as everything else
+  // (it used to wait for this batch first -- one extra round trip before
+  // the header could render).
+  const [access, settings, lastServiceDate, groupResult] = await Promise.all([
     getAccessSummary(userId),
     getAppSettings(),
     getLastServiceDate(),
+    isCombined ? Promise.resolve(null) : supabase.from("groups").select("id, name").eq("id", groupId).maybeSingle(),
   ]);
 
   if (isCombined) {
@@ -138,7 +142,7 @@ async function GroupLayoutContent({
     );
   }
 
-  const { data: group } = await supabase.from("groups").select("id, name").eq("id", groupId).maybeSingle();
+  const group = groupResult?.data ?? null;
 
   // RLS returns no row at all if this user can't access the group -- treated
   // the same as a bad ID, rather than leaking whether it exists.

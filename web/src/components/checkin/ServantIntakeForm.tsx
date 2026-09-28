@@ -4,7 +4,7 @@ import { useState } from "react";
 import { submitNewServantAction, type NewServantInput } from "@/app/checkin/actions";
 
 const inputClass =
-  "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10";
+  "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -76,7 +76,7 @@ export function ServantIntakeForm({
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4 space-y-3">
-      <h2 className="text-base font-bold text-[#1e3a5f]">New Servant Registration</h2>
+      <h2 className="text-base font-bold text-brand">New Servant Registration</h2>
       <p className="text-xs text-[#666]">
         Your info will be recorded. A coordinator will follow up to give you app access.
       </p>
@@ -147,7 +147,7 @@ export function ServantIntakeForm({
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          className="flex-1 rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
         >
           {pending ? "Submitting…" : "Submit"}
         </button>

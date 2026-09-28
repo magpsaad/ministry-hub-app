@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { submitOwnRegistrationAction, completeOwnProfileAction, type RegistrationInput } from "@/app/register/actions";
 
 const inputClass =
-  "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10";
+  "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
 const EMPTY_FORM: RegistrationInput = { phone: "", gender: "Male", father_of_confession: null, comments: null };
 
@@ -62,7 +62,7 @@ export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; f
   if (submitted) {
     return (
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center space-y-2">
-        <h2 className="text-base font-bold text-[#1e3a5f]">Thanks, {fullName}!</h2>
+        <h2 className="text-base font-bold text-brand">Thanks, {fullName}!</h2>
         <p className="text-sm text-[#666]">
           Your registration has been submitted. A Coordinator or System Admin will review it and give you access soon.
         </p>
@@ -72,7 +72,7 @@ export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; f
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 space-y-3">
-      <h2 className="text-base font-bold text-[#1e3a5f]">Complete Your Registration</h2>
+      <h2 className="text-base font-bold text-brand">Complete Your Registration</h2>
       <p className="text-sm text-[#666]">
         {hasRole
           ? "Please fill in a few more details before continuing."
@@ -119,7 +119,7 @@ export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; f
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+        className="w-full rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
       >
         {pending ? "Submitting…" : "Submit"}
       </button>

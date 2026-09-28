@@ -56,7 +56,7 @@ export function EditOutreachEntryModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
-          <h2 className="text-lg font-bold text-[#1e3a5f]">Edit Outreach — {entry.member_name}</h2>
+          <h2 className="text-lg font-bold text-brand">Edit Outreach — {entry.member_name}</h2>
           <button onClick={onClose} className="text-[#999] hover:text-[#333] text-xl leading-none">
             ×
           </button>
@@ -71,7 +71,7 @@ export function EditOutreachEntryModal({
               type="datetime-local"
               value={occurredAt}
               onChange={(e) => setOccurredAt(e.target.value)}
-              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-[#1e3a5f] focus:outline-none"
+              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-brand focus:outline-none"
             />
           </div>
           <div>
@@ -80,7 +80,7 @@ export function EditOutreachEntryModal({
               value={type}
               onChange={(e) => setType(e.target.value)}
               placeholder="Call, Visit, Text, Email, etc."
-              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-[#1e3a5f] focus:outline-none"
+              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-brand focus:outline-none"
             />
           </div>
           <div>
@@ -89,7 +89,7 @@ export function EditOutreachEntryModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-[#1e3a5f] focus:outline-none"
+              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-brand focus:outline-none"
             />
           </div>
           <div>
@@ -98,7 +98,7 @@ export function EditOutreachEntryModal({
               type="date"
               value={followUpDue}
               onChange={(e) => setFollowUpDue(e.target.value)}
-              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-[#1e3a5f] focus:outline-none"
+              className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-brand focus:outline-none"
             />
           </div>
         </div>
@@ -107,7 +107,7 @@ export function EditOutreachEntryModal({
           <button
             onClick={handleSave}
             disabled={pending}
-            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             {pending ? "Saving…" : "Save"}
           </button>

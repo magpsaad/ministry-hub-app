@@ -76,6 +76,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
       actionsNeededConfig={
         settings.proximity_enabled ? actionsNeededConfig : actionsNeededConfig.filter((c) => c.proximity === "Local")
       }
+      actionsNeededLookbackMonths={settings.actions_needed_lookback_months}
       proximityEnabled={settings.proximity_enabled}
       universityLabel={settings.university_label}
       programLabel={settings.program_label}

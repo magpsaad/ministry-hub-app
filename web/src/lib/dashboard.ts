@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getAppSettings } from "@/lib/app-settings";
 import { fetchAllRows } from "@/lib/pagination";
@@ -56,8 +57,10 @@ export type NewlyAssignedMember = {
   assignedServantName: string;
 };
 
-/** Lightweight, used by the nav shell header on every tab (not just Dashboard). */
-export async function getLastServiceDate(): Promise<string | null> {
+/** Lightweight, used by the nav shell header on every tab (not just Dashboard).
+ * React.cache()-memoized per request: the group layout and the Dashboard's
+ * stats (one call per cohort on the combined view) share one query. */
+export const getLastServiceDate = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("attendance_records")
@@ -67,7 +70,7 @@ export async function getLastServiceDate(): Promise<string | null> {
     .limit(1)
     .maybeSingle();
   return data?.service_date ?? null;
-}
+});
 
 /**
  * REQUIREMENTS.md §6.3/§7.2/§6.2. Returns per-member raw rows rather than
@@ -84,11 +87,12 @@ export async function getLastServiceDate(): Promise<string | null> {
 export async function getDashboardStatsData(groupId: string): Promise<DashboardStatsData> {
   const supabase = await createClient();
 
-  const { data: members } = await supabase
-    .from("members")
-    .select("id, is_visitor, assigned_servant_id")
-    .eq("group_id", groupId)
-    .eq("status", "active");
+  // Members and the latest service date don't depend on each other -- fetched
+  // together (they used to be two sequential round trips).
+  const [{ data: members }, latestServiceDate] = await Promise.all([
+    supabase.from("members").select("id, is_visitor, assigned_servant_id").eq("group_id", groupId).eq("status", "active"),
+    getLastServiceDate(),
+  ]);
 
   const active = members ?? [];
   const nonVisitors = active.filter((m) => !m.is_visitor);
@@ -99,38 +103,32 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
   let presentLastServiceSet = new Set<string>();
 
   if (memberIds.length > 0) {
-    const { data: latestDateRow } = await supabase
-      .from("attendance_records")
-      .select("service_date")
-      .eq("attendee_type", "member")
-      .order("service_date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (latestDateRow) {
-      lastServiceDate = latestDateRow.service_date;
+    if (latestServiceDate) {
+      lastServiceDate = latestServiceDate;
 
       // All-time, per-cohort -- can exceed one page on its own (confirmed
       // directly: Yr1 alone already has 1200+ attendance_records), so a
       // plain single request here would silently truncate and mark some
       // members "Never Attended" who actually have (whichever ones happen
       // to fall past row 1000). Paged via fetchAllRows (lib/pagination.ts).
-      const attendedIds = await fetchAllRows((from, to) =>
+      // The two attendance reads are independent -- fetched in parallel.
+      const [attendedIds, { data: presentRows }] = await Promise.all([
+        fetchAllRows((from, to) =>
+          supabase
+            .from("attendance_records")
+            .select("member_id")
+            .eq("attendee_type", "member")
+            .in("member_id", memberIds)
+            .range(from, to),
+        ),
         supabase
           .from("attendance_records")
           .select("member_id")
           .eq("attendee_type", "member")
-          .in("member_id", memberIds)
-          .range(from, to),
-      );
+          .eq("service_date", latestServiceDate)
+          .in("member_id", memberIds),
+      ]);
       everAttendedSet = new Set(attendedIds.map((r) => r.member_id));
-
-      const { data: presentRows } = await supabase
-        .from("attendance_records")
-        .select("member_id")
-        .eq("attendee_type", "member")
-        .eq("service_date", lastServiceDate)
-        .in("member_id", memberIds);
       presentLastServiceSet = new Set((presentRows ?? []).map((r) => r.member_id));
     }
   }

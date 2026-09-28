@@ -172,7 +172,7 @@ export function AttendanceInteractive({
         <select
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         >
           {dateOptions.map((d) => (
             <option key={d.value} value={d.value}>
@@ -240,7 +240,7 @@ export function AttendanceInteractive({
                       <button
                         type="button"
                         onClick={() => setHistoryMember({ id: m.id, full_name: m.full_name })}
-                        className="text-[#1e3a5f] font-semibold hover:underline"
+                        className="text-brand font-semibold hover:underline"
                       >
                         {m.avgAttendancePercent}%
                       </button>

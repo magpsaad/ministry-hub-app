@@ -43,7 +43,7 @@ export function AppLogo({
       style={style}
       className="shrink-0 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.2)] flex items-center justify-center"
     >
-      <span className="text-[#1e3a5f] font-bold" style={{ fontSize: size * 0.32 }}>
+      <span className="text-brand font-bold" style={{ fontSize: size * 0.32 }}>
         {initials(title)}
       </span>
     </div>

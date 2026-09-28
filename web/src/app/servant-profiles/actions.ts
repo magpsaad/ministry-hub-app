@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { photosBucket } from "@/lib/storage";
+import { photosBucket, isExternalPhotoUrl } from "@/lib/storage";
 import { logAudit } from "@/lib/audit";
 
 export type UpdateServantProfileInput = {
@@ -50,7 +50,7 @@ export async function uploadServantPhotoAction(servantId: string, formData: Form
   const { error: updateError } = await supabase.from("profiles").update({ photo_path: path }).eq("id", servantId);
   if (updateError) return { error: updateError.message };
 
-  if (existing?.photo_path && existing.photo_path !== path) {
+  if (existing?.photo_path && existing.photo_path !== path && !isExternalPhotoUrl(existing.photo_path)) {
     await supabase.storage.from(photosBucket()).remove([existing.photo_path]);
   }
 
@@ -67,8 +67,11 @@ export async function removeServantPhotoAction(servantId: string, photoPath: str
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
 
-  const { error: removeError } = await supabase.storage.from(photosBucket()).remove([photoPath]);
-  if (removeError) return { error: removeError.message };
+  // A Google profile picture link isn't a stored file -- nothing to delete.
+  if (!isExternalPhotoUrl(photoPath)) {
+    const { error: removeError } = await supabase.storage.from(photosBucket()).remove([photoPath]);
+    if (removeError) return { error: removeError.message };
+  }
 
   const { error } = await supabase.from("profiles").update({ photo_path: null }).eq("id", servantId);
   if (error) return { error: error.message };

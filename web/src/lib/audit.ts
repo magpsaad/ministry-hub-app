@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuditActionType =
@@ -34,6 +35,9 @@ export type AuditActionType =
  * the underlying app operation this is attached to must always succeed
  * regardless of audit logging's own state.
  *
+ * Runs after the response is sent (next/server after()), so it never slows
+ * down the page or action it's attached to.
+ *
  * Takes the caller's userId explicitly rather than calling
  * `supabase.auth.getUser()` itself, since every call site already has it on
  * hand -- avoids reintroducing the redundant-auth-call performance bug fixed
@@ -44,27 +48,38 @@ export async function logAudit(
   actionType: AuditActionType,
   opts?: { groupId?: string | null; details?: Record<string, unknown> },
 ): Promise<void> {
+  // The "Load Data for all cohorts" combined view (§ the /g/all/* routes)
+  // passes the literal route param "all" as groupId through every call
+  // site that already threads groupId into logAudit -- normalized to null
+  // here, once, rather than patching each call site, since group_id is a
+  // real FK to groups(id) and "all" isn't a real group.
+  const groupId = opts?.groupId === "all" ? null : (opts?.groupId ?? null);
+
   try {
+    // The Supabase client (which reads the request's cookies) is created
+    // HERE, during the request -- Server Components can't read cookies
+    // inside an after() callback. The two audit queries themselves run via
+    // after(), once the response has been sent, so logging no longer adds
+    // two round trips to every page load and every save.
     const supabase = await createClient();
-    const { data: config } = await supabase
-      .from("audit_config")
-      .select("enabled")
-      .eq("action_type", actionType)
-      .maybeSingle();
-    if (config && config.enabled === false) return;
+    after(async () => {
+      try {
+        const { data: config } = await supabase
+          .from("audit_config")
+          .select("enabled")
+          .eq("action_type", actionType)
+          .maybeSingle();
+        if (config && config.enabled === false) return;
 
-    // The "Load Data for all cohorts" combined view (§ the /g/all/* routes)
-    // passes the literal route param "all" as groupId through every call
-    // site that already threads groupId into logAudit -- normalized to null
-    // here, once, rather than patching each call site, since group_id is a
-    // real FK to groups(id) and "all" isn't a real group.
-    const groupId = opts?.groupId === "all" ? null : (opts?.groupId ?? null);
-
-    await supabase.from("audit_log").insert({
-      user_id: userId,
-      action_type: actionType,
-      group_id: groupId,
-      details: opts?.details ?? null,
+        await supabase.from("audit_log").insert({
+          user_id: userId,
+          action_type: actionType,
+          group_id: groupId,
+          details: opts?.details ?? null,
+        });
+      } catch {
+        // Best-effort -- never let audit logging break the underlying action.
+      }
     });
   } catch {
     // Best-effort -- never let audit logging break the underlying action.

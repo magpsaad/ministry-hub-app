@@ -28,7 +28,7 @@ export default async function GroupTransitionPage() {
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
-      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
+      <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
           <HomeLink />
           <RefreshButton />
@@ -44,7 +44,11 @@ export default async function GroupTransitionPage() {
         <p className="mt-1 text-sm opacity-90">Group Transition</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <GroupTransitionInteractive initialPreview={preview} />
+        <GroupTransitionInteractive
+          initialPreview={preview}
+          positionLabel={settings.ladder_position_label}
+          groupLabel={settings.group_label}
+        />
       </main>
     </div>
   );

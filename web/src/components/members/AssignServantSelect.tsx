@@ -50,7 +50,7 @@ export function AssignServantSelect({
       // placeholder text. An explicit width overrides that intrinsic
       // sizing outright. shrink-0 keeps it at that width so the sibling
       // info column (not this) does any shrinking on a narrow screen.
-      className="shrink-0 w-[76px] truncate rounded-md bg-[#1e3a5f] px-2 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] focus:outline-none disabled:opacity-60"
+      className="shrink-0 w-[76px] truncate rounded-md bg-brand px-2 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark focus:outline-none disabled:opacity-60"
     >
       <option value="" disabled>
         {pending ? "Assigning…" : "Assign"}

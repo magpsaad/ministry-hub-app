@@ -99,7 +99,7 @@ function DayGrid({
           >
             <span
               className={`text-xs font-semibold ${
-                dateISO === todayISO ? "inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#1e3a5f] text-white" : "text-[#333]"
+                dateISO === todayISO ? "inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white" : "text-[#333]"
               }`}
             >
               {day.getDate()}
@@ -138,7 +138,7 @@ function DateRow({
   const isToday = dateISO === toISO(new Date());
   return (
     <div ref={rowRef} className={`flex border-b border-[#e0e0e0] ${isToday ? "bg-[#eef4fb]" : "bg-white"}`}>
-      <div className={`w-20 shrink-0 px-2 py-3 text-center border-l-2 ${isToday ? "border-l-[#1e3a5f]" : "border-l-transparent"}`}>
+      <div className={`w-20 shrink-0 px-2 py-3 text-center border-l-2 ${isToday ? "border-l-brand" : "border-l-transparent"}`}>
         <div className="text-[11px] uppercase text-[#666]">{date.toLocaleDateString(undefined, { weekday: "short" })}</div>
         <div className="text-lg font-bold text-[#333]">{date.getDate()}</div>
         {showMonth && (
@@ -246,7 +246,7 @@ export function ServiceCalendarModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[70] bg-[#f5f5f5] flex flex-col">
-      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative shrink-0">
+      <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative shrink-0">
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
           <button
             onClick={onClose}
@@ -277,7 +277,7 @@ export function ServiceCalendarModal({
               key={v}
               onClick={() => setView(v)}
               className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
-                view === v ? "bg-[#1e3a5f] text-white" : "bg-[#f0f0f0] text-[#333] hover:bg-[#e0e0e0]"
+                view === v ? "bg-brand text-white" : "bg-[#f0f0f0] text-[#333] hover:bg-[#e0e0e0]"
               }`}
             >
               {v === "fridays" ? serviceWeekdayLabel : v.charAt(0).toUpperCase() + v.slice(1)}
@@ -300,7 +300,7 @@ export function ServiceCalendarModal({
             </button>
           </div>
         )}
-        <button onClick={() => openNew()} className="rounded-md bg-[#1e3a5f] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#152a45]">
+        <button onClick={() => openNew()} className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">
           + Add Event
         </button>
       </div>

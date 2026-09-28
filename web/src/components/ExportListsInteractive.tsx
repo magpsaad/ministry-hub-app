@@ -115,7 +115,7 @@ export function ExportListsInteractive({
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 print:hidden">
-        <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Export or Print a List</h2>
+        <h2 className="text-lg font-bold text-brand mb-1">Export or Print a List</h2>
         <p className="text-xs text-[#666] mb-4">
           Names only -- no phone, email, attendance, or other {memberLabel.toLowerCase()}/servant details are ever included.
         </p>
@@ -124,7 +124,7 @@ export function ExportListsInteractive({
         <select
           value={selectedKey}
           onChange={(e) => setSelectedKey(e.target.value)}
-          className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         >
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
@@ -139,7 +139,7 @@ export function ExportListsInteractive({
             type="button"
             onClick={handleDownloadCsv}
             disabled={loading || names.length === 0}
-            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-50 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             Download CSV
           </button>
@@ -147,7 +147,7 @@ export function ExportListsInteractive({
             type="button"
             onClick={handleDownloadPdf}
             disabled={loading || names.length === 0}
-            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-50 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             Download PDF
           </button>
@@ -167,7 +167,7 @@ export function ExportListsInteractive({
         {/* Owner-requested: the group picker itself already excludes Yr0
             (never present in `groups`); "Servants" is a separate, fixed
             entry alongside it, not another cohort. */}
-        <h3 className="text-base font-bold text-[#1e3a5f] print:text-xl">{listTitle}</h3>
+        <h3 className="text-base font-bold text-brand print:text-xl">{listTitle}</h3>
         <p className="hidden print:block text-xs text-[#666] mb-3">{appTitle}</p>
         {loading ? (
           <p className="mt-2 text-sm text-[#666] print:hidden">Loading…</p>

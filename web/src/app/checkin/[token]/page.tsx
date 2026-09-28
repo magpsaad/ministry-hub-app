@@ -15,7 +15,10 @@ import { CheckInFlow } from "@/components/checkin/CheckInFlow";
  * token alone (via checkin_get_flow) decides which flow to render. */
 export default async function CheckInPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const [flow, settings] = await Promise.all([getCheckInFlow(token), getAppSettings()]);
+  // The school list is fetched up front with the flow lookup (it used to
+  // wait for it -- an extra round trip on every QR scan). It's small and
+  // readable without signing in; the servants' flow simply doesn't use it.
+  const [flow, settings, allUniversities] = await Promise.all([getCheckInFlow(token), getAppSettings(), getUniversities()]);
 
   if (!flow) {
     return (
@@ -28,10 +31,12 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
     );
   }
 
-  const [people, universities] = await Promise.all([
-    flow.isServant ? listCheckInServants(token) : flow.flowType === "check_in_and_intake" ? listCheckInMembers(token) : Promise.resolve([]),
-    flow.isServant ? Promise.resolve([]) : getUniversities(),
-  ]);
+  const people = await (flow.isServant
+    ? listCheckInServants(token)
+    : flow.flowType === "check_in_and_intake"
+      ? listCheckInMembers(token)
+      : Promise.resolve([]));
+  const universities = flow.isServant ? [] : allUniversities;
 
   const rememberCookieName = flow.isServant ? SERVANT_CHECKIN_COOKIE : MEMBER_CHECKIN_COOKIE;
   const rememberedPersonId =
@@ -41,7 +46,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
-      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
+      <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
         {/* Owner-requested: Home, Refresh and Exit on every check-in page
             (member, intake-only and servant alike), matching every other
             page in the app. */}

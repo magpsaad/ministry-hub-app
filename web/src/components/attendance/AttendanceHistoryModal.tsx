@@ -36,7 +36,7 @@ export function AttendanceHistoryModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-3">
-          <h2 className="text-lg font-bold text-[#1e3a5f]">{title ?? fullName}</h2>
+          <h2 className="text-lg font-bold text-brand">{title ?? fullName}</h2>
           <button onClick={onClose} className="text-[#999] hover:text-[#333] text-xl leading-none">
             ×
           </button>

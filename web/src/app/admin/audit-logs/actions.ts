@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { easternMidnightUtcIso } from "@/lib/timezone";
+import { zoneMidnightUtcIso } from "@/lib/timezone";
+import { getAppSettings } from "@/lib/app-settings";
 
 export type AuditLogRow = {
   id: number;
@@ -21,7 +22,7 @@ export type AuditLogFilters = {
 };
 
 export async function getAuditLogsAction(filters: AuditLogFilters): Promise<AuditLogRow[]> {
-  const supabase = await createClient();
+  const [supabase, settings] = await Promise.all([createClient(), getAppSettings()]);
   let query = supabase
     .from("audit_log")
     .select("id, occurred_at, action_type, user_id, details, profiles(full_name), groups(name)")
@@ -30,16 +31,16 @@ export async function getAuditLogsAction(filters: AuditLogFilters): Promise<Audi
 
   if (filters.actionType) query = query.eq("action_type", filters.actionType);
   if (filters.userId) query = query.eq("user_id", filters.userId);
-  // fromDate/toDate are plain "YYYY-MM-DD" pickers meant as Eastern calendar
-  // days -- handing them to Postgres as bare strings would compare against
+  // fromDate/toDate are plain "YYYY-MM-DD" pickers meant as calendar days in
+  // the ministry's timezone -- handing them to Postgres as bare strings would compare against
   // occurred_at (timestamptz) in the DB session's own timezone (UTC on
   // Supabase), shifting the filter boundary by 4-5 hours. Converted to the
-  // actual UTC instant of that Eastern day's start/end instead.
-  if (filters.fromDate) query = query.gte("occurred_at", easternMidnightUtcIso(filters.fromDate));
+  // actual UTC instant of that day's start/end in the ministry's timezone.
+  if (filters.fromDate) query = query.gte("occurred_at", zoneMidnightUtcIso(filters.fromDate, settings.timezone));
   if (filters.toDate) {
     const [y, m, d] = filters.toDate.split("-").map(Number);
     const nextDay = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
-    query = query.lt("occurred_at", easternMidnightUtcIso(nextDay));
+    query = query.lt("occurred_at", zoneMidnightUtcIso(nextDay, settings.timezone));
   }
 
   const { data } = await query;

@@ -4,16 +4,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCalendarEvents, type CalendarEvent, type CalendarEventType } from "@/lib/calendar";
 import { calendarBucket } from "@/lib/storage";
-import { getAppSettings } from "@/lib/app-settings";
+import { getAppSettings, weekdayName } from "@/lib/app-settings";
 import { logAudit } from "@/lib/audit";
 
 export async function getCalendarEventsAction(): Promise<CalendarEvent[]> {
   return getCalendarEvents();
 }
 
-const WEEKDAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-/** Bootstraps the calendar modal: events plus the deployment's configured
+/** Bootstraps the calendar modal: events plus the ministry's configured
  * service weekday, dynamically labeling the 4th view (was hardcoded
  * "Fridays" in the old app). */
 export async function getCalendarBootstrapAction(): Promise<{
@@ -24,17 +22,11 @@ export async function getCalendarBootstrapAction(): Promise<{
   appTitleShort: string;
   appVersion: string;
 }> {
-  const supabase = await createClient();
-  const [events, { data: weekdayRow }, settings] = await Promise.all([
-    getCalendarEvents(),
-    supabase.from("app_settings").select("service_weekday").single(),
-    getAppSettings(),
-  ]);
-  const serviceWeekday = weekdayRow?.service_weekday ?? 5;
+  const [events, settings] = await Promise.all([getCalendarEvents(), getAppSettings()]);
   return {
     events,
-    serviceWeekday,
-    serviceWeekdayLabel: `${WEEKDAY_NAMES[serviceWeekday]}s`,
+    serviceWeekday: settings.service_weekday,
+    serviceWeekdayLabel: `${weekdayName(settings.service_weekday)}s`,
     logoUrl: settings.logo_url,
     appTitleShort: settings.app_title_short,
     appVersion: settings.app_version,

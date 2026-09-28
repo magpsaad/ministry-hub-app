@@ -86,38 +86,39 @@ export async function getGroupMembers(groupId: string | string[]): Promise<Group
   // fetchAllRows like the attendance query below already was. Ties on
   // full_name alone aren't safe to page across (could skip or duplicate a
   // row at a page boundary), so `id` is added as a deterministic tiebreaker.
-  const [data, windowSettings] = await Promise.all([
+  //
+  // The attendance read below is independent of the member read, so all
+  // three run in one parallel batch (the attendance read used to wait for
+  // the members first -- an extra round trip per page of attendance).
+  const [data, windowSettings, attendance] = await Promise.all([
     fetchAllRows((from, to) => {
       let q = supabase.from("members").select(LIST_SELECT).eq("status", "active").order("full_name").order("id").range(from, to);
       q = Array.isArray(groupId) ? q.in("group_id", groupId) : q.eq("group_id", groupId);
       return q;
     }),
     getAttendanceWindowSettings(),
+    // Filtered by the same group_id(s)/active-status as the members query,
+    // via a join -- NOT `.in("member_id", memberIds)` with every id from a
+    // large member list. That silently broke the "all cohorts combined" view
+    // (owner-reported: ~900 UUIDs in one filter is a request the Supabase API
+    // rejects with a 400). A group_id filter stays small regardless of how
+    // many members it resolves to. Paged via fetchAllRows, ordered by id so
+    // pages can't overlap or skip rows.
+    fetchAllRows((from, to) => {
+      let q = supabase
+        .from("attendance_records")
+        .select("member_id, service_date, member:members!inner(group_id, status)")
+        .eq("attendee_type", "member")
+        .eq("member.status", "active")
+        .order("id")
+        .range(from, to);
+      q = Array.isArray(groupId) ? q.in("member.group_id", groupId) : q.eq("member.group_id", groupId);
+      return q;
+    }),
   ]);
 
   const members = data as unknown as MemberListItem[];
   if (members.length === 0) return { members: [], serviceWeekdayDates: [] };
-
-  // Filtered by the same group_id(s)/active-status as the members query
-  // above, via a join -- NOT `.in("member_id", memberIds)` with every id
-  // from a large member list. That silently broke the "all cohorts
-  // combined" view (owner-reported: Attendance/Analytics showed no data
-  // at all) -- ~900 UUIDs in one filter is a ~34,000-character query the
-  // Supabase API flatly rejects with a 400, and this call never checked
-  // for an error, so it just looked like an empty result. A group_id
-  // filter stays small (at most a handful of cohort ids) regardless of
-  // how many members that resolves to. Paged via fetchAllRows -- a single
-  // cohort alone can already exceed one page (lib/pagination.ts).
-  const attendance = await fetchAllRows((from, to) => {
-    let q = supabase
-      .from("attendance_records")
-      .select("member_id, service_date, member:members!inner(group_id, status)")
-      .eq("attendee_type", "member")
-      .eq("member.status", "active")
-      .range(from, to);
-    q = Array.isArray(groupId) ? q.in("member.group_id", groupId) : q.eq("member.group_id", groupId);
-    return q;
-  });
 
   const trackedDates = Array.from(new Set(attendance.map((a) => a.service_date)))
     .filter((d) => isOnServiceWeekday(d, windowSettings.service_weekday))

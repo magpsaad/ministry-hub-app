@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import { getAppSettings } from "@/lib/app-settings";
 import { QaEnvBanner } from "@/components/QaEnvBanner";
+import { TimezoneProvider } from "@/components/TimezoneProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -43,9 +44,19 @@ export async function generateViewport(): Promise<Viewport> {
   };
 }
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Brand colours and timezone come from App Settings, never hard-coded
+  // (MULTI_TENANT_PLAN.md §10, A1/A9). The colours become CSS variables that
+  // globals.css maps to Tailwind's `brand` / `brand-light` / `brand-dark`.
+  const settings = await getAppSettings();
+  const brandVars = {
+    "--brand": settings.theme_color,
+    "--brand-light": settings.theme_color_light,
+    "--brand-dark": settings.theme_color_dark,
+  } as React.CSSProperties;
+
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} h-full antialiased`} style={brandVars}>
       <body className="min-h-full flex flex-col">
         {/* Deliberate one-off exception to "no colored/alarming UI" -- this
          * banner's whole job is to be impossible to miss, not to blend in.
@@ -112,7 +123,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             });
           })();`}
         </Script>
-        {children}
+        <TimezoneProvider timeZone={settings.timezone}>{children}</TimezoneProvider>
       </body>
     </html>
   );

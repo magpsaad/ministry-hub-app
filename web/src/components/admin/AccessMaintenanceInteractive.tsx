@@ -172,7 +172,7 @@ export function AccessMaintenanceInteractive({
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="text-sm font-bold text-[#1e3a5f] mb-2">What each role can and cannot do</h2>
+        <h2 className="text-sm font-bold text-brand mb-2">What each role can and cannot do</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
           {(Object.keys(ROLE_LABELS) as AccessRoleRow["role"][]).map((r) => (
             <div key={r}>
@@ -185,7 +185,7 @@ export function AccessMaintenanceInteractive({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">Find a Person</h2>
+        <h2 className="text-lg font-bold text-brand mb-3">Find a Person</h2>
         <p className="text-xs text-[#666] mb-3">
           Only people who&rsquo;ve signed in at least once appear here -- there&rsquo;s no account yet to grant a
           role to otherwise.
@@ -195,7 +195,7 @@ export function AccessMaintenanceInteractive({
           placeholder="Search by name or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm mb-3 focus:border-[#1e3a5f] focus:outline-none"
+          className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm mb-3 focus:border-brand focus:outline-none"
         />
         <div className="divide-y divide-[#f0f0f0] max-h-96 overflow-y-auto">
           {filteredProfiles.map((p) => (
@@ -209,7 +209,7 @@ export function AccessMaintenanceInteractive({
                 setMergeSearch("");
               }}
               className={`w-full text-left py-2 px-2 text-sm rounded-md ${
-                selectedProfileId === p.id ? "bg-[#1e3a5f] text-white" : "hover:bg-[#f5f5f5] text-[#333]"
+                selectedProfileId === p.id ? "bg-brand text-white" : "hover:bg-[#f5f5f5] text-[#333]"
               }`}
             >
               <p className="font-medium">{p.full_name}</p>
@@ -226,7 +226,7 @@ export function AccessMaintenanceInteractive({
         ) : (
           <>
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="text-lg font-bold text-[#1e3a5f]">{selectedProfile.full_name}</h2>
+              <h2 className="text-lg font-bold text-brand">{selectedProfile.full_name}</h2>
               <div className="flex shrink-0 gap-3">
                 <button
                   type="button"
@@ -237,7 +237,7 @@ export function AccessMaintenanceInteractive({
                   }}
                   disabled={pending}
                   title="Merge a duplicate account's history into this one"
-                  className="text-xs font-semibold text-[#1e3a5f] hover:underline disabled:opacity-60"
+                  className="text-xs font-semibold text-brand hover:underline disabled:opacity-60"
                 >
                   Merge Duplicate Into This
                 </button>
@@ -265,7 +265,7 @@ export function AccessMaintenanceInteractive({
                   placeholder="Search by name or email..."
                   value={mergeSearch}
                   onChange={(e) => setMergeSearch(e.target.value)}
-                  className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm mb-2 focus:border-[#1e3a5f] focus:outline-none"
+                  className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm mb-2 focus:border-brand focus:outline-none"
                 />
                 <div className="divide-y divide-[#f0f0f0] max-h-48 overflow-y-auto">
                   {mergeCandidates.map((p) => (
@@ -278,7 +278,7 @@ export function AccessMaintenanceInteractive({
                         type="button"
                         onClick={() => handleMerge(p.id, p.full_name)}
                         disabled={pending}
-                        className="shrink-0 rounded-md bg-[#1e3a5f] px-3 py-1 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+                        className="shrink-0 rounded-md bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
                       >
                         Merge
                       </button>
@@ -310,11 +310,11 @@ export function AccessMaintenanceInteractive({
             </div>
 
             <div className="border-t border-[#f0f0f0] pt-3 space-y-2">
-              <h3 className="text-sm font-bold text-[#1e3a5f]">Grant a Role</h3>
+              <h3 className="text-sm font-bold text-brand">Grant a Role</h3>
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value as AccessRoleRow["role"])}
-                className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
               >
                 {(Object.keys(ROLE_LABELS) as AccessRoleRow["role"][]).map((r) => (
                   <option key={r} value={r}>
@@ -326,7 +326,7 @@ export function AccessMaintenanceInteractive({
                 <select
                   value={newGroupId}
                   onChange={(e) => setNewGroupId(e.target.value)}
-                  className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
                 >
                   <option value="">{newRole === "servant" ? "Unassigned" : "Select a group..."}</option>
                   {groups.map((g) => (
@@ -340,7 +340,7 @@ export function AccessMaintenanceInteractive({
                 type="button"
                 onClick={handleGrant}
                 disabled={pending}
-                className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
               >
                 Grant
               </button>

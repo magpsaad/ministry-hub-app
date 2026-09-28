@@ -32,6 +32,7 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ grou
       servants={assignments.servants}
       unassignedCount={assignments.unassignedCount}
       memberLabel={settings.member_label}
+      groupLabel={settings.group_label}
       proximityEnabled={settings.proximity_enabled}
       currentUserId={user?.id ?? ""}
       combined={combined}

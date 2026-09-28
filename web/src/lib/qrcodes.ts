@@ -3,11 +3,6 @@ import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { getAppSettings } from "@/lib/app-settings";
 
-/** The shared "Servants" QR has no group row (group_id is null) to hang a
- * color on, so it gets a fixed color -- matches the old app's actual
- * QR image ("Photos/QR Codes/25-26 Servants.png"), sampled directly. */
-const SERVANTS_COLOR = "#9B2EBF";
-
 /** Embeds the app logo in the center of a QR SVG (matches the old app's
  * look). Error-correction level "H" (~30% redundancy) is required so
  * covering the center ~20% of the code with a logo doesn't break
@@ -36,7 +31,6 @@ export type QrCodeForPrinting = {
   checkInUrl: string;
   svg: string;
   color: string;
-  needsReprint: boolean;
 };
 
 async function siteOrigin(): Promise<string> {
@@ -49,10 +43,9 @@ async function siteOrigin(): Promise<string> {
 /**
  * REQUIREMENTS.md §6.15 -- generates real, scannable QR codes on the fly
  * (the `qrcode` package, no external service/cost) pointing at each
- * group's (or the shared Servants QR's) check-in URL. Reprint tracking:
- * `needsReprint` is true whenever the row has never been marked printed,
- * or has changed (its label, from a future Group Transition rename) since
- * it last was.
+ * group's (or the shared Servants QR's) check-in URL. Printable by anyone
+ * who can see them, at any time (the old "Mark as Printed" tracking was
+ * removed -- MULTI_TENANT_PLAN.md P3).
  *
  * Ordered Servants first, then Year 0 -> Year 5+ (owner-requested) --
  * every code, for every app user (migration 0040). Reads through
@@ -77,8 +70,6 @@ export async function getQrCodesForPrinting(): Promise<QrCodeForPrinting[]> {
     id: string;
     label: string;
     check_in_token: string;
-    printed_at: string | null;
-    updated_at: string;
     group_id: string | null;
     ladder_position: number | null;
     qr_color: string | null;
@@ -99,10 +90,11 @@ export async function getQrCodesForPrinting(): Promise<QrCodeForPrinting[]> {
         errorCorrectionLevel: "H",
       });
       const svg = settings.logo_url ? embedLogo(rawSvg, settings.logo_url) : rawSvg;
-      const needsReprint = !r.printed_at || new Date(r.updated_at) > new Date(r.printed_at);
-      const color = r.qr_color ?? SERVANTS_COLOR;
+      // The group-less Servants QR has no group row to hang a colour on --
+      // its colour is an App Setting (was hard-coded).
+      const color = r.qr_color ?? settings.servants_qr_color;
 
-      return { id: r.id, label: r.label, checkInUrl, svg, color, needsReprint };
+      return { id: r.id, label: r.label, checkInUrl, svg, color };
     }),
   );
 }

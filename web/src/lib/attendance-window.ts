@@ -41,7 +41,7 @@ const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "
  * screen's Service Day dropdown so the wording always matches whatever's
  * actually configured, not a hardcoded "Friday." */
 export function weekdayName(serviceWeekday: number): string {
-  return WEEKDAY_NAMES[serviceWeekday - 1] ?? "Friday";
+  return WEEKDAY_NAMES[serviceWeekday - 1] ?? "service day";
 }
 
 /**
