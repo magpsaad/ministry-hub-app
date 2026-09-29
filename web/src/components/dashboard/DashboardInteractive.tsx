@@ -544,13 +544,17 @@ export function DashboardInteractive({
                             other Actions Needed cards exactly, while View
                             original entry/Dismiss stay together in their
                             own row on the left. */}
-                        <button
-                          type="button"
-                          onClick={() => setOutreachForFollowUp(f)}
-                          className="shrink-0 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark"
-                        >
-                          Outreach
-                        </button>
+                        {/* Hidden for Read-Only access, like every other
+                            outreach button (QA R-1, retest). */}
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => setOutreachForFollowUp(f)}
+                            className="shrink-0 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark"
+                          >
+                            Outreach
+                          </button>
+                        )}
                       </div>
                     );
                   })}
