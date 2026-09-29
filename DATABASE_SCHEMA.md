@@ -1,6 +1,130 @@
 # Youth Ministry Management App — Database Schema
 
-**Companion to REQUIREMENTS.md.** This is the implementable Postgres/Supabase schema: tables, types, constraints, indexes, and representative Row-Level Security policies. This document is a design artifact for review — **no implementation or migration steps have been run**; nothing here has been executed against a real database yet.
+**Companion to REQUIREMENTS.md.** This is the implementable Postgres/Supabase schema: tables, types, constraints, indexes, and representative Row-Level Security policies. It began as the original design artifact; the live schema is what `supabase/migrations/` builds (0001 → 0067), applied to both the `qa` and `prod` schemas.
+
+> **Multi-ministry (v6, 29 Sep 2026).** Since Project B (migrations 0064–0067) the schema holds several ministries of one church. **Section M below is authoritative for that layer** and takes precedence over the single-ministry DDL in §1–§17, which is kept as the design record of each table's own columns. Wherever a table below shows a single-column key or a link to `profiles(id)`, read it together with §M: every ministry-owned table now has `ministry_id`, keys and uniqueness are per ministry, and links are composite. Design reasoning: `MULTI_TENANT_PLAN.md`.
+
+---
+
+## M. Multi-ministry layer (migrations 0064–0067)
+
+### M.1 Church-wide tables (0064)
+
+None of these is reachable through the API directly (RLS on, no policies, privileges revoked from `anon`/`authenticated`); they are read only through the narrow functions in M.5.
+
+```sql
+create table ministries (
+  id            text primary key check (id ~ '^[A-Z]{3}$'),   -- the permanent 3-letter code, e.g. 'SAY'
+  name          text not null check (length(trim(name)) > 0),
+  is_active     boolean not null default true,
+  display_order integer not null default 0,
+  created_at    timestamptz not null default now()
+);
+-- trigger trg_ministries_id_permanent refuses any change to id
+
+create table ministry_addresses (          -- this schema's environment only (qa or prod)
+  host        text primary key check (host = lower(host) and host !~ '[/\s]'),
+  ministry_id text references ministries(id),
+  kind        text not null check (kind in ('ministry', 'console')),
+  created_at  timestamptz not null default now(),
+  check ((kind = 'console') = (ministry_id is null))
+);
+
+create table church_admins (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create table tenancy_settings (            -- one row
+  id                  boolean primary key default true check (id),
+  default_ministry_id text references ministries(id)  -- transition fallback; NULL since 0066 (fail closed)
+);
+```
+
+`app_releases` (Release History) stays church-wide: readable by everyone, writable by the Church Admin only.
+
+### M.2 `ministry_id` on 17 tables (0064)
+
+`app_settings`, `groups`, `members`, `universities`, `attendance_records`, `outreach_entries`, `service_calendar_events`, `holiday_rules`, `verses`, `qr_codes`, `pending_servants`, `pending_servant_attendance`, `audit_log`, `audit_config`, `actions_needed_config`, `user_roles`, `profiles` each have:
+
+```sql
+ministry_id text not null default current_ministry_id() references ministries(id)
+```
+
+Inserts therefore need no code change: the column defaults to the request's ministry, and the composite keys below reject any mismatch. Database functions always set it explicitly.
+
+### M.3 Keys, uniqueness and composite foreign keys (0064)
+
+| Table | Key / uniqueness | Composite FKs (all include `ministry_id`) |
+|---|---|---|
+| `profiles` | PK `(ministry_id, id)` — **one profile per person per ministry**; `id` is still the login id | – |
+| `app_settings` | PK `ministry_id` (singleton `id` dropped in 0066); adds `sub_coordinator_auto_servant boolean not null default true` | – |
+| `groups` | `unique (ministry_id, id)`, `unique (ministry_id, cohort_year)` | – |
+| `members` | `unique (ministry_id, id)` | `(ministry_id, group_id) → groups`, `(ministry_id, university_id) → universities`, `(ministry_id, assigned_servant_id) → profiles` |
+| `universities` | `unique (ministry_id, id)`, `unique (ministry_id, name)` | – |
+| `attendance_records` | `unique (ministry_id, servant_id, service_date)` | `(ministry_id, member_id) → members`, `(ministry_id, servant_id) → profiles` |
+| `outreach_entries` | – | `(ministry_id, member_id) → members`, `(ministry_id, servant_id) → profiles` |
+| `service_calendar_events`, `holiday_rules` | – | `(ministry_id, created_by) → profiles` |
+| `qr_codes` | `check_in_token` stays unique church-wide (the anonymous check-in page finds the ministry from it); one Servants QR per ministry (`unique (ministry_id) where group_id is null`); `printed_at` dropped in 0066 | `(ministry_id, group_id) → groups` |
+| `pending_servants` | `unique (ministry_id, id)`; one open self-registration per person per ministry | `(ministry_id, approved_by / resulting_profile_id / submitted_by_profile_id) → profiles` |
+| `pending_servant_attendance` | – | `(ministry_id, pending_servant_id) → pending_servants` (cascade) |
+| `audit_log` | – | `(ministry_id, group_id) → groups`, `(ministry_id, user_id) → profiles` |
+| `audit_config` | PK `(ministry_id, action_type)` | – |
+| `actions_needed_config` | PK `(ministry_id, proximity)` | – |
+| `user_roles` | `unique (ministry_id, user_id, role, group_id)`; one Unassigned grant per person per ministry | `(ministry_id, group_id) → groups`, `(ministry_id, user_id) → profiles` (cascade) |
+
+Every `legacy_source_ref` unique index is now `(ministry_id, legacy_source_ref)`. Ministry-first indexes were added for the busiest filters (attendance by date, audit log by time, members by group, outreach by member, roles by user, groups by position).
+
+### M.4 How a request's ministry reaches the database
+
+- The app resolves its web address to a ministry and sends the code in the `x-ministry-id` request header on every call.
+- `current_ministry_id()` returns that header when it is exactly 3 letters A–Z, otherwise `tenancy_settings.default_ministry_id` (NULL since 0066, so a request that names no ministry sees nothing). It never raises.
+- The header only narrows: every rule still requires a real role in that ministry.
+- Public check-in functions ignore the header and use the ministry of the scanned QR code.
+
+### M.5 Functions
+
+- **Explicit-ministry helpers:** `is_church_admin(uid)`, `ministry_exists(m)`, `ministry_is_active(m)`, `is_app_user_in(m, uid)`, `is_admin_in(m, uid)`, `is_admin_or_gc_in(m, uid)`, `is_coordinator_in(m, uid)`, `group_ministry_id(gid)`. The Church Admin passes the role checks in every existing ministry; everyone else also needs the ministry to be active.
+- **Existing helpers, same names and signatures,** now mean "in the current ministry": `is_app_user`, `is_admin`, `is_admin_or_general_coordinator`, `is_coordinator`, `can_manage_servants`, `has_group_access` (the group must belong to the current ministry), `has_readonly_or_full_group_access`.
+- **`accessible_group_ids(p_include_read_only)`** (0067): the current user's accessible group ids in the current ministry, as one array, so security rules evaluate it once per query instead of once per row.
+- **Address lookup:** `resolve_ministry_by_address(host)` returns `(ministry_id, name, is_active, kind)` for that one address, or nothing. It is callable without sign-in and has no "list all" form.
+- **Check-in** (no sign-in): `checkin_resolve(token)` finds the QR code's ministry and refuses an inactive one. Every `checkin_*` function starts there and scopes every read and write to it, including service day and "today" (`is_service_day(m)`, `checkin_today(m)`). `checkin_get_flow` also returns `ministry_id`, so the page shows that ministry's branding and school list.
+- **Admin, Coordinator and person-level functions** (`run_group_transition`, `add_group_tier`, `delete_group_tier`, `rename_group`, `archive_audit_log`, `grant_servant_role`, `reassign_role_group`, `revoke_role_grant`, `remove_servant`, `export_group_member_names`, `get_audit_log_users`, `get_qr_codes_with_groups`, `add_member_photo`, `merge_servant_accounts`, `remove_profile_completely`, `link_approved_pending_servant`, `absorb_own_pending_registration`) act only within the current ministry.
+- **New:** `add_person_to_ministry_by_email(email)`, for an Admin of the current ministry.
+- **Triggers:** `ensure_servant_for_sub_coordinator` respects the ministry's `sub_coordinator_auto_servant` setting; `update_join_date_on_attendance` updates that ministry's profile.
+- **Console (Church Admin only):** `list_ministries`, `create_ministry`, `update_ministry`, `apply_ministry_settings`, `set_ministry_active`, `add_ministry_address`, `remove_ministry_address`.
+- **Storage:** `storage_write_allowed(name, admin_only)`, see M.7.
+- **Every** security-definer function has a pinned `search_path` (its own schema, `public`, `pg_temp`). Only the check-in functions and `resolve_ministry_by_address` are callable without sign-in.
+
+### M.6 Row-Level Security pattern
+
+Every rule on a per-ministry table starts with the ministry condition, then keeps the table's own rule, for example (production, as applied):
+
+```sql
+-- members: read
+using ( ministry_id = (select current_ministry_id())
+        and ( (select is_admin_or_general_coordinator())
+              or group_id = any ((select accessible_group_ids(true))::uuid[]) ) )
+
+-- members: insert/update use accessible_group_ids(false) (read-only grants excluded)
+
+-- profiles: read = app users of this ministry, or yourself; update = yourself or a coordinator of this ministry;
+--           insert = yourself, in this ministry
+using ( ministry_id = (select current_ministry_id())
+        and ( (select is_app_user()) or id = (select auth.uid()) ) )
+
+-- app_settings: readable without sign-in, for the request's ministry only (login and check-in pages need it);
+--               update = Admin of that ministry
+using ( ministry_id = (select current_ministry_id()) )
+```
+
+Helpers are wrapped in `(select …)` so Postgres evaluates them once per query. The `::uuid[]` cast on `accessible_group_ids` is required: without it `= any (select …)` parses as a subquery comparison.
+
+### M.7 Storage
+
+Buckets per environment (`qa-photos`, `qa-calendar`, `qa-branding` and the `prod-*` equivalents) hold one folder per ministry: `SAY/members/…`, `SAY/profiles/…`, `SAY/calendar/…`, `SAY/branding/…`. The stored paths in `members.photo_path`, `profiles.photo_path`, `service_calendar_events.attachment_url` and `app_settings.logo_url` include the folder. A `photo_path` that is a web link (a Google profile picture saved at first sign-in) is left as is and shown directly.
+
+Write policies (0065, a separate QA file and production file, so neither ever touches the other environment's rules) call `storage_write_allowed(name, admin_only)`. When the path's first folder is a ministry code, it allows the write only if the caller is an approved user of **that** ministry (for branding, its Admin) or the Church Admin; the folder decides, not the request header. Paths with no folder fall back to the pre-v6 rule for the current ministry; that branch existed for the transition, and the app now writes only folder paths. Any other shape is refused. Reading is unchanged: the buckets are public.
 
 Target: Supabase (Postgres 15+). Conventions used throughout: `uuid` primary keys via `gen_random_uuid()` (pgcrypto/pgcrypto-equivalent, available by default on Supabase), `timestamptz` for all timestamps, `text` in place of `varchar` (idiomatic Postgres), soft-delete via status/archived flags rather than hard deletes except where explicitly noted.
 
@@ -25,7 +149,7 @@ create type attendee_kind as enum ('member', 'servant');
 
 ## 1. `app_settings`
 
-Single-row configuration table. (A key/value table is an acceptable alternative if more settings get added later; a single row is simplest for a single-tenant deployment.)
+**v6: one row per ministry**, primary key `ministry_id` (§M.3). The singleton `id` column and its check shown below were dropped in 0066. Later migrations also added `theme_color_light`, `theme_color_dark`, `servants_qr_color`, `my_assigned_header_color`(`_light`), `ladder_position_label`, `actions_needed_lookback_months` (default 12) and, in 0064, `sub_coordinator_auto_servant` (default true). A new ministry's row is created by `create_ministry` in the console. The original single-row design follows.
 
 ```sql
 create table app_settings (
@@ -154,7 +278,7 @@ create table universities (
 
 ## 5. `profiles` (extends Supabase `auth.users` — Admins, Coordinators, Servants; never Members)
 
-Supabase Auth owns `auth.users` (id, email, auth metadata) — a single table shared by the whole Supabase project, not per-schema. `profiles` holds the app-specific fields, one row per authenticated user **per schema**. Rows are provisioned lazily by the application (not a database trigger) right after sign-in, using `NEXT_PUBLIC_APP_ENV` to know which schema's `profiles` table to insert into — a trigger on the shared `auth.users` table can't reliably distinguish which environment a given signup came from (this was tried and reverted; see `supabase/migrations/0002_core_tables.sql`).
+Supabase Auth owns `auth.users` (id, email, auth metadata) — a single table shared by the whole Supabase project, not per-schema. `profiles` holds the app-specific fields, one row per authenticated user **per schema** and, since v6, **per ministry**: primary key `(ministry_id, id)` (§M.3), created for the address's ministry the first time the person signs in there. Every link to a profile is therefore composite, e.g. `user_roles (ministry_id, user_id) → profiles (ministry_id, id)`. Rows are provisioned lazily by the application (not a database trigger) right after sign-in, using `NEXT_PUBLIC_APP_ENV` to know which schema's `profiles` table to insert into — a trigger on the shared `auth.users` table can't reliably distinguish which environment a given signup came from (this was tried and reverted; see `supabase/migrations/0002_core_tables.sql`).
 
 ```sql
 create table profiles (
@@ -196,7 +320,9 @@ create index idx_user_roles_user on user_roles (user_id);
 create index idx_user_roles_group on user_roles (group_id);
 ```
 
-**Helper functions** (used throughout RLS policies, §7):
+**v6:** grants are per ministry (`ministry_id`, uniqueness `(ministry_id, user_id, role, group_id)`), and `read_only` is a fifth role value. The helpers below keep their names but now check roles **in the current ministry** and let the Church Admin through (§M.5).
+
+**Helper functions** (used throughout RLS policies, §7; original design):
 
 ```sql
 create or replace function is_admin_or_general_coordinator(uid uuid default auth.uid())
@@ -232,7 +358,7 @@ $$;
 
 ## 7. Row-Level Security (representative policies)
 
-Enable RLS on every table holding ministry data; deny by default; grant explicitly.
+Enable RLS on every table holding ministry data; deny by default; grant explicitly. **v6:** every policy on a per-ministry table also requires `ministry_id = (select current_ministry_id())`, and group-scoped rules use `accessible_group_ids()` once per query; see §M.6 for the policies as applied. The examples below are the original single-ministry design.
 
 ```sql
 alter table members enable row level security;
@@ -463,14 +589,14 @@ create table qr_codes (
   image_path     text not null,                -- Supabase Storage object path
   check_in_token text not null unique,          -- opaque token forming the public check-in URL
   flow_type      qr_flow_type not null default 'check_in_and_intake',
-  printed_at     timestamptz,                   -- null/stale relative to group.updated_at = needs reprint
+  -- printed_at  timestamptz  -- REMOVED: "Mark printed" dropped in Project A, column dropped in 0066
   updated_at     timestamptz not null default now()
 );
 ```
 
 `flow_type` distinguishes the position-0 (pre-entry) group's QR — which must only ever open the intake/registration form (`intake_only`, no attendance option, since that group isn't tracked for attendance) — from every other group's QR, which supports both the existing-member check-in flow and the new-member intake flow (`check_in_and_intake`). A newly-created group defaults to `check_in_and_intake`; a group at `ladder_position = 0` should be created with `intake_only`.
 
-A QR code "needs reprinting" whenever `printed_at is null or printed_at < groups.updated_at` for its `group_id` (or, for the Servants code, whenever its own label changes). The Group Transition process (§8 below) should touch `groups.updated_at` whenever a name regenerates, making this comparison trivial.
+~~A QR code "needs reprinting" whenever `printed_at is null or printed_at < groups.updated_at`…~~ **Removed (v6):** reprint tracking and the "Needs Reprint" badge are gone. The Group Transition's reprint prompt lists the groups whose labels changed. Since v6 each ministry has exactly one Servants QR (`unique (ministry_id) where group_id is null`), and `check_in_token` stays unique church-wide (§M.3).
 
 *(Add `updated_at timestamptz not null default now()` to `groups`, maintained by a standard `before update` trigger — omitted above for brevity, required in the actual migration.)*
 
@@ -574,11 +700,20 @@ universities (1) ───< members (many)
 
 actions_needed_config, audit_config, audit_log, verses, app_settings — standalone
   (audit_log references profiles/groups but nothing references it)
+
+-- v6 (§M): every table above carries ministry_id, and every link shown is
+-- composite on (ministry_id, …), so a row can only point within its own ministry.
+ministries (1) ─────< every per-ministry table (ministry_id)
+ministries (1) ─────< ministry_addresses (kind 'ministry'; console rows have no ministry)
+auth.users (1) ─────< profiles (one per ministry) ; church_admins (church-wide)
+app_releases, tenancy_settings — church-wide, standalone
 ```
 
 ---
 
 ## 17. `legacy_source_ref` — one-way migration tracking
+
+**v6:** the Sheets tool is retired (REQUIREMENTS.md §10.3). `legacy_source_ref` stays, now unique per ministry, for future per-ministry import tools. The original design follows.
 
 REQUIREMENTS.md §10.1 confirms the current Google Sheets app remains the **sole source of truth** throughout the testing period — the sync is one-way (Sheets → this database). Each refresh makes the *operational* tables an exact mirror of current Sheets content; *configuration* tables are seeded once and then excluded from the ongoing sweep (revised in v5 to broaden this exclusion beyond just role assignments). No separate tracking table is needed — just a `legacy_source_ref` column on every operational table.
 
