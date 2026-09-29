@@ -104,7 +104,7 @@ export default async function LandingPage() {
             href="/version-control"
             className="mt-2 block rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white text-center hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
-            Version Control / Release History
+            Release History
           </Link>
         </section>
 
