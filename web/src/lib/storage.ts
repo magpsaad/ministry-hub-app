@@ -1,5 +1,6 @@
 const PHOTOS_BUCKET = `${process.env.NEXT_PUBLIC_APP_ENV}-photos`;
 const CALENDAR_BUCKET = `${process.env.NEXT_PUBLIC_APP_ENV}-calendar`;
+const BRANDING_BUCKET = `${process.env.NEXT_PUBLIC_APP_ENV}-branding`;
 
 /** MULTI_TENANT_PLAN.md §7 -- every ministry has its own folder in each
  * bucket ("SAY/members/…", "HSM/profiles/…"). The storage write rules look
@@ -49,4 +50,15 @@ export function calendarAttachmentUrl(path: string | null): string | null {
 
 export function calendarBucket(): string {
   return CALENDAR_BUCKET;
+}
+
+/** The ministry logo lives in the branding bucket; app_settings.logo_url
+ * stores its full public web address (it can also be any other image
+ * address an Admin pastes in). */
+export function brandingBucket(): string {
+  return BRANDING_BUCKET;
+}
+
+export function brandingPublicUrl(path: string): string {
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BRANDING_BUCKET}/${path}`;
 }

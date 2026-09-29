@@ -7,6 +7,7 @@ import {
   updateActionsNeededLookbackAction,
   updateAttendanceWindowSettingsAction,
   updateAppSettingsAction,
+  uploadLogoAction,
 } from "@/app/admin/actions-needed-config/actions";
 import type { AttendanceWindowSettings } from "@/lib/app-settings";
 import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive";
@@ -41,6 +42,28 @@ export function ActionsNeededConfigInteractive({
   const [appSettings, setAppSettings] = useState<AppSettingsFormInput>(initialAppSettings);
   const [appSettingsSaved, setAppSettingsSaved] = useState(false);
   const [appSettingsError, setAppSettingsError] = useState<string | null>(null);
+
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoMessage, setLogoMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [logoPending, startLogoTransition] = useTransition();
+
+  function handleUploadLogo() {
+    if (!logoFile) return;
+    setLogoMessage(null);
+    const formData = new FormData();
+    formData.append("logo", logoFile);
+    startLogoTransition(async () => {
+      const res = await uploadLogoAction(formData);
+      if (res.error || !res.logoUrl) {
+        setLogoMessage({ ok: false, text: res.error ?? "The logo could not be uploaded." });
+        return;
+      }
+      // Keep the form in step, so a later Save on this card keeps the new logo.
+      updateAppField("logo_url", res.logoUrl);
+      setLogoFile(null);
+      setLogoMessage({ ok: true, text: "Uploaded. The new logo now shows across the app." });
+    });
+  }
 
   const [lookbackMonths, setLookbackMonths] = useState(initialLookbackMonths);
   const [lookbackSaved, setLookbackSaved] = useState(false);
@@ -268,14 +291,57 @@ export function ActionsNeededConfigInteractive({
             </span>
           </label>
         ))}
-        <label className="text-xs text-[#666] sm:col-span-2">
-          Logo URL (blank = no logo)
-          <input
-            value={appSettings.logo_url ?? ""}
-            onChange={(e) => updateAppField("logo_url", e.target.value === "" ? null : e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
-          />
-        </label>
+        <div className="sm:col-span-2 rounded-md border border-[#eee] p-3 space-y-2">
+          <p className="text-xs font-semibold text-[#333]">Logo</p>
+          <div className="flex flex-wrap items-center gap-3">
+            {appSettings.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- small preview of a remote branding image
+              <img
+                src={appSettings.logo_url}
+                alt="Current logo"
+                className="h-14 w-14 rounded-full bg-white object-contain p-1 shadow-[0_2px_6px_rgba(0,0,0,0.15)]"
+              />
+            ) : (
+              <span className="text-xs text-[#999]">No logo yet</span>
+            )}
+            <label htmlFor="logo-file" className="text-xs text-[#666]">
+              <span className="sr-only">Choose a logo image</span>
+              <input
+                id="logo-file"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => {
+                  setLogoFile(e.target.files?.[0] ?? null);
+                  setLogoMessage(null);
+                }}
+                className="block text-xs"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleUploadLogo}
+              disabled={!logoFile || logoPending}
+              className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+            >
+              {logoPending ? "Uploading…" : "Upload logo"}
+            </button>
+          </div>
+          <p className="text-[11px] text-[#999]">
+            PNG, JPG or WebP, up to 2 MB. A square image about 512 × 512 pixels looks best. Uploading replaces the
+            logo straight away.
+          </p>
+          {logoMessage && (
+            <p className={`text-xs ${logoMessage.ok ? "text-[#155724]" : "text-[#dc3545]"}`}>{logoMessage.text}</p>
+          )}
+          <label className="block text-xs text-[#666]">
+            Or paste an image address (blank = no logo, then Save)
+            <input
+              value={appSettings.logo_url ?? ""}
+              onChange={(e) => updateAppField("logo_url", e.target.value === "" ? null : e.target.value)}
+              className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+            />
+          </label>
+        </div>
       </div>
       <p className="text-xs text-[#666] mb-3">
         Service Day drives self-check-in gating and which dates count toward average attendance %. The Cutoff Time

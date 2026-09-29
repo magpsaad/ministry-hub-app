@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveMinistry } from "@/lib/ministry-context";
+import { brandingBucket, brandingPublicUrl, ministryFilePath } from "@/lib/storage";
 import { getAttendanceWindowSettings, type AttendanceWindowSettings, type AppSettings } from "@/lib/app-settings";
 
 export type ActionsNeededConfigRow = {
@@ -173,6 +174,55 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   // revalidate broadly rather than just this one admin route.
   revalidatePath("/", "layout");
   return { error: null };
+}
+
+const LOGO_TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+/** Upload a new logo for THIS ministry and make it the logo straight away
+ * (only logo_url is written, so unsaved edits elsewhere on the form are
+ * untouched). The file goes into the ministry's own branding folder
+ * ("TST/branding/logo-….png", MULTI_TENANT_PLAN.md §7); the storage rules
+ * let only this ministry's Admins (or the Church Admin) write there. Each
+ * upload gets a new file name so browsers can't keep showing a cached old
+ * logo. The previous logo file is left in place (the branding bucket keeps
+ * no delete rule), which also means a mistaken upload can be undone by
+ * pasting the old address back into Logo URL. */
+export async function uploadLogoAction(formData: FormData) {
+  const file = formData.get("logo") as File | null;
+  if (!file || file.size === 0) return { error: "Choose an image first.", logoUrl: null };
+  const ext = LOGO_TYPES[file.type];
+  if (!ext) return { error: "Use a PNG, JPG or WebP image.", logoUrl: null };
+  if (file.size > LOGO_MAX_BYTES) {
+    return { error: "That image is over 2 MB. A square image about 512 × 512 pixels is plenty.", logoUrl: null };
+  }
+
+  const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
+  const path = ministryFilePath(ministryId, "branding", `logo-${Date.now()}.${ext}`);
+  const { error: uploadError } = await supabase.storage
+    .from(brandingBucket())
+    .upload(path, file, { contentType: file.type });
+  if (uploadError) {
+    return {
+      error: /row-level security|unauthorized|403/i.test(uploadError.message)
+        ? "Only System Admins can change the logo."
+        : uploadError.message,
+      logoUrl: null,
+    };
+  }
+
+  const logoUrl = brandingPublicUrl(path);
+  const { data, error } = await supabase
+    .from("app_settings")
+    .update({ logo_url: logoUrl })
+    .eq("ministry_id", ministryId)
+    .select("ministry_id");
+  if (error) return { error: error.message, logoUrl: null };
+  if (!data || data.length === 0) return { error: "Only System Admins can change the logo.", logoUrl: null };
+
+  // The logo shows in every page header, the sign-in page and QR codes.
+  revalidatePath("/", "layout");
+  return { error: null, logoUrl };
 }
 
 /** REQUIREMENTS.md §7.2/§6.13 -- the two independent, admin-configurable
