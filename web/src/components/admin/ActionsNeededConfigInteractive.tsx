@@ -7,8 +7,8 @@ import {
   updateActionsNeededLookbackAction,
   updateAttendanceWindowSettingsAction,
   updateAppSettingsAction,
-  uploadLogoAction,
 } from "@/app/admin/actions-needed-config/actions";
+import { UploadLogoModal } from "@/components/admin/UploadLogoModal";
 import type { AttendanceWindowSettings } from "@/lib/app-settings";
 import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive";
 
@@ -43,26 +43,14 @@ export function ActionsNeededConfigInteractive({
   const [appSettingsSaved, setAppSettingsSaved] = useState(false);
   const [appSettingsError, setAppSettingsError] = useState<string | null>(null);
 
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoMessage, setLogoMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const [logoPending, startLogoTransition] = useTransition();
+  const [showLogoUpload, setShowLogoUpload] = useState(false);
+  const [logoMessage, setLogoMessage] = useState<string | null>(null);
 
-  function handleUploadLogo() {
-    if (!logoFile) return;
-    setLogoMessage(null);
-    const formData = new FormData();
-    formData.append("logo", logoFile);
-    startLogoTransition(async () => {
-      const res = await uploadLogoAction(formData);
-      if (res.error || !res.logoUrl) {
-        setLogoMessage({ ok: false, text: res.error ?? "The logo could not be uploaded." });
-        return;
-      }
-      // Keep the form in step, so a later Save on this card keeps the new logo.
-      updateAppField("logo_url", res.logoUrl);
-      setLogoFile(null);
-      setLogoMessage({ ok: true, text: "Uploaded. The new logo now shows across the app." });
-    });
+  function handleLogoUploaded(logoUrl: string) {
+    // Keep the form in step, so a later Save on this card keeps the new logo.
+    updateAppField("logo_url", logoUrl);
+    setShowLogoUpload(false);
+    setLogoMessage("Uploaded. The new logo now shows across the app.");
   }
 
   const [lookbackMonths, setLookbackMonths] = useState(initialLookbackMonths);
@@ -304,34 +292,20 @@ export function ActionsNeededConfigInteractive({
             ) : (
               <span className="text-xs text-[#999]">No logo yet</span>
             )}
-            <label htmlFor="logo-file" className="text-xs text-[#666]">
-              <span className="sr-only">Choose a logo image</span>
-              <input
-                id="logo-file"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => {
-                  setLogoFile(e.target.files?.[0] ?? null);
-                  setLogoMessage(null);
-                }}
-                className="block text-xs"
-              />
-            </label>
             <button
               type="button"
-              onClick={handleUploadLogo}
-              disabled={!logoFile || logoPending}
-              className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+              onClick={() => {
+                setLogoMessage(null);
+                setShowLogoUpload(true);
+              }}
+              className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
             >
-              {logoPending ? "Uploading…" : "Upload logo"}
+              {appSettings.logo_url ? "Upload new logo" : "Upload logo"}
             </button>
           </div>
-          <p className="text-[11px] text-[#999]">
-            PNG, JPG or WebP, up to 2 MB. A square image about 512 × 512 pixels looks best. Uploading replaces the
-            logo straight away.
-          </p>
-          {logoMessage && (
-            <p className={`text-xs ${logoMessage.ok ? "text-[#155724]" : "text-[#dc3545]"}`}>{logoMessage.text}</p>
+          {logoMessage && <p className="text-xs text-[#155724]">{logoMessage}</p>}
+          {showLogoUpload && (
+            <UploadLogoModal onClose={() => setShowLogoUpload(false)} onUploaded={handleLogoUploaded} />
           )}
           <label className="block text-xs text-[#666]">
             Or paste an image address (blank = no logo, then Save)
