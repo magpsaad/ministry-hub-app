@@ -97,10 +97,9 @@ export default async function LandingPage() {
             </Link>
           </div>
           {/* Owner-requested: moved here from System Admin Corner so
-              everyone can view the release history -- adding/editing a
-              release still stays Admin-only, enforced on the page itself
-              (VersionControlInteractive's canManage prop) and by
-              app_releases' own write RLS. */}
+              everyone can view the release history. Read-only here --
+              release notes are added/edited only by the Church Admin, in
+              the console (MULTI_TENANT_PLAN.md P9). */}
           <Link
             href="/version-control"
             className="mt-2 block rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white text-center hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"

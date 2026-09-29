@@ -3,28 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export type AppRelease = {
-  id: string;
-  version: string;
-  description: string | null;
-  released_on: string;
-};
-
-/** Owner-requested: Version Control screen -- newest release first, since
- * that's also the one currently shown as the app-wide "Version X" badge
- * (see getAppSettings()). */
-export async function getReleasesAction(): Promise<AppRelease[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("app_releases")
-    .select("id, version, description, released_on")
-    .order("released_on", { ascending: false })
-    .order("created_at", { ascending: false });
-  return data ?? [];
-}
-
+/** MULTI_TENANT_PLAN.md P9 -- Version Control is a Church Admin function
+ * now: release notes are written once, here in the console, and shown in
+ * every ministry. app_releases' write rule enforces Church Admin only
+ * (is_church_admin()), so this screen is a convenience, not the gate. */
 export async function addReleaseAction(version: string, description: string, releasedOn: string) {
-  if (!version.trim()) return { error: "Version number is required." };
+  if (!version.trim()) return { error: "Version number is required.", id: null };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -34,7 +18,7 @@ export async function addReleaseAction(version: string, description: string, rel
     .single();
   if (error) return { error: error.message, id: null };
 
-  revalidatePath("/version-control");
+  revalidatePath("/console/releases");
   return { error: null, id: data.id as string };
 }
 
@@ -42,12 +26,14 @@ export async function updateReleaseAction(id: string, version: string, descripti
   if (!version.trim()) return { error: "Version number is required." };
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("app_releases")
     .update({ version: version.trim(), description: description.trim() || null, released_on: releasedOn })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
 
-  revalidatePath("/version-control");
+  revalidatePath("/console/releases");
   return { error: null };
 }

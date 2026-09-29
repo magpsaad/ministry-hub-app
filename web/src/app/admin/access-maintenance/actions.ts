@@ -32,6 +32,36 @@ export async function getAllRoleRowsAction(): Promise<AccessRoleRow[]> {
   }));
 }
 
+/** MULTI_TENANT_PLAN.md §3.7 -- "Add existing account by email": someone
+ * who already has a login (e.g. they serve in another ministry) but has
+ * never signed in on this ministry's address gets a profile HERE, with no
+ * role yet, so they can then be granted one below. The answer is only ever
+ * "added" or "no account with that email" -- it never reveals whether, or
+ * where, else they serve. Admins only (the function refuses anyone else). */
+export async function addPersonByEmailAction(email: string) {
+  const trimmed = email.trim();
+  if (!trimmed) return { error: "Enter an email address.", profile: null };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in", profile: null };
+
+  const { data: personId, error } = await supabase.rpc("add_person_to_ministry_by_email", { p_email: trimmed });
+  if (error) return { error: error.message, profile: null };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("id", personId as string)
+    .maybeSingle();
+
+  await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { details: { action: "add_by_email", userId: personId } });
+  revalidatePath("/admin/access-maintenance");
+  return { error: null, profile: (profile as AccessProfile | null) ?? null };
+}
+
 /** Owner-reported: a person can hold at most one 'servant' grant at a time
  * (ministry policy -- the same rule Servant Assignments' reassign already
  * enforces, migration 0031). Granting "servant" here used to always insert

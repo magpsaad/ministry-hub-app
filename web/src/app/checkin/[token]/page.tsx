@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { getCheckInFlow, listCheckInMembers, listCheckInServants } from "@/lib/checkin";
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
+import { getActiveMinistry } from "@/lib/ministry-context";
 import { weekdayName } from "@/lib/attendance-window";
 import { SERVANT_CHECKIN_COOKIE, MEMBER_CHECKIN_COOKIE, parseRememberedCheckinPerson } from "@/lib/checkin-remember-cookie";
 import { AppLogo } from "@/components/AppLogo";
@@ -18,9 +19,19 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
   // The school list is fetched up front with the flow lookup (it used to
   // wait for it -- an extra round trip on every QR scan). It's small and
   // readable without signing in; the servants' flow simply doesn't use it.
-  const [flow, settings, allUniversities] = await Promise.all([getCheckInFlow(token), getAppSettings(), getUniversities()]);
+  const [flow, settings, allUniversities, ministryId] = await Promise.all([
+    getCheckInFlow(token),
+    getAppSettings(),
+    getUniversities(),
+    getActiveMinistry(),
+  ]);
 
-  if (!flow) {
+  // A QR code only works on its own ministry's address (it's printed with
+  // that address). Opened on another ministry's address, it's treated as
+  // unrecognized -- this page must never show one ministry's code under
+  // another ministry's name, logo or school list (MULTI_TENANT_PLAN.md
+  // §3.2, V8).
+  if (!flow || flow.ministryId !== ministryId) {
     return (
       <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
         <div className="max-w-sm w-full text-center bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6">

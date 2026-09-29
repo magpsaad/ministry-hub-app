@@ -5,6 +5,10 @@ export type Role = "admin" | "general_coordinator" | "sub_coordinator" | "servan
 
 export type AccessSummary = {
   roles: { role: Role; group_id: string | null }[];
+  /** MULTI_TENANT_PLAN.md D2/D3 -- the church-wide owner role. */
+  isChurchAdmin: boolean;
+  /** An Admin of THIS ministry -- by role grant, or as the Church Admin,
+   * who acts as an Admin of whichever ministry's address they're on (§3.5). */
   isAdmin: boolean;
   isGeneralCoordinator: boolean;
   isSubCoordinator: boolean;
@@ -21,22 +25,27 @@ export type AccessSummary = {
  * landing page and every permission check are driven by the union of them,
  * never a single "the" role.
  *
+ * The role grants are this ministry's only -- the security rule returns no
+ * other ministry's rows (MULTI_TENANT_PLAN.md §3.2).
+ *
  * React.cache()-memoized per request (per userId): the page, its layout and
  * helpers used to each query user_roles separately for the same person.
  */
 export const getAccessSummary = cache(async (userId: string): Promise<AccessSummary> => {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role, group_id")
-    .eq("user_id", userId);
+  const [{ data }, { data: churchAdmin }] = await Promise.all([
+    supabase.from("user_roles").select("role, group_id").eq("user_id", userId),
+    supabase.rpc("is_church_admin"),
+  ]);
 
   const roles = (data ?? []) as AccessSummary["roles"];
   const has = (r: Role) => roles.some((row) => row.role === r);
+  const isChurchAdmin = churchAdmin === true;
 
   return {
     roles,
-    isAdmin: has("admin"),
+    isChurchAdmin,
+    isAdmin: has("admin") || isChurchAdmin,
     isGeneralCoordinator: has("general_coordinator"),
     isSubCoordinator: has("sub_coordinator"),
     isServant: has("servant"),

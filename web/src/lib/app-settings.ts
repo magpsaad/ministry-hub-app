@@ -62,14 +62,20 @@ export type AppSettings = {
   /** Rolling average-attendance windows (null = no cap). */
   youth_attendance_window_weeks: number | null;
   servant_attendance_window_weeks: number | null;
+  /** Whether granting someone Sub-Coordinator of a group automatically also
+   * makes them a Servant of it (MULTI_TENANT_PLAN.md §5.5, F12; was always
+   * on). */
+  sub_coordinator_auto_servant: boolean;
 };
 
 const SETTINGS_COLUMNS =
-  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, my_assigned_header_color, my_assigned_header_color_light, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, youth_attendance_window_weeks, servant_attendance_window_weeks";
+  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, my_assigned_header_color, my_assigned_header_color_light, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, youth_attendance_window_weeks, servant_attendance_window_weeks, sub_coordinator_auto_servant";
 
 /**
  * REQUIREMENTS.md §2 -- everything about the app's identity, vocabulary,
- * schedule and timezone is driven by this one row, never hardcoded.
+ * schedule and timezone is driven by this one row, never hardcoded. It is
+ * THIS ministry's row: the security rule only ever returns the row of the
+ * ministry whose address the request came in on (MULTI_TENANT_PLAN.md §3.2).
  *
  * Deliberately has NO built-in fallback values (MULTI_TENANT_PLAN.md §10,
  * A2): a fallback would silently substitute one ministry's weekday,

@@ -15,12 +15,14 @@ import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive"
 const WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export function ActionsNeededConfigInteractive({
+  ministryCode,
   initial,
   initialWindowSettings,
   initialAppSettings,
   initialGroups,
   initialLookbackMonths,
 }: {
+  ministryCode: string;
   initial: ActionsNeededConfigRow[];
   initialWindowSettings: AttendanceWindowSettings;
   initialAppSettings: AppSettingsFormInput;
@@ -122,6 +124,18 @@ export function ActionsNeededConfigInteractive({
 
   return (
     <div className="space-y-4">
+    {/* MULTI_TENANT_PLAN.md D0 -- the ministry's permanent 3-letter code,
+        shown read-only; it's chosen once, when the ministry is created. */}
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] px-5 py-4 flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-sm font-bold text-brand">Ministry Code</h2>
+        <p className="text-xs text-[#666]">Permanent &mdash; it can&rsquo;t be changed.</p>
+      </div>
+      <span className="rounded-md bg-[#f0f4f8] px-3 py-1.5 font-mono text-base font-bold tracking-widest text-brand">
+        {ministryCode}
+      </span>
+    </div>
+
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-brand mb-1">App Labels &amp; Branding</h2>
       <p className="text-sm text-[#666] mb-4">
@@ -287,6 +301,34 @@ export function ActionsNeededConfigInteractive({
       positionLabel={appSettings.ladder_position_label}
       groupLabel={appSettings.group_label}
     />
+
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+      <h2 className="text-lg font-bold text-brand mb-1">Sub-Coordinators</h2>
+      <p className="text-sm text-[#666] mb-3">
+        When on, making someone Sub-Coordinator of a {appSettings.group_label.toLowerCase()} also makes them a Servant
+        of that {appSettings.group_label.toLowerCase()} automatically. Changing this only affects grants made from now
+        on; existing roles are left as they are.
+      </p>
+      <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
+        <input
+          type="checkbox"
+          checked={appSettings.sub_coordinator_auto_servant}
+          onChange={(e) => updateAppField("sub_coordinator_auto_servant", e.target.checked)}
+        />
+        Sub-Coordinators automatically become Servants
+      </label>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-brand mb-1">Current Birthdays Window</h2>

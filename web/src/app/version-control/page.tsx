@@ -1,26 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
-import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getReleasesAction } from "@/app/version-control/actions";
+import { getReleases } from "@/lib/releases";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeLink } from "@/components/HomeLink";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { VersionControlInteractive } from "@/components/VersionControlInteractive";
 
-/** Owner-requested: Servant Corner, viewable by every app user -- adding a
- * release and editing existing ones stays System Admin only, enforced
- * both here (canManage passed down) and by app_releases' own write RLS
- * (is_admin(), migration 0055), so this is defense-in-depth, not the
- * only gate. */
+/** Owner-requested: Servant Corner, viewable by every app user. Read-only
+ * in every ministry -- release notes are church-wide and are added/edited
+ * only by the Church Admin, in the console (MULTI_TENANT_PLAN.md P9). */
 export default async function VersionControlPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const access = await getAccessSummary(user.id);
-  const [settings, releases] = await Promise.all([getAppSettings(), getReleasesAction()]);
+  const [settings, releases] = await Promise.all([getAppSettings(), getReleases()]);
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -40,7 +36,7 @@ export default async function VersionControlPage() {
         <p className="mt-1 text-sm opacity-90">Release History</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <VersionControlInteractive initial={releases} canManage={access.isAdmin} />
+        <VersionControlInteractive initial={releases} canManage={false} />
       </main>
     </div>
   );

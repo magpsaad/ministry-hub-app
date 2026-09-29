@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAppSettings } from "@/lib/app-settings";
+import { getBranding } from "@/lib/branding";
 import { createClient } from "@/lib/supabase/server";
 import { AppLogo } from "@/components/AppLogo";
 import { signInWithGoogle, signInWithPassword, signUpWithPassword, requestPasswordReset } from "./actions";
@@ -16,7 +16,7 @@ export default async function LoginPage({
   } = await supabase.auth.getUser();
   if (user) redirect("/");
 
-  const settings = await getAppSettings();
+  const settings = await getBranding();
   const { error, message, mode } = await searchParams;
   const isSignUp = mode === "signup";
   const isForgot = mode === "forgot";

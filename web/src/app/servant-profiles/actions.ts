@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { photosBucket, isExternalPhotoUrl } from "@/lib/storage";
+import { photosBucket, isExternalPhotoUrl, ministryFilePath } from "@/lib/storage";
+import { getActiveMinistry } from "@/lib/ministry-context";
 import { logAudit } from "@/lib/audit";
 
 export type UpdateServantProfileInput = {
@@ -33,14 +34,14 @@ export async function uploadServantPhotoAction(servantId: string, formData: Form
   const file = formData.get("photo") as File | null;
   if (!file || file.size === 0) return { error: "No file selected" };
 
-  const supabase = await createClient();
+  const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
 
   const ext = file.name.split(".").pop() || "jpg";
-  const path = `servant-${servantId}-${Date.now()}.${ext}`;
+  const path = ministryFilePath(ministryId, "profiles", `servant-${servantId}-${Date.now()}.${ext}`);
 
   const { data: existing } = await supabase.from("profiles").select("photo_path").eq("id", servantId).maybeSingle();
 

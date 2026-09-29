@@ -4,18 +4,22 @@ export type CheckInFlow = {
   isServant: boolean;
   flowType: "check_in_and_intake" | "intake_only";
   label: string;
+  /** The ministry the scanned QR code belongs to (MULTI_TENANT_PLAN.md
+   * §3.2) -- every check-in function works in this ministry only. */
+  ministryId: string;
 };
 
 /** Bootstrap call for the public check-in page (REQUIREMENTS.md §6.11/§6.12)
  * -- resolves the token to a group/servant flow before the client decides
  * which list/mark/submit RPCs to call next. Returns null for an invalid or
- * unknown token (never throws to the caller). */
+ * unknown token, or a ministry that's been switched off (never throws to
+ * the caller). */
 export async function getCheckInFlow(token: string): Promise<CheckInFlow | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("checkin_get_flow", { p_token: token }).single();
   if (error || !data) return null;
-  const row = data as { is_servant: boolean; flow_type: CheckInFlow["flowType"]; label: string };
-  return { isServant: row.is_servant, flowType: row.flow_type, label: row.label };
+  const row = data as { is_servant: boolean; flow_type: CheckInFlow["flowType"]; label: string; ministry_id: string };
+  return { isServant: row.is_servant, flowType: row.flow_type, label: row.label, ministryId: row.ministry_id };
 }
 
 export type CheckInPerson = { id: string; full_name: string; kind: "member" | "servant" | "pending" };

@@ -3,7 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * Lazily provisions this user's `profiles` row in the CURRENT schema
- * (qa or prod, per NEXT_PUBLIC_APP_ENV) if one doesn't exist yet.
+ * (qa or prod, per NEXT_PUBLIC_APP_ENV) if one doesn't exist yet -- for THIS
+ * ministry only: profiles are per ministry (MULTI_TENANT_PLAN.md D7), so a
+ * person's first sign-in on a ministry's address gives them a separate
+ * profile there. The lookup below only sees this ministry's rows, and the
+ * insert's ministry_id defaults to this address's ministry.
  *
  * Replaces the auth.users trigger approach (see 0002_core_tables.sql for
  * why): auth.users is shared across both schemas, so only the app itself --

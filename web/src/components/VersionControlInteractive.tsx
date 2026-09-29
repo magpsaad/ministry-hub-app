@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { AppRelease } from "@/app/version-control/actions";
-import { addReleaseAction, updateReleaseAction } from "@/app/version-control/actions";
+import type { AppRelease } from "@/lib/releases";
+import { addReleaseAction, updateReleaseAction } from "@/app/console/releases/actions";
 import { todayInZone, formatDateKey } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
 
@@ -13,13 +13,13 @@ import { useTimezone } from "@/components/TimezoneProvider";
  * entries. No delete -- not asked for, and a release history is meant to
  * stay a durable record.
  *
- * Owner-requested: viewable by everyone now, but `canManage` (Admin-only,
- * decided by the page) hides both the per-row Edit control and the
- * entire "Add a Release" section for anyone else -- not just disables
- * them, since the ask was specifically that non-Admins can't even see
- * those controls. Backed by app_releases' own write RLS too (is_admin()),
- * so this is a UI convenience on top of a real enforced restriction, not
- * the only thing stopping a non-Admin from writing. */
+ * Owner-requested: viewable by everyone, but `canManage` hides both the
+ * per-row Edit control and the entire "Add a Release" section -- not just
+ * disables them. It's true only in the Church Admin console: release notes
+ * are church-wide, written once there and shown in every ministry
+ * (MULTI_TENANT_PLAN.md P9). Backed by app_releases' own write rule
+ * (is_church_admin()), so this is a UI convenience on top of a real
+ * enforced restriction. */
 export function VersionControlInteractive({ initial, canManage }: { initial: AppRelease[]; canManage: boolean }) {
   const timeZone = useTimezone();
   const [releases, setReleases] = useState(initial);

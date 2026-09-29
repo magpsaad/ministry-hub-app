@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { photosBucket } from "@/lib/storage";
+import { photosBucket, ministryFilePath } from "@/lib/storage";
+import { getActiveMinistry } from "@/lib/ministry-context";
 import { logAudit } from "@/lib/audit";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
@@ -187,12 +188,12 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
   const file = formData.get("photo") as File | null;
   if (!file || file.size === 0) return { error: "No file selected" };
 
-  const supabase = await createClient();
+  const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
   const {
     data: { user },
   } = await supabase.auth.getUser();
   const ext = file.name.split(".").pop() || "jpg";
-  const path = `${memberId}-${Date.now()}.${ext}`;
+  const path = ministryFilePath(ministryId, "members", `${memberId}-${Date.now()}.${ext}`);
 
   const { data: existing } = await supabase.from("members").select("photo_path").eq("id", memberId).maybeSingle();
 

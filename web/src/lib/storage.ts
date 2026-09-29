@@ -1,6 +1,18 @@
 const PHOTOS_BUCKET = `${process.env.NEXT_PUBLIC_APP_ENV}-photos`;
 const CALENDAR_BUCKET = `${process.env.NEXT_PUBLIC_APP_ENV}-calendar`;
 
+/** MULTI_TENANT_PLAN.md §7 -- every ministry has its own folder in each
+ * bucket ("SAY/members/…", "HSM/profiles/…"). The storage write rules look
+ * at that first folder: only that ministry's approved users (or the Church
+ * Admin) may upload, replace or delete there. The stored path includes the
+ * folder, so the public-URL helpers below need no change. Files uploaded
+ * before this (flat paths) keep working until they're moved into SAY/. */
+export type StorageFolder = "members" | "profiles" | "calendar" | "branding";
+
+export function ministryFilePath(ministryId: string, folder: StorageFolder, fileName: string): string {
+  return `${ministryId}/${folder}/${fileName}`;
+}
+
 /** Public URL for a stored photo path -- predictable for public buckets, no
  * API round-trip needed. Works in both server and client code since
  * NEXT_PUBLIC_* vars are inlined at build time either way.

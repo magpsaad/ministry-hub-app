@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCalendarEvents, type CalendarEvent, type CalendarEventType } from "@/lib/calendar";
-import { calendarBucket } from "@/lib/storage";
+import { calendarBucket, ministryFilePath } from "@/lib/storage";
+import { getActiveMinistry } from "@/lib/ministry-context";
 import { getAppSettings, weekdayName } from "@/lib/app-settings";
 import { logAudit } from "@/lib/audit";
 
@@ -96,9 +97,9 @@ export async function uploadEventAttachmentAction(eventId: string, formData: For
   const file = formData.get("attachment") as File | null;
   if (!file || file.size === 0) return { error: "No file selected", path: null };
 
-  const supabase = await createClient();
+  const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
   const ext = file.name.split(".").pop() || "bin";
-  const path = `${eventId}-${Date.now()}.${ext}`;
+  const path = ministryFilePath(ministryId, "calendar", `${eventId}-${Date.now()}.${ext}`);
 
   const { error: uploadError } = await supabase.storage.from(calendarBucket()).upload(path, file, {
     contentType: file.type,

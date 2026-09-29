@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
-import { getAppSettings } from "@/lib/app-settings";
+import { getBranding } from "@/lib/branding";
 import { QaEnvBanner } from "@/components/QaEnvBanner";
 import { TimezoneProvider } from "@/components/TimezoneProvider";
 import "./globals.css";
@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getAppSettings();
+  const settings = await getBranding();
   // Owner-requested: the logo as the "Add to Home Screen" icon -- iOS
   // Safari specifically needs an apple-touch-icon link (separate from the
   // manifest.ts icons Android reads). Owner tried it on qa, approved, then
@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export async function generateViewport(): Promise<Viewport> {
-  const settings = await getAppSettings();
+  const settings = await getBranding();
   return {
     themeColor: settings.theme_color,
     width: "device-width",
@@ -45,10 +45,13 @@ export async function generateViewport(): Promise<Viewport> {
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  // Brand colours and timezone come from App Settings, never hard-coded
-  // (MULTI_TENANT_PLAN.md §10, A1/A9). The colours become CSS variables that
-  // globals.css maps to Tailwind's `brand` / `brand-light` / `brand-dark`.
-  const settings = await getAppSettings();
+  // Brand colours and timezone come from THIS address's ministry's App
+  // Settings (neutral chrome on the console or an unknown address), never
+  // hard-coded (MULTI_TENANT_PLAN.md §3.2, §10 A1/A9). Read per request, so
+  // one ministry's branding can never be served on another's address. The
+  // colours become CSS variables that globals.css maps to Tailwind's
+  // `brand` / `brand-light` / `brand-dark`.
+  const settings = await getBranding();
   const brandVars = {
     "--brand": settings.theme_color,
     "--brand-light": settings.theme_color_light,

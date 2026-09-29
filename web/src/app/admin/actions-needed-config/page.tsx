@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings, getAttendanceWindowSettings } from "@/lib/app-settings";
+import { getActiveMinistry } from "@/lib/ministry-context";
 import { getActionsNeededConfigAction, getGroupsForAdminAction } from "@/app/admin/actions-needed-config/actions";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeLink } from "@/components/HomeLink";
@@ -24,11 +25,12 @@ export default async function ActionsNeededConfigPage() {
     );
   }
 
-  const [settings, config, windowSettings, groups] = await Promise.all([
+  const [settings, config, windowSettings, groups, ministryCode] = await Promise.all([
     getAppSettings(),
     getActionsNeededConfigAction(),
     getAttendanceWindowSettings(),
     getGroupsForAdminAction(),
+    getActiveMinistry(),
   ]);
 
   return (
@@ -50,6 +52,7 @@ export default async function ActionsNeededConfigPage() {
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
         <ActionsNeededConfigInteractive
+          ministryCode={ministryCode}
           initial={config}
           initialWindowSettings={windowSettings}
           initialAppSettings={settings}

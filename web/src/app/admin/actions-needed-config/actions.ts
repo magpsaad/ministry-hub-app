@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveMinistry } from "@/lib/ministry-context";
 import { getAttendanceWindowSettings, type AttendanceWindowSettings, type AppSettings } from "@/lib/app-settings";
 
 export type ActionsNeededConfigRow = {
@@ -159,9 +160,13 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     proximity_enabled: input.proximity_enabled,
     show_proximity_on_attendance: input.show_proximity_on_attendance,
     ladder_position_label: input.ladder_position_label,
+    sub_coordinator_auto_servant: input.sub_coordinator_auto_servant,
   };
-  const supabase = await createClient();
-  const { error } = await supabase.from("app_settings").update(update).eq("id", true);
+  // Saved by this ministry's code (the settings table has one row per
+  // ministry now, MULTI_TENANT_PLAN.md §2.5 #1); the security rule would
+  // refuse any other ministry's row anyway.
+  const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
+  const { error } = await supabase.from("app_settings").update(update).eq("ministry_id", ministryId);
   if (error) return { error: error.message };
 
   // Branding fields are read on nearly every page (header, nav shell), so
@@ -174,14 +179,14 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
  * rolling-attendance-window settings, folded into this existing threshold-
  * editing screen rather than a new one. */
 export async function updateAttendanceWindowSettingsAction(settings: AttendanceWindowSettings) {
-  const supabase = await createClient();
+  const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
   const { error } = await supabase
     .from("app_settings")
     .update({
       youth_attendance_window_weeks: settings.youth_attendance_window_weeks,
       servant_attendance_window_weeks: settings.servant_attendance_window_weeks,
     })
-    .eq("id", true);
+    .eq("ministry_id", ministryId);
   if (error) return { error: error.message };
 
   revalidatePath("/admin/actions-needed-config");
@@ -194,8 +199,11 @@ export async function updateActionsNeededLookbackAction(months: number) {
   if (!Number.isInteger(months) || months < 1 || months > 120) {
     return { error: "The look-back period must be a whole number of months between 1 and 120." };
   }
-  const supabase = await createClient();
-  const { error } = await supabase.from("app_settings").update({ actions_needed_lookback_months: months }).eq("id", true);
+  const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
+  const { error } = await supabase
+    .from("app_settings")
+    .update({ actions_needed_lookback_months: months })
+    .eq("ministry_id", ministryId);
   if (error) return { error: error.message };
 
   revalidatePath("/admin/actions-needed-config");

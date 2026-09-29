@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getAppSettings } from "@/lib/app-settings";
+import { getBranding } from "@/lib/branding";
 
 /** PWA "Add to Home Screen" icon (Android Chrome/Chromium) -- owner-
  * requested: use the ministry's own configured logo (app_settings.logo_url)
@@ -10,9 +10,13 @@ import { getAppSettings } from "@/lib/app-settings";
  * deliberately so the two are visually distinguishable at a glance on a
  * home screen (kept in sync with layout.tsx's generateMetadata, which
  * needs the identical check).
+ *
+ * Built per request from the address it's fetched on, so each ministry's
+ * address gets its own name, colour and home-screen icon
+ * (MULTI_TENANT_PLAN.md §8, R16).
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const settings = await getAppSettings();
+  const settings = await getBranding();
   const useLogo = process.env.NEXT_PUBLIC_APP_ENV === "prod" && !!settings.logo_url;
 
   return {

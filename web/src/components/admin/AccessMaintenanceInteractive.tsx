@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import type { AccessProfile, AccessRoleRow } from "@/app/admin/access-maintenance/actions";
 import type { GroupSummary } from "@/lib/groups";
 import {
+  addPersonByEmailAction,
   grantRoleAction,
   revokeRoleAction,
   removeProfileCompletelyAction,
@@ -58,6 +59,39 @@ export function AccessMaintenanceInteractive({
   const [error, setError] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSearch, setMergeSearch] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addMessage, setAddMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  /** MULTI_TENANT_PLAN.md §3.7 -- "Add existing account by email". Someone
+   * already listed here is simply selected; otherwise they get a profile in
+   * this ministry (no role yet) and are selected so a role can be granted. */
+  function handleAddByEmail() {
+    const email = addEmail.trim();
+    setAddMessage(null);
+    if (!email) return;
+    const existing = profiles.find((p) => p.email?.toLowerCase() === email.toLowerCase());
+    if (existing) {
+      setSelectedProfileId(existing.id);
+      setAddMessage({ ok: true, text: `${existing.full_name} is already listed — selected.` });
+      return;
+    }
+    startTransition(async () => {
+      const res = await addPersonByEmailAction(email);
+      if (res.error || !res.profile) {
+        setAddMessage({ ok: false, text: res.error ?? "Could not add that person." });
+        return;
+      }
+      const added = res.profile;
+      setProfiles((prev) =>
+        prev.some((p) => p.id === added.id)
+          ? prev
+          : [...prev, added].sort((a, b) => a.full_name.localeCompare(b.full_name)),
+      );
+      setSelectedProfileId(added.id);
+      setAddEmail("");
+      setAddMessage({ ok: true, text: `Added ${added.full_name}. Grant them a role on the right.` });
+    });
+  }
 
   const filteredProfiles = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -197,6 +231,35 @@ export function AccessMaintenanceInteractive({
           onChange={(e) => setSearch(e.target.value)}
           className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm mb-3 focus:border-brand focus:outline-none"
         />
+        <div className="mb-3 rounded-md border border-[#eee] bg-[#fafafa] p-3">
+          <p className="text-xs text-[#666] mb-2">
+            <strong className="text-[#333]">Add existing account by email</strong> &mdash; for someone who already has
+            a sign-in but hasn&rsquo;t used this ministry&rsquo;s address yet.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              placeholder="their@email.com"
+              value={addEmail}
+              onChange={(e) => setAddEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddByEmail();
+              }}
+              className="min-w-0 flex-1 rounded-md border border-[#ddd] px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleAddByEmail}
+              disabled={pending || !addEmail.trim()}
+              className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+            >
+              Add
+            </button>
+          </div>
+          {addMessage && (
+            <p className={`mt-2 text-xs ${addMessage.ok ? "text-[#155724]" : "text-[#dc3545]"}`}>{addMessage.text}</p>
+          )}
+        </div>
         <div className="divide-y divide-[#f0f0f0] max-h-96 overflow-y-auto">
           {filteredProfiles.map((p) => (
             <button

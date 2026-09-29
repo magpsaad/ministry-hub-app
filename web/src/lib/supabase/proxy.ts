@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { resolveAddress, ministryHeaders } from "@/lib/ministry-context";
 
 /** REQUIREMENTS.md §6.1 addendum -- paths a signed-in-but-not-yet-
  * registered person must still be able to reach: signing in/out, the
@@ -15,8 +16,21 @@ const GATE_EXEMPT_PREFIXES = ["/login", "/checkin", "/auth", "/register"];
  * request can. */
 const PUBLIC_ASSET_PATHS = ["/manifest.webmanifest"];
 
-function isGateExempt(pathname: string): boolean {
-  return GATE_EXEMPT_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+/** MULTI_TENANT_PLAN.md §3.2 -- the two plain status pages. Neither makes a
+ * single data call. */
+export const NOT_SET_UP_PATH = "/address-not-set-up";
+export const INACTIVE_PATH = "/ministry-inactive";
+
+/** §3.8 -- the Church Admin console lives only on its own address. */
+const CONSOLE_PREFIX = "/console";
+
+/** What an inactive ministry's address still allows before we know who's
+ * asking: signing in (the Church Admin can still get in, §3.2) and the
+ * status page itself. Check-in is NOT here -- it stops for everyone. */
+const INACTIVE_OPEN_PREFIXES = ["/login", "/auth", INACTIVE_PATH];
+
+function matchesPrefix(pathname: string, prefixes: string[]): boolean {
+  return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 /**
@@ -24,39 +38,53 @@ function isGateExempt(pathname: string): boolean {
  * session cookie in sync between the browser and the server. Called from
  * src/proxy.ts (Next.js 16 renamed middleware.ts -> proxy.ts).
  *
- * Also enforces the registration gate here (not just at the page level):
- * a signed-in user with no role, or with a role but missing mandatory
- * profile fields (phone/gender), gets redirected to /register regardless
- * of which page they tried to reach -- a page-level check alone would only
- * catch someone who lands on a page that happens to have one; this covers
- * every route in one place, including a deep link into a page that has no
- * such check at all (owner-reported gap: QR Codes and the Service Calendar
- * currently have none). Read-only, lightweight (one query) -- the actual
- * profile-provisioning/approval-linking side effects (ensureProfile(),
- * link_approved_pending_servant()) still only run from Server Components
- * (the /register page itself, and the normal landing page), not here --
- * this function's own Supabase client is scoped to request/response
- * cookies, not the cookies() API those rely on, so it stays read-only by
- * design rather than risk running that logic in a different context.
+ * Decides, in this order (MULTI_TENANT_PLAN.md §8):
+ * 1. Which ministry this address belongs to. Unknown address -> "This
+ *    address isn't set up", with no data call of any kind. The console's
+ *    address -> only the console (and signing in) is reachable there, and a
+ *    ministry's address never serves the console.
+ * 2. Inactive ministry -> "This ministry isn't active" for everyone except
+ *    the Church Admin (who can still sign in and work there).
+ * 3. The signed-out gate, then the registration gate: a signed-in user with
+ *    no role IN THIS MINISTRY, or missing phone/gender on THIS MINISTRY's
+ *    profile, goes to this ministry's /register. The Church Admin passes
+ *    (they act as an Admin of whichever ministry's address they're on,
+ *    §3.5) without needing a role grant there.
  *
- * Also enforces the signed-out gate here, not just at the page level.
- * Every gated page already has its own `if (!user) redirect("/login")` --
- * that isn't removed, it's now a backup -- but a signed-out request used to
- * reach the page first regardless, so an anonymous direct hit to e.g.
- * /g/[groupId]/members would let that page's own data query fire (and fail
- * loudly with a Postgres "permission denied", RLS correctly blocking it,
- * but noisy in the server logs) before the page's own redirect won out.
- * Redirecting here instead means the page never runs at all for a
- * signed-out request to a gated route.
+ * The registration gate lives here (not just at the page level) so it
+ * covers every route in one place, including deep links into pages with no
+ * check of their own. Read-only by design: the profile-provisioning and
+ * approval-linking side effects (ensureProfile(),
+ * link_approved_pending_servant()) still only run from Server Components.
+ *
+ * The signed-out gate is here too, so a signed-out request to a gated page
+ * never runs that page at all (every gated page keeps its own
+ * `if (!user) redirect("/login")` as a backup).
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const pathname = request.nextUrl.pathname;
+
+  // Public assets never need a session -- return before any other work.
+  // (manifest.ts itself copes with any kind of address.)
+  if (PUBLIC_ASSET_PATHS.includes(pathname)) {
+    return response;
+  }
+
+  const address = await resolveAddress(request.headers.get("host") ?? "");
+
+  if (address.kind === "unknown") {
+    return pathname === NOT_SET_UP_PATH
+      ? response
+      : NextResponse.rewrite(new URL(NOT_SET_UP_PATH, request.url));
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       db: { schema: process.env.NEXT_PUBLIC_APP_ENV as "qa" | "prod" },
+      global: { headers: ministryHeaders(address) },
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -74,14 +102,6 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Public assets never need a session -- return before any auth work
-  // (this check used to run after the auth call, so every manifest fetch
-  // paid for a round trip it didn't use).
-  const pathname = request.nextUrl.pathname;
-  if (PUBLIC_ASSET_PATHS.includes(pathname)) {
-    return response;
-  }
-
   // Touches the session so expired tokens get refreshed. getClaims()
   // verifies the sign-in token locally against the project's published
   // signing keys (this project uses asymmetric ES256 keys), instead of
@@ -91,17 +111,50 @@ export async function updateSession(request: NextRequest) {
   const { data: claimsData } = await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub ?? null;
 
-  if (!userId && !isGateExempt(pathname)) {
+  if (address.kind === "console") {
+    // Only the console and signing in/out exist on this address. Whether
+    // the signed-in person is actually a Church Admin is checked by the
+    // console pages themselves (and again by every console function).
+    if (!matchesPrefix(pathname, [CONSOLE_PREFIX, "/login", "/auth"])) {
+      return NextResponse.redirect(new URL(CONSOLE_PREFIX, request.url));
+    }
+    if (!userId && matchesPrefix(pathname, [CONSOLE_PREFIX])) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return response;
+  }
+
+  // A ministry's address never serves the console.
+  if (matchesPrefix(pathname, [CONSOLE_PREFIX])) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  // Asked at most once per request, and only when it matters.
+  let churchAdminCheck: Promise<boolean> | null = null;
+  const isChurchAdmin = () =>
+    (churchAdminCheck ??= userId
+      ? Promise.resolve(supabase.rpc("is_church_admin")).then(({ data }) => data === true)
+      : Promise.resolve(false));
+
+  if (!address.isActive && !matchesPrefix(pathname, INACTIVE_OPEN_PREFIXES)) {
+    if (!(await isChurchAdmin())) {
+      return NextResponse.rewrite(new URL(INACTIVE_PATH, request.url));
+    }
+    // The Church Admin carries on through the normal gate below.
+  }
+
+  if (!userId && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (userId && !isGateExempt(pathname)) {
-    const [{ data: profile }, { count: roleCount }] = await Promise.all([
+  if (userId && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
+    const [{ data: profile }, { count: roleCount }, churchAdmin] = await Promise.all([
       supabase.from("profiles").select("phone, gender").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      isChurchAdmin(),
     ]);
     const isComplete = !!profile && !!profile.phone && !!profile.gender && (roleCount ?? 0) > 0;
-    if (!isComplete) {
+    if (!isComplete && !churchAdmin) {
       return NextResponse.redirect(new URL("/register", request.url));
     }
   }
