@@ -28,6 +28,7 @@ export function OutreachInteractive({
   memberLabel,
   currentUserId,
   currentUserName,
+  canAdd,
 }: {
   groupId: string;
   entries: OutreachEntryFull[];
@@ -36,6 +37,8 @@ export function OutreachInteractive({
   memberLabel: string;
   currentUserId: string;
   currentUserName: string;
+  /** False for Read-Only access: "+ Add Outreach Entry" isn't offered (QA R-1). */
+  canAdd: boolean;
 }) {
   const timeZone = useTimezone();
   const router = useRouter();
@@ -127,13 +130,15 @@ export function OutreachInteractive({
             <span className="text-[#999]">▾</span>
           </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowAdd(true)}
-          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-        >
-          + Add Outreach Entry
-        </button>
+        {canAdd && (
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          >
+            + Add Outreach Entry
+          </button>
+        )}
       </div>
 
       <div className="space-y-2">

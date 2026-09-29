@@ -15,7 +15,11 @@ export default async function ConsoleReleasesPage() {
   return (
     <ConsoleShell title="Release Notes" email={access.email}>
       <p className="text-sm text-[#666]">Shown to everyone, in every ministry, as the app&rsquo;s Release History.</p>
-      <VersionControlInteractive initial={releases} canManage />
+      <VersionControlInteractive
+        key={releases.map((r) => `${r.id}:${r.version}:${r.released_on}:${r.description ?? ""}`).join("|")}
+        initial={releases}
+        canManage
+      />
     </ConsoleShell>
   );
 }

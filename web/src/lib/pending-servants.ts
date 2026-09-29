@@ -44,12 +44,16 @@ export async function getPendingServants(): Promise<PendingServant[]> {
   return rows.map((r) => ({ ...r, checkInCount: countByPending.get(r.id) ?? 0 }));
 }
 
-/** Lightweight count for the landing page's "Pending Servants" button badge. */
+/** Lightweight count for the landing page's "Pending Servants" button badge:
+ * only requests still waiting for someone to approve them (QA G-2). An
+ * approved person who hasn't signed in yet still shows on the Pending
+ * Servants screen (as approved), but needs no action, so isn't counted. */
 export async function getPendingServantsCount(): Promise<number> {
   const supabase = await createClient();
   const { count } = await supabase
     .from("pending_servants")
     .select("id", { count: "exact", head: true })
-    .is("resulting_profile_id", null);
+    .is("resulting_profile_id", null)
+    .is("approved_at", null);
   return count ?? 0;
 }

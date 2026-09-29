@@ -5,6 +5,7 @@ import { getAppSettings } from "@/lib/app-settings";
 import { getCombinedGroups } from "@/lib/groups";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
+import { getAccessSummary, canEditGroup } from "@/lib/roles";
 import { OutreachInteractive } from "@/components/outreach/OutreachInteractive";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
@@ -19,7 +20,7 @@ export default async function OutreachPage({ params }: { params: Promise<{ group
   // one cohort.
   const groupIds = groupId === ALL_COHORTS_GROUP_ID ? (await getCombinedGroups()).map((g) => g.id) : groupId;
 
-  const [entries, members, servants, settings, profile] = await Promise.all([
+  const [entries, members, servants, settings, profile, access] = await Promise.all([
     getOutreachEntries(groupIds),
     getGroupMembersLite(groupIds),
     getServantsForGroup(groupIds),
@@ -27,7 +28,10 @@ export default async function OutreachPage({ params }: { params: Promise<{ group
     user
       ? supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle().then((r) => r.data)
       : Promise.resolve(null),
+    user ? getAccessSummary(user.id) : Promise.resolve(null),
   ]);
+  // Read-Only access can view outreach but not add it (QA R-1).
+  const canEdit = access ? canEditGroup(access, groupId) : false;
 
   return (
     <OutreachInteractive
@@ -38,6 +42,7 @@ export default async function OutreachPage({ params }: { params: Promise<{ group
       memberLabel={settings.member_label}
       currentUserId={user?.id ?? ""}
       currentUserName={profile?.full_name ?? user?.email ?? "Unknown"}
+      canAdd={canEdit}
     />
   );
 }

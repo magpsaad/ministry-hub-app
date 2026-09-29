@@ -8,12 +8,13 @@ import type { GroupSummary } from "@/lib/groups";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { SearchIcon } from "@/components/icons";
 import { MemberGrid } from "./MemberGrid";
+import { MemberOverridesContext, type MemberPatch } from "./MemberOverrides";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 const PROXIMITIES = ["Local", "Regional", "Abroad", "Unknown"];
 
 export function MemberListInteractive({
-  members,
+  members: serverMembers,
   groupId,
   groups,
   universities,
@@ -58,6 +59,31 @@ export function MemberListInteractive({
 }) {
   const isCombined = groupId === ALL_COHORTS_GROUP_ID;
   const { myAssignedOnly, hydrated } = useMyAssigned();
+
+  // Changes just saved from a youth's record, shown straight away (QA S-3,
+  // R-2); dropped as soon as the server's refreshed list arrives, since that
+  // already contains them.
+  const [overrides, setOverrides] = useState<Record<string, MemberPatch>>({});
+  const [seenServerMembers, setSeenServerMembers] = useState(serverMembers);
+  if (serverMembers !== seenServerMembers) {
+    setSeenServerMembers(serverMembers);
+    setOverrides({});
+  }
+  const overridesApi = useMemo(
+    () => ({
+      apply: (memberId: string, patch: MemberPatch) =>
+        setOverrides((prev) => ({ ...prev, [memberId]: { ...prev[memberId], ...patch } })),
+    }),
+    [],
+  );
+  const members = useMemo(
+    () =>
+      serverMembers
+        .map((m) => (overrides[m.id] ? { ...m, ...overrides[m.id] } : m))
+        // Deleted, or moved out of this group (the combined view keeps them).
+        .filter((m) => !(m as MemberPatch).deleted && (isCombined || m.group_id === groupId)),
+    [serverMembers, overrides, isCombined, groupId],
+  );
   const [q, setQ] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [cohortIds, setCohortIds] = useState<string[]>([]);
@@ -119,6 +145,7 @@ export function MemberListInteractive({
   const isFiltered = filtered.length !== members.length;
 
   return (
+    <MemberOverridesContext.Provider value={overridesApi}>
     <div>
       <p className="mb-2 text-sm font-semibold text-[#333]">
         {isFiltered
@@ -299,5 +326,6 @@ export function MemberListInteractive({
         currentUserName={currentUserName}
       />
     </div>
+    </MemberOverridesContext.Provider>
   );
 }

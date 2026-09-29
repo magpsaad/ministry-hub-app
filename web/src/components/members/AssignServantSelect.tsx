@@ -35,9 +35,17 @@ export function AssignServantSelect({
       defaultValue=""
       disabled={pending}
       onChange={(e) => {
-        if (!e.target.value) return;
+        const select = e.target;
+        if (!select.value) return;
         startTransition(async () => {
-          await assignServantAction(memberId, groupId, e.target.value);
+          const result = await assignServantAction(memberId, groupId, select.value);
+          if (result.error) {
+            // Owner-reported (QA R-1): a refused assignment used to look
+            // like it did nothing. Say why, and put the dropdown back.
+            select.value = "";
+            alert(result.error);
+            return;
+          }
           router.refresh();
         });
       }}

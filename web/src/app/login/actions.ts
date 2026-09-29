@@ -80,8 +80,12 @@ export async function requestPasswordReset(formData: FormData) {
   redirect(`/login?message=${encodeURIComponent("If that email has an account, a password reset link is on its way.")}`);
 }
 
+/** Signs out of THIS address only (QA E-5). Supabase's default ends every
+ * session the person has -- every ministry's address, the console and every
+ * other device -- which broke "each address keeps its own sign-in"
+ * (MULTI_TENANT_PLAN.md §3.6). */
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/login");
 }

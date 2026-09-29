@@ -273,15 +273,17 @@ export function DashboardInteractive({
                       Assigned Servant: {m.assigned_servant?.full_name ?? "No assigned servant"}
                     </p>
                   </div>
-                  <OutreachQuickLink
-                    memberId={m.id}
-                    memberName={m.full_name}
-                    memberPhone={m.phone}
-                    memberLabel={memberLabel}
-                    groupId={groupId}
-                    currentUserName={currentUserName}
-                    className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
-                  />
+                  {canEdit && (
+                    <OutreachQuickLink
+                      memberId={m.id}
+                      memberName={m.full_name}
+                      memberPhone={m.phone}
+                      memberLabel={memberLabel}
+                      groupId={groupId}
+                      currentUserName={currentUserName}
+                      className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
+                    />
+                  )}
                 </div>
               );
             })}
@@ -341,7 +343,7 @@ export function DashboardInteractive({
                         there's still not enough room. */}
                     {m.phone && <PhoneLink phone={m.phone} className="text-xs truncate" />}
                   </div>
-                  <AssignServantSelect memberId={m.id} groupId={groupId} memberGender={m.gender} servants={servants} />
+                  {canEdit && <AssignServantSelect memberId={m.id} groupId={groupId} memberGender={m.gender} servants={servants} />}
                 </div>
               );
             })}
@@ -408,15 +410,17 @@ export function DashboardInteractive({
                               text on the left, unlike Birthdays' Outreach
                               button, which always sits on the right --
                               matched to that same placement here. */}
-                          <OutreachQuickLink
-                            memberId={m.id}
-                            memberName={m.full_name}
-                            memberPhone={m.phone}
-                            memberLabel={memberLabel}
-                            groupId={groupId}
-                            currentUserName={currentUserName}
-                            className="shrink-0 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark"
-                          />
+                          {canEdit && (
+                            <OutreachQuickLink
+                              memberId={m.id}
+                              memberName={m.full_name}
+                              memberPhone={m.phone}
+                              memberLabel={memberLabel}
+                              groupId={groupId}
+                              currentUserName={currentUserName}
+                              className="shrink-0 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark"
+                            />
+                          )}
                         </div>
                       );
                     }
@@ -471,15 +475,17 @@ export function DashboardInteractive({
                               matched to that same placement here. Dismiss
                               stays below the text (a secondary action, not
                               the card's primary one). */}
-                          <OutreachQuickLink
-                            memberId={m.id}
-                            memberName={m.full_name}
-                            memberPhone={m.phone}
-                            memberLabel={memberLabel}
-                            groupId={groupId}
-                            currentUserName={currentUserName}
-                            className="shrink-0 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark"
-                          />
+                          {canEdit && (
+                            <OutreachQuickLink
+                              memberId={m.id}
+                              memberName={m.full_name}
+                              memberPhone={m.phone}
+                              memberLabel={memberLabel}
+                              groupId={groupId}
+                              currentUserName={currentUserName}
+                              className="shrink-0 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark"
+                            />
+                          )}
                         </div>
                       );
                     }

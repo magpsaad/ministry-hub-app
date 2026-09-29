@@ -36,7 +36,14 @@ export default async function VersionControlPage() {
         <p className="mt-1 text-sm opacity-90">Release History</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <VersionControlInteractive initial={releases} canManage={false} />
+        {/* Keyed on the data so Refresh (or any re-render with newer
+            releases) shows the new list -- the component otherwise keeps
+            the list it first received (QA O-3). */}
+        <VersionControlInteractive
+          key={releases.map((r) => `${r.id}:${r.version}:${r.released_on}:${r.description ?? ""}`).join("|")}
+          initial={releases}
+          canManage={false}
+        />
       </main>
     </div>
   );

@@ -8,6 +8,7 @@ import type { ServantOption } from "@/lib/servants";
 import type { GroupSummary } from "@/lib/groups";
 import { getMemberAction } from "@/app/g/[groupId]/members/data-actions";
 import { MemberDetailModal } from "./MemberDetailModal";
+import { useMemberOverrides } from "./MemberOverrides";
 
 /** Wraps any trigger element (a name, a card, ...) so clicking it opens the
  * Member Detail modal -- reused from the Member List grid, Dashboard's
@@ -49,6 +50,7 @@ export function MemberDetailLink({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const overrides = useMemberOverrides();
   const [detail, setDetail] = useState<MemberDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -79,7 +81,10 @@ export function MemberDetailLink({
           canEdit={canEdit}
           currentUserName={currentUserName}
           onClose={() => setDetail(null)}
-          onSaved={() => router.refresh()}
+          onSaved={(patch) => {
+            if (patch) overrides?.apply(memberId, patch);
+            router.refresh();
+          }}
         />
       )}
     </>

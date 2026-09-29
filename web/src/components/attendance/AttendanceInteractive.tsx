@@ -81,6 +81,34 @@ export function AttendanceInteractive({
   const [historyMember, setHistoryMember] = useState<{ id: string; full_name: string } | null>(null);
   const [, startTransition] = useTransition();
 
+  // Owner-reported (QA R-1): Read-Only access could click Present/Absent.
+  // Only people who can edit a member's group get the toggle.
+  const editableGroups = useMemo(() => new Set(memberRecord.editableGroupIds), [memberRecord.editableGroupIds]);
+  function canToggle(groupIdOfMember: string) {
+    return memberRecord.canEditAll || editableGroups.has(groupIdOfMember);
+  }
+
+  // Owner-reported (QA S-5): the % used to wait for the server's refresh
+  // after a change. Recomputed here from the same inputs and the same
+  // formula the server uses (lib/attendance.ts): present service-day dates
+  // over tracked service-day dates since the later of join date and the
+  // rolling window. Marking someone present earlier than their join date
+  // moves their join date back, as the database does.
+  function avgPercentFor(memberId: string, joinDate: string | null, serverPercent: number | null): number | null {
+    // Untouched since the page loaded (same list object the server sent, or
+    // still none at all): show the server's own figure.
+    if (attendanceByMember[memberId] === bundle.attendanceByMember[memberId]) return serverPercent;
+    const dates = attendanceByMember[memberId] ?? [];
+    const earliest = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
+    const effectiveJoin = joinDate && earliest ? (earliest < joinDate ? earliest : joinDate) : (joinDate ?? earliest);
+    const since = resolveAttendanceSince(effectiveJoin, bundle.windowWeeks);
+    if (!since) return null;
+    const tracked = bundle.serviceWeekdayDates.filter((d) => d >= since);
+    if (tracked.length === 0) return null;
+    const present = new Set(dates);
+    return Math.round((tracked.filter((d) => present.has(d)).length / tracked.length) * 100);
+  }
+
   function historyFor(memberId: string, joinDate: string | null) {
     const since = resolveAttendanceSince(joinDate, bundle.windowWeeks);
     if (!since) return [];
@@ -216,6 +244,13 @@ export function AttendanceInteractive({
           <tbody className="divide-y divide-[#f0f0f0]">
             {visible.map((m) => {
               const status = statusLabel(m.id);
+              const avgPercent = avgPercentFor(m.id, m.join_date, m.avgAttendancePercent);
+              const statusClass =
+                status === "Present"
+                  ? "bg-[#d4edda] text-[#155724]"
+                  : status === "Absent"
+                    ? "bg-[#f8d7da] text-[#721c24]"
+                    : "bg-[#fff3cd] text-[#856404]";
               return (
                 <tr key={m.id}>
                   <td className="px-4 py-2.5">
@@ -234,7 +269,7 @@ export function AttendanceInteractive({
                     </td>
                   )}
                   <td className="px-4 py-2.5">
-                    {m.avgAttendancePercent === null ? (
+                    {avgPercent === null ? (
                       <span className="text-[#666]">N/A</span>
                     ) : (
                       <button
@@ -242,25 +277,28 @@ export function AttendanceInteractive({
                         onClick={() => setHistoryMember({ id: m.id, full_name: m.full_name })}
                         className="text-brand font-semibold hover:underline"
                       >
-                        {m.avgAttendancePercent}%
+                        {avgPercent}%
                       </button>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <button
-                      type="button"
-                      disabled={togglingId === m.id}
-                      onClick={() => handleToggle(m.id, m.full_name)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-50 ${
-                        status === "Present"
-                          ? "bg-[#d4edda] text-[#155724] hover:bg-[#c3e6cb]"
-                          : status === "Absent"
-                            ? "bg-[#f8d7da] text-[#721c24] hover:bg-[#f5c6cb]"
-                            : "bg-[#fff3cd] text-[#856404] hover:bg-[#ffeeba]"
-                      }`}
-                    >
-                      {status}
-                    </button>
+                    {canToggle(m.group_id) ? (
+                      <button
+                        type="button"
+                        disabled={togglingId === m.id}
+                        onClick={() => handleToggle(m.id, m.full_name)}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-50 hover:brightness-95 ${statusClass}`}
+                      >
+                        {status}
+                      </button>
+                    ) : (
+                      <span
+                        title="View only"
+                        className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}
+                      >
+                        {status}
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

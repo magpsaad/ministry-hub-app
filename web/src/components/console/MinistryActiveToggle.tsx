@@ -10,12 +10,15 @@ export function MinistryActiveToggle({ code, name, isActive }: { code: string; n
   const [active, setActive] = useState(isActive);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
 
   function handleClick() {
     const next = !active;
+    // The app re-checks each address at most once a minute, so the change
+    // can take up to a minute to show there (QA O-2).
     const question = next
-      ? `Turn ${name} (${code}) back on? Its people will be able to sign in and check in again.`
-      : `Turn ${name} (${code}) off? Its data is kept, but nobody except you can sign in or check in there until it's turned back on.`;
+      ? `Turn ${name} (${code}) back on? Its people will be able to sign in and check in again (within about a minute).`
+      : `Turn ${name} (${code}) off? Its data is kept, but nobody except you can sign in or check in there until it's turned back on. This takes effect within about a minute; you, as Church Admin, keep full access.`;
     if (!confirm(question)) return;
     setError(null);
     startTransition(async () => {
@@ -25,6 +28,8 @@ export function MinistryActiveToggle({ code, name, isActive }: { code: string; n
         return;
       }
       setActive(next);
+      setError(null);
+      setDone(next ? "Turned on. Takes effect within about a minute." : "Turned off. Takes effect within about a minute.");
     });
   }
 
@@ -39,6 +44,7 @@ export function MinistryActiveToggle({ code, name, isActive }: { code: string; n
         {active ? "Turn off" : "Turn on"}
       </button>
       {error && <span className="text-[11px] text-[#dc3545]">{error}</span>}
+      {done && !error && <span className="text-[11px] text-[#155724]">{done}</span>}
     </span>
   );
 }

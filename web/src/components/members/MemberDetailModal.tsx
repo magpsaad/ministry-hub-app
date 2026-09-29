@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import type { MemberDetail } from "@/lib/members";
+import type { MemberPatch } from "./MemberOverrides";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
 import type { GroupSummary } from "@/lib/groups";
@@ -64,7 +65,9 @@ export function MemberDetailModal({
   canEdit: boolean;
   currentUserName: string;
   onClose: () => void;
-  onSaved: () => void;
+  /** Called after every successful change, with what changed in the list's
+   * own shape so the Member List can show it immediately (QA S-3/R-2). */
+  onSaved: (patch?: MemberPatch) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -137,17 +140,37 @@ export function MemberDetailModal({
         setError(result.error);
         return;
       }
+      const university = universities.find((u) => u.id === form.university_id) ?? null;
+      const patch: MemberPatch = {
+        phone: form.phone,
+        program_of_study: form.program_of_study,
+        date_of_birth: form.date_of_birth,
+        gender: form.gender,
+        is_visitor: form.is_visitor,
+        university: university ? { id: university.id, name: university.name, proximity: university.proximity } : null,
+      };
       if (memberGroupId !== member.group_id) {
         const moveResult = await moveMemberGroupAction(member.id, member.group_id, memberGroupId);
         if (moveResult.error) {
           setError(moveResult.error);
           return;
         }
+        // Moving clears the servant (moveMemberGroupAction does the same).
+        Object.assign(patch, { group_id: memberGroupId, assigned_servant_id: null, assigned_servant: null });
       } else if (assignedServantId !== member.assigned_servant_id) {
-        await assignServantAction(member.id, groupId, assignedServantId);
+        const assignResult = await assignServantAction(member.id, groupId, assignedServantId);
+        if (assignResult?.error) {
+          setError(assignResult.error);
+          return;
+        }
+        const servant = servants.find((s) => s.id === assignedServantId);
+        Object.assign(patch, {
+          assigned_servant_id: assignedServantId,
+          assigned_servant: servant ? { full_name: servant.full_name } : null,
+        });
       }
       setEditing(false);
-      onSaved();
+      onSaved(patch);
     });
   }
 
@@ -159,7 +182,7 @@ export function MemberDetailModal({
         setError(result.error);
         return;
       }
-      onSaved();
+      onSaved({ deleted: true });
       onClose();
     });
   }
@@ -189,7 +212,7 @@ export function MemberDetailModal({
         return;
       }
       if (result.photoPath) setPhotoPath(result.photoPath);
-      onSaved();
+      onSaved(result.photoPath ? { photo_path: result.photoPath } : undefined);
     });
   }
 
@@ -205,7 +228,7 @@ export function MemberDetailModal({
         return;
       }
       setPhotoPath(null);
-      onSaved();
+      onSaved({ photo_path: null });
     });
   }
 
@@ -469,12 +492,16 @@ export function MemberDetailModal({
             >
               Prev. Outreach
             </button>
-            <button
-              onClick={() => setShowAddOutreach(true)}
-              className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-            >
-              New Outreach
-            </button>
+            {/* Owner-reported (QA R-1): Read-Only can't add outreach, so the
+                button isn't offered (the save was always going to fail). */}
+            {canEdit && (
+              <button
+                onClick={() => setShowAddOutreach(true)}
+                className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+              >
+                New Outreach
+              </button>
+            )}
             <button onClick={onClose} className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
               Close
             </button>

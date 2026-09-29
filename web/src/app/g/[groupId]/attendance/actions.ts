@@ -12,19 +12,26 @@ export async function setAttendanceAction(memberId: string, groupId: string, dat
     data: { user },
   } = await supabase.auth.getUser();
 
+  const NO_PERMISSION = "You don't have permission to change attendance for this group.";
+
   if (present) {
     const { error } = await supabase
       .from("attendance_records")
       .insert({ attendee_type: "member", member_id: memberId, service_date: date });
-    if (error) return { error: error.message };
+    if (error) return { error: /row-level security/i.test(error.message) ? NO_PERMISSION : error.message };
     if (user) await logAudit(user.id, "ATTENDANCE_ADDED", { groupId, details: { memberId, date } });
   } else {
-    const { error } = await supabase
+    // Owner-reported (QA R-1): a delete the security rules refuse isn't an
+    // error -- it just deletes nothing -- so this used to report success and
+    // the screen showed "Absent" while nothing had changed. Count the rows.
+    const { data, error } = await supabase
       .from("attendance_records")
       .delete()
       .eq("member_id", memberId)
-      .eq("service_date", date);
+      .eq("service_date", date)
+      .select("id");
     if (error) return { error: error.message };
+    if (!data || data.length === 0) return { error: NO_PERMISSION };
     if (user) await logAudit(user.id, "ATTENDANCE_REMOVED", { groupId, details: { memberId, date } });
   }
 

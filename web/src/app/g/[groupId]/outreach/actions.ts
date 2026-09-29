@@ -50,7 +50,13 @@ export async function addOutreachEntryAction(groupId: string, input: AddOutreach
     notes: input.notes,
     follow_up_due: input.follow_up_due,
   });
-  if (error) return { error: error.message };
+  if (error) {
+    return {
+      error: /row-level security/i.test(error.message)
+        ? "You don't have permission to add outreach for this person (view-only access)."
+        : error.message,
+    };
+  }
 
   await logAudit(user.id, "OUTREACH_ADDED", { groupId, details: { memberId: input.member_id } });
   revalidatePath(`/g/${groupId}/dashboard`);
