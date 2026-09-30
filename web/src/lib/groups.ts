@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AccessSummary } from "@/lib/roles";
+import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 export type GroupSummary = {
   id: string;
@@ -66,3 +67,51 @@ export function filterSelectableGroups(groups: GroupSummary[], access: AccessSum
   const ownGroupIds = new Set(access.roles.map((r) => r.group_id).filter((id): id is string => id !== null));
   return groups.filter((g) => g.ladder_position > 0 && (hasFullGroupAccess || ownGroupIds.has(g.id)));
 }
+
+/**
+ * SIDE_MENU_PLAN.md D3/D4 -- the cohorts this person actually serves: any
+ * role row other than read-only that points at a specific cohort (Servant,
+ * Sub-Coordinator, or an Admin/General Coordinator who also serves one).
+ * Kept in display order, so the first entry is the "first listed" cohort.
+ */
+export function getServingGroups(groups: GroupSummary[], access: AccessSummary): GroupSummary[] {
+  const servingIds = new Set(
+    access.roles.filter((r) => r.role !== "read_only" && r.group_id !== null).map((r) => r.group_id as string),
+  );
+  return filterSelectableGroups(groups, access).filter((g) => servingIds.has(g.id));
+}
+
+export type SwitcherEntry = { id: string; name: string; tag: "serving" | "view only" | "admin" | null };
+
+/**
+ * SIDE_MENU_PLAN.md §3.2 -- the side menu's cohort switcher, in order: the
+ * cohorts this person serves, then Combined (Admin/General Coordinator
+ * only, same rule as the group layout), then every other cohort they can
+ * open, then the hidden pre-entry group for Admins (moved here from the old
+ * System Admin Corner). Built only from filterSelectableGroups(), so it
+ * never lists a cohort the landing page's old dropdown wouldn't have.
+ */
+export function buildSwitcherEntries(
+  groups: GroupSummary[],
+  access: AccessSummary,
+  combinedName: string,
+): SwitcherEntry[] {
+  const hasFullGroupAccess = access.isAdmin || access.isGeneralCoordinator;
+  const serving = getServingGroups(groups, access);
+  const servingIds = new Set(serving.map((g) => g.id));
+
+  const entries: SwitcherEntry[] = serving.map((g) => ({ id: g.id, name: g.name, tag: "serving" }));
+  if (hasFullGroupAccess) entries.push({ id: ALL_COHORTS_GROUP_ID, name: combinedName, tag: null });
+  for (const g of filterSelectableGroups(groups, access)) {
+    if (servingIds.has(g.id)) continue;
+    entries.push({ id: g.id, name: g.name, tag: hasFullGroupAccess ? null : "view only" });
+  }
+  const preEntry = access.isAdmin ? groups.find((g) => g.ladder_position === 0) : undefined;
+  if (preEntry) entries.push({ id: preEntry.id, name: preEntry.name, tag: "admin" });
+  return entries;
+}
+
+/** SIDE_MENU_PLAN.md D6 -- the last cohort opened from the switcher, used
+ * only to pick between several cohorts a person serves. Never trusted on
+ * its own: the landing rule ignores it unless it is still one of theirs. */
+export const LAST_GROUP_COOKIE = "last_group";

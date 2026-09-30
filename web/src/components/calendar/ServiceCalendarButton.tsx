@@ -5,10 +5,11 @@ import type { CalendarEvent } from "@/lib/calendar-types";
 import { getCalendarBootstrapAction, getCalendarEventsAction } from "@/app/calendar/actions";
 import { ServiceCalendarModal } from "./ServiceCalendarModal";
 
-/** Landing page trigger for the Service Calendar (§6.8) -- fetches on
- * first open rather than on every landing-page load, since the calendar
- * is ministry-wide, not scoped to whichever group happens to be loaded. */
-export function ServiceCalendarButton() {
+/** Side-menu trigger for the Service Calendar (§6.8) -- fetches on first
+ * open rather than on every page load, since the calendar is
+ * ministry-wide, not scoped to whichever group happens to be loaded.
+ * `className` replaces the default button styling. */
+export function ServiceCalendarButton({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   // Real values arrive from App Settings on first open (the modal isn't
@@ -41,7 +42,10 @@ export function ServiceCalendarButton() {
         type="button"
         onClick={handleOpen}
         disabled={pending}
-        className="rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+        className={
+          className ??
+          "rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+        }
       >
         {pending && !open ? "Loading…" : "Service Calendar"}
       </button>
