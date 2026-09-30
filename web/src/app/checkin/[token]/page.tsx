@@ -3,6 +3,7 @@ import { getCheckInFlow, listCheckInMembers, listCheckInServants } from "@/lib/c
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
 import { getActiveMinistry } from "@/lib/ministry-context";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { weekdayName } from "@/lib/attendance-window";
 import { SERVANT_CHECKIN_COOKIE, MEMBER_CHECKIN_COOKIE, parseRememberedCheckinPerson } from "@/lib/checkin-remember-cookie";
 import { AppLogo } from "@/components/AppLogo";
@@ -19,11 +20,12 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
   // The school list is fetched up front with the flow lookup (it used to
   // wait for it -- an extra round trip on every QR scan). It's small and
   // readable without signing in; the servants' flow simply doesn't use it.
-  const [flow, settings, allUniversities, ministryId] = await Promise.all([
+  const [flow, settings, allUniversities, ministryId, user] = await Promise.all([
     getCheckInFlow(token),
     getAppSettings(),
     getUniversities(),
     getActiveMinistry(),
+    getCurrentUser(),
   ]);
 
   // A QR code only works on its own ministry's address (it's printed with
@@ -60,9 +62,12 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
       <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
         {/* Owner-requested: Menu, Refresh and Exit on every check-in page
             (member, intake-only and servant alike), matching every other
-            page in the app. */}
+            page in the app -- except that a signed-out youth on a member
+            QR doesn't get the Menu (owner-reported: it led to sign-in, and
+            a youth signing in there lands in Pending Servants as noise).
+            The Servants QR keeps it, since servants do sign in. */}
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
-          <MenuButton />
+          {(flow.isServant || user) && <MenuButton />}
           <RefreshButton />
         </div>
         <SignOutButton className="absolute top-2.5 right-4 text-white/70 hover:text-white transition-colors" />

@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { CalendarEvent } from "@/lib/calendar-types";
 import { EVENT_TYPE_COLORS, contrastText } from "@/lib/calendar-types";
 import { AppLogo } from "@/components/AppLogo";
-import { HomeIcon } from "@/components/icons";
+import { ArrowLeftIcon } from "@/components/icons";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { EventForm } from "./EventForm";
@@ -250,12 +250,12 @@ export function ServiceCalendarModal({
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
           <button
             onClick={onClose}
-            title="Home"
-            aria-label="Home"
+            title="Back"
+            aria-label="Back"
             className="inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
           >
-            <HomeIcon className="h-8 w-8" />
-            <span className="text-xs font-medium">Home</span>
+            <ArrowLeftIcon className="h-8 w-8" />
+            <span className="text-xs font-medium">Back</span>
           </button>
           <RefreshButton onRefresh={onRefresh} />
         </div>
