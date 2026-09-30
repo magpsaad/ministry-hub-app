@@ -54,6 +54,7 @@ For a brand-new environment, first `create schema if not exists qa;` (or `prod`)
 | `0065_qa_…` / `0065_prod_…` | Per-ministry storage write rules (`storage_write_allowed`), one file per environment |
 | `0066` | **Project B contract**: transition fallback off (a request that names no ministry sees nothing), `app_settings.id` and `qr_codes.printed_at` dropped |
 | `0067` | RLS performance: `accessible_group_ids()` evaluated once per query instead of per row |
+| `0068_qa_only_…` | **QA only.** "Refresh QA from production" for the QA console: `refresh_prod_ministries`, `refresh_qa_only_access`, `refresh_from_prod` (reads `prod.*`, writes only `qa.*`, keeps a backup in `qa_refresh_backup`), plus `refresh_keep_list` and `refresh_log`. Never run with `search_path` prod. |
 
 `project_b/` holds the one-off Project B rollout scripts, all already run in QA and production: `B1_backup.sql` (the in-database backup schema `<env>_premm_backup`), the SAY file move (`B5_copy_say_files.mjs`, `B5_switch_say_paths.sql` and its `_down`, `B5_delete_old_say_files.mjs`), and `delete_test_ministry_qa_only.sql` (removes the QA Test Ministry, TST). The `.mjs` scripts need a service-role key in `web/.env.local`, which should be removed again afterwards.
 
