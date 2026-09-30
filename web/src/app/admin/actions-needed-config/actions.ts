@@ -89,6 +89,26 @@ export async function updateGroupQrColorAction(groupId: string, color: string) {
   return { error: null };
 }
 
+/** The Servants QR code colour (app_settings.servants_qr_color), edited
+ * from the Group Names panel next to the groups' own QR colours. Admins
+ * only (app_settings_write); a refused update touches 0 rows, so the row
+ * count is checked. */
+export async function updateServantsQrColorAction(color: string) {
+  if (!HEX_COLOR.test(color)) return { error: `"${color}" isn't a valid colour -- use the #RRGGBB form.` };
+  const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
+  const { data, error } = await supabase
+    .from("app_settings")
+    .update({ servants_qr_color: color })
+    .eq("ministry_id", ministryId)
+    .select("ministry_id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to change the Servants QR colour." };
+
+  revalidatePath("/admin/actions-needed-config");
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
 export type AddGroupTierInput = { cohortYear: number | null; name: string; qrColor: string };
 
 /** Extends the active ladder by one tier, inserted just below the current
@@ -121,13 +141,17 @@ export async function deleteGroupTierAction(groupId: string) {
   return { error: null };
 }
 
-/** The fields the App Settings form edits. The rolling attendance windows
- * and the Actions Needed look-back have their own cards and save actions,
- * so they're deliberately NOT part of this form (saving the branding card
- * must never overwrite a window/look-back change saved from another card). */
+/** The fields the App Settings form edits. The rolling attendance windows,
+ * the Actions Needed look-back and the Servants QR colour (Group Names panel)
+ * have their own save actions, so they're deliberately NOT part of this form
+ * (saving one card must never overwrite a value saved from another). */
 export type AppSettingsFormInput = Omit<
   AppSettings,
-  "app_version" | "youth_attendance_window_weeks" | "servant_attendance_window_weeks" | "actions_needed_lookback_months"
+  | "app_version"
+  | "youth_attendance_window_weeks"
+  | "servant_attendance_window_weeks"
+  | "actions_needed_lookback_months"
+  | "servants_qr_color"
 >;
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
@@ -142,7 +166,6 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     input.theme_color,
     input.theme_color_light,
     input.theme_color_dark,
-    input.servants_qr_color,
     input.my_assigned_header_color,
     input.my_assigned_header_color_light,
   ]) {
@@ -162,7 +185,6 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     theme_color: input.theme_color,
     theme_color_light: input.theme_color_light,
     theme_color_dark: input.theme_color_dark,
-    servants_qr_color: input.servants_qr_color,
     my_assigned_header_color: input.my_assigned_header_color,
     my_assigned_header_color_light: input.my_assigned_header_color_light,
     group_label: input.group_label,

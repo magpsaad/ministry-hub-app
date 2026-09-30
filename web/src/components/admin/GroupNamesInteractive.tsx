@@ -7,7 +7,10 @@ import {
   addGroupTierAction,
   deleteGroupTierAction,
   updateGroupQrColorAction,
+  updateServantsQrColorAction,
 } from "@/app/admin/actions-needed-config/actions";
+
+const SERVANTS = "servants";
 
 /** REQUIREMENTS.md §6.9/§6.14 -- rename any active group's display name,
  * and extend/shrink the active ladder by a tier. Add/Delete go through
@@ -22,39 +25,75 @@ export function GroupNamesInteractive({
   initial,
   positionLabel,
   groupLabel,
-  servantsQrColor,
+  initialServantsQrColor,
 }: {
   initial: AdminGroupRow[];
   positionLabel: string;
   groupLabel: string;
-  /** What a group with no colour of its own prints in (lib/qrcodes.ts). */
-  servantsQrColor: string;
+  /** The Servants QR colour -- also what a group with no colour of its own
+   * prints in (lib/qrcodes.ts). */
+  initialServantsQrColor: string;
 }) {
   const [groups, setGroups] = useState(initial);
+  const [servantsQrColor, setServantsQrColor] = useState(initialServantsQrColor);
   const [colorStatus, setColorStatus] = useState<Record<string, "saving" | "saved">>({});
   const colorTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   // The colour picker reports every step while dragging, so save once the
-  // colour has stopped changing for a moment.
-  function handleQrColor(groupId: string, color: string) {
+  // colour has stopped changing for a moment. `key` is a group id, or
+  // SERVANTS for the Servants QR.
+  function handleQrColor(key: string, color: string) {
     setError(null);
-    setGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, qr_color: color } : g)));
-    setColorStatus((prev) => ({ ...prev, [groupId]: "saving" }));
-    clearTimeout(colorTimers.current[groupId]);
-    colorTimers.current[groupId] = setTimeout(async () => {
-      const res = await updateGroupQrColorAction(groupId, color);
+    if (key === SERVANTS) setServantsQrColor(color);
+    else setGroups((prev) => prev.map((g) => (g.id === key ? { ...g, qr_color: color } : g)));
+    setColorStatus((prev) => ({ ...prev, [key]: "saving" }));
+    clearTimeout(colorTimers.current[key]);
+    colorTimers.current[key] = setTimeout(async () => {
+      const res = key === SERVANTS ? await updateServantsQrColorAction(color) : await updateGroupQrColorAction(key, color);
       if (res.error) {
         setError(res.error);
         setColorStatus((prev) => {
           const next = { ...prev };
-          delete next[groupId];
+          delete next[key];
           return next;
         });
         return;
       }
-      setColorStatus((prev) => ({ ...prev, [groupId]: "saved" }));
+      setColorStatus((prev) => ({ ...prev, [key]: "saved" }));
     }, 600);
   }
+
+  // One row's colour dot (and its "Saving…"/"Saved" note). Group rows and
+  // the Servants row use the same markup so every dot lines up.
+  function colorDot(key: string, color: string, label: string) {
+    return (
+      <>
+        {colorStatus[key] && (
+          <span className="text-[11px] text-[#999]">{colorStatus[key] === "saving" ? "Saving…" : "Saved"}</span>
+        )}
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => handleQrColor(key, e.target.value)}
+          title={`QR code colour for ${label}`}
+          aria-label={`QR code colour for ${label}`}
+          className="h-7 w-7 shrink-0 cursor-pointer appearance-none rounded-full border border-[#ddd] bg-transparent p-0 [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-none [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none [&::-webkit-color-swatch-wrapper]:p-0"
+        />
+      </>
+    );
+  }
+
+  // Invisible stand-ins, same size as the Rename/Delete buttons.
+  const renamePlaceholder = (
+    <span aria-hidden="true" className="invisible rounded-md px-3 py-1.5 text-xs font-semibold">
+      Rename
+    </span>
+  );
+  const deletePlaceholder = (
+    <span aria-hidden="true" className="invisible rounded-md border px-3 py-1.5 text-xs font-semibold">
+      Delete
+    </span>
+  );
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [pending, startTransition] = useTransition();
@@ -120,11 +159,12 @@ export function GroupNamesInteractive({
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Group Names</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">Group Names &amp; QR Code Colors</h2>
       <p className="text-sm text-[#666] mb-4">
         Every active group in the cohort ladder, position 0 (pre-entry) through the terminal group. Rename any of
         them directly, or add/remove a tier if this deployment needs more or fewer active years than the default.
-        Click a group&rsquo;s colour dot to change its QR code colour; it saves straight away.
+        Click a colour dot to change that QR code&rsquo;s colour (the Servants QR is at the bottom); it saves
+        straight away.
       </p>
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 
@@ -167,17 +207,7 @@ export function GroupNamesInteractive({
               ) : (
                 <>
                   <span className="flex-1 min-w-0 truncate text-sm text-[#333]">{g.name}</span>
-                  {colorStatus[g.id] && (
-                    <span className="text-[11px] text-[#999]">{colorStatus[g.id] === "saving" ? "Saving…" : "Saved"}</span>
-                  )}
-                  <input
-                    type="color"
-                    value={g.qr_color ?? servantsQrColor}
-                    onChange={(e) => handleQrColor(g.id, e.target.value)}
-                    title={`QR code colour for ${g.name}`}
-                    aria-label={`QR code colour for ${g.name}`}
-                    className="h-7 w-7 shrink-0 cursor-pointer appearance-none rounded-full border border-[#ddd] bg-transparent p-0 [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-none [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none [&::-webkit-color-swatch-wrapper]:p-0"
-                  />
+                  {colorDot(g.id, g.qr_color ?? servantsQrColor, g.name)}
                   <button
                     type="button"
                     onClick={() => startEdit(g)}
@@ -195,13 +225,7 @@ export function GroupNamesInteractive({
                       Delete
                     </button>
                   ) : (
-                    // Same size as Delete, so every row's colour dot lines up.
-                    <span
-                      aria-hidden="true"
-                      className="invisible rounded-md border px-3 py-1.5 text-xs font-semibold"
-                    >
-                      Delete
-                    </span>
+                    deletePlaceholder
                   )}
                 </>
               )}
@@ -271,6 +295,14 @@ export function GroupNamesInteractive({
           + Add Group
         </button>
       )}
+
+      <div className="mt-4 border-t border-[#f0f0f0] py-2 flex items-center gap-3">
+        <span className="w-14 shrink-0" />
+        <span className="flex-1 min-w-0 truncate text-sm text-[#333]">Servants</span>
+        {colorDot(SERVANTS, servantsQrColor, "the Servants QR")}
+        {renamePlaceholder}
+        {deletePlaceholder}
+      </div>
     </div>
   );
 }

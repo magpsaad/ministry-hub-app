@@ -58,6 +58,7 @@ export default async function ActionsNeededConfigPage() {
           initialAppSettings={settings}
           initialGroups={groups}
           initialLookbackMonths={settings.actions_needed_lookback_months}
+          initialServantsQrColor={settings.servants_qr_color}
         />
       </main>
     </div>

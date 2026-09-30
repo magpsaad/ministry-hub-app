@@ -23,6 +23,7 @@ export function ActionsNeededConfigInteractive({
   initialAppSettings,
   initialGroups,
   initialLookbackMonths,
+  initialServantsQrColor,
 }: {
   ministryCode: string;
   initial: ActionsNeededConfigRow[];
@@ -30,6 +31,7 @@ export function ActionsNeededConfigInteractive({
   initialAppSettings: AppSettingsFormInput;
   initialGroups: AdminGroupRow[];
   initialLookbackMonths: number;
+  initialServantsQrColor: string;
 }) {
   const [rows, setRows] = useState(initial);
   const [pending, startTransition] = useTransition();
@@ -149,11 +151,11 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">App Labels &amp; Branding</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">App Labels</h2>
       <p className="text-sm text-[#666] mb-4">
-        The app&rsquo;s identity, vocabulary and colours, used everywhere they&rsquo;re displayed &mdash; e.g.
-        Ministry Label &ldquo;High School Ministry&rdquo;, Group Label &ldquo;Grade&rdquo;, Member Label
-        &ldquo;Student&rdquo;.
+        The app&rsquo;s names and vocabulary, used everywhere they&rsquo;re displayed &mdash; e.g. Ministry Label
+        &ldquo;High School Ministry&rdquo;, Group Label &ldquo;Grade&rdquo;, Member Label &ldquo;Student&rdquo;
+        &mdash; plus the service day and time settings.
       </p>
       {appSettingsError && <p className="mb-3 text-sm text-[#dc3545]">{appSettingsError}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -253,6 +255,33 @@ export function ActionsNeededConfigInteractive({
             className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
+      </div>
+      <p className="text-xs text-[#666] mb-3">
+        Service Day drives self-check-in gating and which dates count toward average attendance %. The Cutoff Time
+        and Timezone together control when &ldquo;Today&rdquo; becomes available in the Attendance tab — it opens as
+        soon as either someone has checked in, or the cutoff time passes, whichever comes first. All three take
+        effect immediately, everywhere.
+      </p>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
+
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+      <h2 className="text-lg font-bold text-brand mb-1">App Branding</h2>
+      <p className="text-sm text-[#666] mb-4">
+        The app&rsquo;s colours and logo, used on every page. Pick a palette and preview it, then Save.
+      </p>
+      {appSettingsError && <p className="mb-3 text-sm text-[#dc3545]">{appSettingsError}</p>}
+      <div className="space-y-3 mb-3">
         <ThemePalettePicker
           colors={{
             theme_color: appSettings.theme_color,
@@ -263,23 +292,7 @@ export function ActionsNeededConfigInteractive({
           }}
           onChange={(colors) => setAppSettings((prev) => ({ ...prev, ...colors }))}
         />
-        <label className="text-xs text-[#666]">
-          Servants QR code colour
-          <span className="mt-1 flex items-center gap-2">
-            <input
-              type="color"
-              value={appSettings.servants_qr_color}
-              onChange={(e) => updateAppField("servants_qr_color", e.target.value)}
-              className="h-8 w-10 cursor-pointer rounded border border-[#ddd] bg-white p-0.5"
-            />
-            <input
-              value={appSettings.servants_qr_color}
-              onChange={(e) => updateAppField("servants_qr_color", e.target.value)}
-              className="w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm font-mono focus:border-brand focus:outline-none"
-            />
-          </span>
-        </label>
-        <div className="sm:col-span-2 rounded-md border border-[#eee] p-3 space-y-2">
+        <div className="rounded-md border border-[#eee] p-3 space-y-2">
           <p className="text-xs font-semibold text-[#333]">Logo</p>
           <div className="flex flex-wrap items-center gap-3">
             {appSettings.logo_url ? (
@@ -317,12 +330,6 @@ export function ActionsNeededConfigInteractive({
           </label>
         </div>
       </div>
-      <p className="text-xs text-[#666] mb-3">
-        Service Day drives self-check-in gating and which dates count toward average attendance %. The Cutoff Time
-        and Timezone together control when &ldquo;Today&rdquo; becomes available in the Attendance tab — it opens as
-        soon as either someone has checked in, or the cutoff time passes, whichever comes first. All three take
-        effect immediately, everywhere.
-      </p>
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -340,7 +347,7 @@ export function ActionsNeededConfigInteractive({
       initial={initialGroups}
       positionLabel={appSettings.ladder_position_label}
       groupLabel={appSettings.group_label}
-      servantsQrColor={initialAppSettings.servants_qr_color}
+      initialServantsQrColor={initialServantsQrColor}
     />
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
