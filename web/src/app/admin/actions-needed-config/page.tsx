@@ -7,8 +7,8 @@ import { getActiveMinistry } from "@/lib/ministry-context";
 import { getActionsNeededConfigAction, getGroupsForAdminAction } from "@/app/admin/actions-needed-config/actions";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
+import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
-import { SignOutButton } from "@/components/SignOutButton";
 import { ActionsNeededConfigInteractive } from "@/components/admin/ActionsNeededConfigInteractive";
 
 /** REQUIREMENTS.md §6.14/§6.1/§3.10 -- Admin Corner, Admins only. */
@@ -38,11 +38,10 @@ export default async function ActionsNeededConfigPage() {
       <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
           <MenuButton />
-          <RefreshButton />
+          <BackButton />
         </div>
-        <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
-          <SignOutButton className="text-white/70 hover:text-white transition-colors" />
-          <span className="text-[10px] text-white/60">Version {settings.app_version}</span>
+        <div className="absolute top-2.5 right-4">
+          <RefreshButton />
         </div>
         <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />

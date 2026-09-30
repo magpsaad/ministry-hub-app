@@ -10,7 +10,7 @@ import { ensureProfile } from "@/lib/supabase/ensure-profile";
 import { logAudit } from "@/lib/audit";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
-import { SignOutButton } from "@/components/SignOutButton";
+import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 
 /**
@@ -64,14 +64,13 @@ export default async function LandingPage() {
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </div>
 
-        <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
-          <SignOutButton className="text-white/70 hover:text-white transition-colors" />
-          <span className="text-[10px] text-white/60">Version {settings.app_version}</span>
+        <div className="absolute top-2.5 right-4">
+          <RefreshButton />
         </div>
 
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
           <MenuButton />
-          <RefreshButton />
+          <BackButton />
         </div>
       </header>
 

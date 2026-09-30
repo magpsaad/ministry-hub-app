@@ -22,6 +22,9 @@
 | D7 | The landing target **always follows the current assignment**, whether it changes at year end or mid-year. It is worked out fresh on every visit and never stored as a fixed group. | ✅ |
 | D8 | **Cohort switcher at the top of the side menu**, collapsed to one line showing the current cohort. **Hidden for anyone with only one cohort.** | ✅ |
 | D9 | **Bible verse moves into the top banner**, near its bottom edge. | ✅ |
+| D8a | **Revised after QA (30 Sep):** the cohort row shows for **everyone with a cohort**, even a single-cohort servant, as an obvious way back to their Dashboard. With one cohort it's a plain "<cohort> Dashboard ›" link; with several it opens the switcher list. | ✅ |
+| D12 | **Header, all pages (after QA):** Exit and Version move to the menu only. The banner's top left is **Menu** then **Back** (previous screen, no reload; with nothing to go back to, your Dashboard); **Refresh** moves to the top right. Signed-out youth on member QR codes see neither Menu nor Back. On the Service Calendar, Menu closes the calendar (the menu is still open beneath it) and Back closes both. | ✅ |
+| D13 | **Verse in yellow; menu headings shaded in the brand colour, entries indented** (after QA). | ✅ |
 | D10 | **Burger everywhere, on phone and desktop alike.** No permanent desktop sidebar. | ✅ |
 | D11 | **HSY coordinators** land on their first listed class for now. This gets revisited under the Group Ladder Redesign. | ✅ |
 | Q1 | **Which banners show the verse?** Recommendation: **the cohort pages only** (Dashboard, Member List, Attendance, Outreach, Analytics), since they replace the landing page. It is picked once when a cohort is opened and stays the same as you move between its tabs; it doesn't change on every tab click and costs no extra time per tab (§3.4). Admin and directory pages keep their plain banner. | ✅ |

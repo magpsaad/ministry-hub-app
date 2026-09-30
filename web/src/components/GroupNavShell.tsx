@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
+import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { useMyAssigned } from "@/components/MyAssignedContext";
-import { SignOutButton } from "@/components/SignOutButton";
 
 const TABS = (memberLabel: string) => [
   { slug: "dashboard", label: "Dashboard" },
@@ -85,7 +85,7 @@ export function GroupNavShell({
               onClick={() => setVerseExpanded((v) => !v)}
               aria-expanded={verseExpanded}
               title={verseExpanded ? "Show less" : "Show the whole verse"}
-              className={`mt-1.5 -mb-2 block w-full max-w-2xl mx-auto text-[11px] italic text-white/80 hover:text-white ${
+              className={`mt-1.5 -mb-2 block w-full max-w-2xl mx-auto text-[11px] italic text-[#ffd54f] hover:text-[#ffe082] ${
                 verseExpanded ? "whitespace-normal" : "truncate"
               }`}
             >
@@ -93,14 +93,13 @@ export function GroupNavShell({
             </button>
           )}
 
-          <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
-            <SignOutButton className="text-white/70 hover:text-white transition-colors" />
-            <span className="text-[10px] text-white/60">Version {appVersion}</span>
+          <div className="absolute top-2.5 right-4">
+            <RefreshButton />
           </div>
 
           <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
             <MenuButton />
-            <RefreshButton />
+            <BackButton />
           </div>
         </header>
 

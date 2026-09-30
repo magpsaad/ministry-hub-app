@@ -14,7 +14,8 @@ import { SignOutButton } from "@/components/SignOutButton";
 // quietly in the background (SIDE_MENU_PLAN.md §3.4).
 let cachedMenuData: MenuData | null = null;
 
-const ITEM = "block w-full text-left px-5 py-2.5 text-sm text-[#333] hover:bg-[#f5f5f5] disabled:opacity-60";
+// Owner-requested: entries indented under their corner heading.
+const ITEM = "block w-full text-left pl-9 pr-5 py-2.5 text-sm text-[#333] hover:bg-[#f5f5f5] disabled:opacity-60";
 
 /**
  * SIDE_MENU_PLAN.md §3.2 -- the burger button in every page header, which
@@ -79,15 +80,16 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
   const currentGroupId = pathname.match(/^\/g\/([^/]+)/)?.[1] ?? null;
   const cohorts = data?.cohorts ?? [];
   const current = cohorts.find((c) => c.id === currentGroupId);
-  // Hidden for anyone with only one cohort (SIDE_MENU_PLAN.md D8) -- except
-  // when that one cohort is view-only: such a person lands on "No group
-  // assigned yet" (D5/Q3), so the switcher is their only way into it.
-  const showSwitcher = cohorts.length > 1 || cohorts.some((c) => c.tag === "view only");
+  // Owner-requested (revises SIDE_MENU_PLAN.md D8): the cohort row shows
+  // for everyone with a cohort, even a single-cohort servant, as an obvious
+  // way back to their Dashboard. With one cohort it's a plain link; with
+  // several it opens the switcher list.
+  const hasSeveral = cohorts.length > 1;
 
   function selectCohort(id: string) {
     onClose();
-    if (id === currentGroupId) return;
-    void logGroupSelectedAction(id);
+    if (pathname === `/g/${id}/dashboard`) return;
+    if (id !== currentGroupId) void logGroupSelectedAction(id);
     router.push(`/g/${id}/dashboard`);
   }
 
@@ -104,7 +106,10 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
   return createPortal(
     <div className="fixed inset-0 z-[60] flex" role="dialog" aria-modal="true" aria-label="Menu">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <nav className="relative h-full w-72 max-w-[85vw] bg-white shadow-[4px_0_20px_rgba(0,0,0,0.15)] flex flex-col overflow-y-auto">
+      {/* [&>*]:shrink-0 -- owner-reported: without it, once the menu is
+          taller than the screen (always, for an Admin) the flex column
+          squeezed the cohort switcher down to an invisible sliver. */}
+      <nav className="relative h-full w-72 max-w-[85vw] bg-white shadow-[4px_0_20px_rgba(0,0,0,0.15)] flex flex-col overflow-y-auto [&>*]:shrink-0">
         <div className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-4 flex items-center justify-between shrink-0">
           <span className="text-base font-semibold">Menu</span>
           <button type="button" onClick={onClose} aria-label="Close menu" className="text-white/80 hover:text-white">
@@ -118,7 +123,17 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
           </div>
         ) : (
           <>
-            {showSwitcher && (
+            {cohorts.length === 1 && (
+              <button
+                type="button"
+                onClick={() => selectCohort(cohorts[0].id)}
+                className="m-3 flex items-center justify-between gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2.5 text-sm font-semibold text-brand text-left hover:bg-brand/10"
+              >
+                <span className="truncate">{cohorts[0].name}</span>
+                <span className="text-[11px] font-medium text-brand/80 shrink-0">Dashboard ›</span>
+              </button>
+            )}
+            {hasSeveral && (
               <div className="m-3 rounded-lg border border-brand/30 bg-brand/5 overflow-hidden">
                 <button
                   type="button"
@@ -148,7 +163,7 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
 
             <Section title="Servant Corner">
               {link("/servants-directory", "Servant Directory")}
-              <ServiceCalendarButton className={ITEM} />
+              <ServiceCalendarButton className={ITEM} onExit={onClose} />
               {link("/qr-codes", "Checkin - QR Codes")}
               {link("/version-control", "Release History")}
             </Section>
@@ -202,7 +217,10 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="py-1">
-      <p className="px-5 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-[#888]">{title}</p>
+      {/* Owner-requested: headings stand out from their entries. */}
+      <p className="mx-3 mb-1 rounded-md bg-brand/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand">
+        {title}
+      </p>
       {children}
     </div>
   );

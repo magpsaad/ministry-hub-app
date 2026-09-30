@@ -6,9 +6,9 @@ import Link from "next/link";
 import type { CalendarEvent } from "@/lib/calendar-types";
 import { EVENT_TYPE_COLORS, contrastText } from "@/lib/calendar-types";
 import { AppLogo } from "@/components/AppLogo";
-import { ArrowLeftIcon } from "@/components/icons";
+import { MenuIcon } from "@/components/icons";
+import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
-import { SignOutButton } from "@/components/SignOutButton";
 import { EventForm } from "./EventForm";
 
 type View = "month" | "week" | "list" | "fridays";
@@ -170,8 +170,8 @@ export function ServiceCalendarModal({
   serviceWeekday,
   logoUrl,
   appTitleShort,
-  appVersion,
   onClose,
+  onExit,
   onRefresh,
 }: {
   events: CalendarEvent[];
@@ -179,8 +179,11 @@ export function ServiceCalendarModal({
   serviceWeekday: number;
   logoUrl: string | null;
   appTitleShort: string;
-  appVersion: string;
+  /** Closes just the calendar (the Menu button -- the side menu it was
+   * opened from is still open beneath it). */
   onClose: () => void;
+  /** Closes the calendar and the side menu (Back, and the logo). */
+  onExit: () => void;
   onRefresh: () => void;
 }) {
   const [view, setView] = useState<View>("month");
@@ -247,23 +250,28 @@ export function ServiceCalendarModal({
   return createPortal(
     <div className="fixed inset-0 z-[70] bg-[#f5f5f5] flex flex-col">
       <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative shrink-0">
+        {/* Owner-requested: looks and behaves like every other page's
+            header. The calendar opens from the side menu, so Menu just
+            closes the calendar, revealing the menu still open beneath it;
+            Back (and the logo) close both, returning to the page
+            underneath. */}
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
           <button
+            type="button"
             onClick={onClose}
-            title="Back"
-            aria-label="Back"
+            title="Menu"
+            aria-label="Menu"
             className="inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
           >
-            <ArrowLeftIcon className="h-8 w-8" />
-            <span className="text-xs font-medium">Back</span>
+            <MenuIcon className="h-8 w-8" />
+            <span className="text-xs font-medium">Menu</span>
           </button>
+          <BackButton onBack={onExit} />
+        </div>
+        <div className="absolute top-2.5 right-4">
           <RefreshButton onRefresh={onRefresh} />
         </div>
-        <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
-          <SignOutButton className="text-white/70 hover:text-white transition-colors" />
-          <span className="text-[10px] text-white/60">Version {appVersion}</span>
-        </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <Link href="/" onClick={onExit} className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={logoUrl} title={appTitleShort} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{appTitleShort}</h1>
         </Link>

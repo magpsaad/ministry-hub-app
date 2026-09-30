@@ -8,15 +8,17 @@ import { ServiceCalendarModal } from "./ServiceCalendarModal";
 /** Side-menu trigger for the Service Calendar (§6.8) -- fetches on first
  * open rather than on every page load, since the calendar is
  * ministry-wide, not scoped to whichever group happens to be loaded.
- * `className` replaces the default button styling. */
-export function ServiceCalendarButton({ className }: { className?: string }) {
+ * `className` replaces the default button styling; `onExit` also closes
+ * whatever it was opened from (the side menu) when leaving the calendar
+ * via Back or the logo. */
+export function ServiceCalendarButton({ className, onExit }: { className?: string; onExit?: () => void }) {
   const [open, setOpen] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   // Real values arrive from App Settings on first open (the modal isn't
   // rendered before then), so these initial values are never shown.
   const [serviceWeekday, setServiceWeekday] = useState(0);
   const [serviceWeekdayLabel, setServiceWeekdayLabel] = useState("");
-  const [branding, setBranding] = useState({ logoUrl: null as string | null, appTitleShort: "", appVersion: "" });
+  const [branding, setBranding] = useState({ logoUrl: null as string | null, appTitleShort: "" });
   const [pending, startTransition] = useTransition();
 
   function handleOpen() {
@@ -25,7 +27,7 @@ export function ServiceCalendarButton({ className }: { className?: string }) {
       setEvents(result.events);
       setServiceWeekday(result.serviceWeekday);
       setServiceWeekdayLabel(result.serviceWeekdayLabel);
-      setBranding({ logoUrl: result.logoUrl, appTitleShort: result.appTitleShort, appVersion: result.appVersion });
+      setBranding({ logoUrl: result.logoUrl, appTitleShort: result.appTitleShort });
       setOpen(true);
     });
   }
@@ -56,8 +58,11 @@ export function ServiceCalendarButton({ className }: { className?: string }) {
           serviceWeekdayLabel={serviceWeekdayLabel}
           logoUrl={branding.logoUrl}
           appTitleShort={branding.appTitleShort}
-          appVersion={branding.appVersion}
           onClose={() => setOpen(false)}
+          onExit={() => {
+            setOpen(false);
+            onExit?.();
+          }}
           onRefresh={handleRefresh}
         />
       )}
