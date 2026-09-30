@@ -190,14 +190,23 @@ export function CreateMinistryInteractive({
       </section>
 
       <section className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="text-lg font-bold text-brand mb-1">First Admins</h2>
+        <h2 className="text-lg font-bold text-brand mb-1">First Admins (optional)</h2>
         <p className="text-sm text-[#666] mb-3">
-          One or two. Each must already have signed in to the app once (anywhere), so their account exists.
+          Leave both blank and <strong>you</strong> become the first Admin (you already have full access as Church
+          Admin). Add the ministry&rsquo;s own Admins later: once they&rsquo;ve signed in at its address, use its Access
+          Maintenance &rarr; &ldquo;Add existing account by email&rdquo;, or approve their registration in Pending
+          Servants and grant System Admin. Only enter someone here who has already signed in to the app.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="text-xs text-[#666]">
-            Admin email
-            <input type="email" value={admin1} onChange={(e) => setAdmin1(e.target.value)} className={inputClass} />
+            Admin email (optional)
+            <input
+              type="email"
+              value={admin1}
+              onChange={(e) => setAdmin1(e.target.value)}
+              placeholder="Blank = you"
+              className={inputClass}
+            />
           </label>
           <label className="text-xs text-[#666]">
             Second Admin email (optional)

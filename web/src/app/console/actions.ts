@@ -59,8 +59,21 @@ export async function createMinistryAction(input: CreateMinistryInput) {
   const badHost = addresses.find((h) => !HOST.test(h));
   if (badHost) return { error: `"${badHost}" doesn't look like a web address (e.g. highschool-ministry.vercel.app).` };
 
-  const adminEmails = input.adminEmails.map((e) => e.trim()).filter(Boolean);
-  if (adminEmails.length < 1 || adminEmails.length > 2) return { error: "Give 1 or 2 first Admins." };
+  const supabase = await createClient();
+
+  // Optional (owner-requested): with no Admin given, the Church Admin
+  // creating the ministry is its first Admin. A new ministry's real Admins
+  // usually have no login yet; they're added later from its Access
+  // Maintenance once they've signed in at its address.
+  let adminEmails = [...new Set(input.adminEmails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  if (adminEmails.length === 0) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user?.email) return { error: "Couldn't read your own email to make you the first Admin. Enter an Admin email." };
+    adminEmails = [user.email.toLowerCase()];
+  }
+  if (adminEmails.length > 2) return { error: "Give at most 2 first Admins." };
 
   const s = input.settings;
   for (const c of [s.theme_color, s.theme_color_light, s.theme_color_dark]) {
@@ -86,7 +99,6 @@ export async function createMinistryAction(input: CreateMinistryInput) {
     if (!v.trim()) return { error: `${label} can't be blank.` };
   }
 
-  const supabase = await createClient();
   const { error } = await supabase.rpc("create_ministry", {
     p_id: code,
     p_name: input.name.trim(),
@@ -96,7 +108,16 @@ export async function createMinistryAction(input: CreateMinistryInput) {
     p_settings: { ...s, logo_url: s.logo_url?.trim() || null },
     p_copy_from: input.copyFrom || null,
   });
-  if (error) return { error: error.message };
+  if (error) {
+    // "No account for x@y -- ask them to sign in once first": nothing was
+    // created (one transaction), so point to the blank-field route.
+    if (error.message.startsWith("No account for")) {
+      return {
+        error: `${error.message.replace(/ -- .*$/, "")}: they haven't signed in to the app yet. Nothing was created. Leave the Admin fields blank to be the first Admin yourself, and add them later from the ministry's Access Maintenance once they've signed in at its address.`,
+      };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath("/console");
   return { error: null, code };
