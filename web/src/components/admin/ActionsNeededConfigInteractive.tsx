@@ -351,9 +351,9 @@ export function ActionsNeededConfigInteractive({
     />
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Sub-Coordinators</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">Coordinators</h2>
       <p className="text-sm text-[#666] mb-3">
-        When on, making someone Sub-Coordinator of a {appSettings.group_label.toLowerCase()} also makes them a Servant
+        When on, making someone Coordinator of a {appSettings.group_label.toLowerCase()} also makes them a Servant
         of that {appSettings.group_label.toLowerCase()} automatically. Changing this only affects grants made from now
         on; existing roles are left as they are.
       </p>
@@ -363,7 +363,7 @@ export function ActionsNeededConfigInteractive({
           checked={appSettings.sub_coordinator_auto_servant}
           onChange={(e) => updateAppField("sub_coordinator_auto_servant", e.target.checked)}
         />
-        Sub-Coordinators automatically become Servants
+        Coordinators automatically become Servants
       </label>
       <div className="flex items-center gap-3">
         <button

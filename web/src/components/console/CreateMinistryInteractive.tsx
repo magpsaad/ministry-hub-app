@@ -318,7 +318,7 @@ export function CreateMinistryInteractive({
               checked={settings.sub_coordinator_auto_servant}
               onChange={(e) => set("sub_coordinator_auto_servant", e.target.checked)}
             />
-            Sub-Coordinators automatically become Servants
+            Coordinators automatically become Servants
           </label>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
