@@ -6,7 +6,7 @@ import { getActiveMinistry } from "@/lib/ministry-context";
 import { weekdayName } from "@/lib/attendance-window";
 import { SERVANT_CHECKIN_COOKIE, MEMBER_CHECKIN_COOKIE, parseRememberedCheckinPerson } from "@/lib/checkin-remember-cookie";
 import { AppLogo } from "@/components/AppLogo";
-import { HomeLink } from "@/components/HomeLink";
+import { MenuButton } from "@/components/MenuButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { CheckInFlow } from "@/components/checkin/CheckInFlow";
@@ -58,11 +58,11 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
   return (
     <div className="min-h-full bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
-        {/* Owner-requested: Home, Refresh and Exit on every check-in page
+        {/* Owner-requested: Menu, Refresh and Exit on every check-in page
             (member, intake-only and servant alike), matching every other
             page in the app. */}
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
-          <HomeLink />
+          <MenuButton />
           <RefreshButton />
         </div>
         <SignOutButton className="absolute top-2.5 right-4 text-white/70 hover:text-white transition-colors" />

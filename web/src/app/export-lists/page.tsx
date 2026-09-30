@@ -5,7 +5,7 @@ import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
 import { getCombinedGroups } from "@/lib/groups";
 import { AppLogo } from "@/components/AppLogo";
-import { HomeLink } from "@/components/HomeLink";
+import { MenuButton } from "@/components/MenuButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { ExportListsInteractive } from "@/components/ExportListsInteractive";
@@ -38,7 +38,7 @@ export default async function ExportListsPage() {
     <div className="min-h-full bg-[#f5f5f5]">
       <header className="print:hidden bg-gradient-to-br from-brand to-brand-light text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
-          <HomeLink />
+          <MenuButton />
           <RefreshButton />
         </div>
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">

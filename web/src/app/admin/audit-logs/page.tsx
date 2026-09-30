@@ -5,7 +5,7 @@ import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAuditLogsAction, getAuditConfigAction, getAuditLogUsersAction } from "@/app/admin/audit-logs/actions";
 import { AppLogo } from "@/components/AppLogo";
-import { HomeLink } from "@/components/HomeLink";
+import { MenuButton } from "@/components/MenuButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { AuditLogsInteractive } from "@/components/admin/AuditLogsInteractive";
@@ -35,7 +35,7 @@ export default async function AuditLogsPage() {
     <div className="min-h-full bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
-          <HomeLink />
+          <MenuButton />
           <RefreshButton />
         </div>
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">

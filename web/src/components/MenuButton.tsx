@@ -22,6 +22,7 @@ const ITEM = "block w-full text-left px-5 py-2.5 text-sm text-[#333] hover:bg-[#
  * when tapped, never on page or tab loads.
  */
 export function MenuButton() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<MenuData | null>(cachedMenuData);
   const [loading, startTransition] = useTransition();
@@ -32,6 +33,12 @@ export function MenuButton() {
       const fresh = await getMenuDataAction();
       cachedMenuData = fresh;
       setData(fresh);
+      // Not signed in (e.g. on a public check-in page): behave like the old
+      // Home button, which sent them on to sign-in.
+      if (!fresh) {
+        setOpen(false);
+        router.push("/");
+      }
     });
   }
 
