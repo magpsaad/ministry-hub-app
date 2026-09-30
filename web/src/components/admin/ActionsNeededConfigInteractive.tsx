@@ -9,6 +9,7 @@ import {
   updateAppSettingsAction,
 } from "@/app/admin/actions-needed-config/actions";
 import { UploadLogoModal } from "@/components/admin/UploadLogoModal";
+import { ThemePalettePicker } from "@/components/admin/ThemePalettePicker";
 import type { AttendanceWindowSettings } from "@/lib/app-settings";
 import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive";
 
@@ -252,33 +253,32 @@ export function ActionsNeededConfigInteractive({
             className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
-        {(
-          [
-            ["theme_color", "Theme colour (headers, buttons, headings)"],
-            ["theme_color_light", "Theme colour, light (header gradient end)"],
-            ["theme_color_dark", "Theme colour, dark (button hover)"],
-            ["servants_qr_color", "Servants QR code colour"],
-            ["my_assigned_header_color", "\u201cMy Assigned List\u201d header colour"],
-            ["my_assigned_header_color_light", "\u201cMy Assigned List\u201d header colour, light (gradient end)"],
-          ] as const
-        ).map(([field, label]) => (
-          <label key={field} className="text-xs text-[#666]">
-            {label}
-            <span className="mt-1 flex items-center gap-2">
-              <input
-                type="color"
-                value={appSettings[field]}
-                onChange={(e) => updateAppField(field, e.target.value)}
-                className="h-8 w-10 cursor-pointer rounded border border-[#ddd] bg-white p-0.5"
-              />
-              <input
-                value={appSettings[field]}
-                onChange={(e) => updateAppField(field, e.target.value)}
-                className="w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm font-mono focus:border-brand focus:outline-none"
-              />
-            </span>
-          </label>
-        ))}
+        <ThemePalettePicker
+          colors={{
+            theme_color: appSettings.theme_color,
+            theme_color_light: appSettings.theme_color_light,
+            theme_color_dark: appSettings.theme_color_dark,
+            my_assigned_header_color: appSettings.my_assigned_header_color,
+            my_assigned_header_color_light: appSettings.my_assigned_header_color_light,
+          }}
+          onChange={(colors) => setAppSettings((prev) => ({ ...prev, ...colors }))}
+        />
+        <label className="text-xs text-[#666]">
+          Servants QR code colour
+          <span className="mt-1 flex items-center gap-2">
+            <input
+              type="color"
+              value={appSettings.servants_qr_color}
+              onChange={(e) => updateAppField("servants_qr_color", e.target.value)}
+              className="h-8 w-10 cursor-pointer rounded border border-[#ddd] bg-white p-0.5"
+            />
+            <input
+              value={appSettings.servants_qr_color}
+              onChange={(e) => updateAppField("servants_qr_color", e.target.value)}
+              className="w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm font-mono focus:border-brand focus:outline-none"
+            />
+          </span>
+        </label>
         <div className="sm:col-span-2 rounded-md border border-[#eee] p-3 space-y-2">
           <p className="text-xs font-semibold text-[#333]">Logo</p>
           <div className="flex flex-wrap items-center gap-3">
