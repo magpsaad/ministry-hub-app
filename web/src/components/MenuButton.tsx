@@ -83,7 +83,10 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
   // for everyone with a cohort, even a single-cohort servant, as an obvious
   // way back to their Dashboard. The arrow (full list) only appears when
   // there's somewhere else to go, or no default to go to.
-  const defaultEntry = cohorts.find((c) => c.id === data?.defaultCohortId);
+  // Someone with no default of their own (e.g. read-only access only) but
+  // just one cohort to open gets that one on the row, not "Choose a ...".
+  const defaultEntry =
+    cohorts.find((c) => c.id === data?.defaultCohortId) ?? (cohorts.length === 1 ? cohorts[0] : undefined);
   const showArrow = cohorts.length > 1 || !defaultEntry;
 
   function selectCohort(id: string) {
