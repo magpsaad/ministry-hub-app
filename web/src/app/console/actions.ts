@@ -46,6 +46,8 @@ export type CreateMinistryInput = {
     theme_color: string;
     theme_color_light: string;
     theme_color_dark: string;
+    my_assigned_header_color: string;
+    my_assigned_header_color_light: string;
   };
 };
 
@@ -76,7 +78,7 @@ export async function createMinistryAction(input: CreateMinistryInput) {
   if (adminEmails.length > 2) return { error: "Give at most 2 first Admins." };
 
   const s = input.settings;
-  for (const c of [s.theme_color, s.theme_color_light, s.theme_color_dark]) {
+  for (const c of [s.theme_color, s.theme_color_light, s.theme_color_dark, s.my_assigned_header_color, s.my_assigned_header_color_light]) {
     if (!HEX_COLOR.test(c)) return { error: `"${c}" isn't a valid colour -- use the #RRGGBB form.` };
   }
   try {

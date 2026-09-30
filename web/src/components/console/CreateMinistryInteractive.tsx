@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { createMinistryAction, type CreateMinistryInput } from "@/app/console/actions";
 import { addressUrl } from "@/lib/address-url";
+import { ThemePalettePicker } from "@/components/admin/ThemePalettePicker";
 
 // ISO weekday numbering (Monday=1..Sunday=7), matching app_settings.service_weekday.
 const WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -43,9 +44,12 @@ export function CreateMinistryInteractive({
     timezone: "",
     proximity_enabled: false,
     sub_coordinator_auto_servant: true,
+    // Starts on the Navy palette; the Colour palette picker below changes all five together.
     theme_color: "#1e3a5f",
     theme_color_light: "#2d5a7b",
     theme_color_dark: "#152a45",
+    my_assigned_header_color: "#c2185b",
+    my_assigned_header_color_light: "#d81b60",
   });
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -330,32 +334,20 @@ export function CreateMinistryInteractive({
             Coordinators automatically become Servants
           </label>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {(
-            [
-              ["theme_color", "Theme colour"],
-              ["theme_color_light", "Theme colour, light"],
-              ["theme_color_dark", "Theme colour, dark"],
-            ] as const
-          ).map(([field, label]) => (
-            <label key={field} className="text-xs text-[#666]">
-              {label}
-              <span className="mt-1 flex items-center gap-2">
-                <input
-                  type="color"
-                  value={settings[field]}
-                  onChange={(e) => set(field, e.target.value)}
-                  className="h-8 w-10 cursor-pointer rounded border border-[#ddd] bg-white p-0.5"
-                />
-                <input
-                  value={settings[field]}
-                  onChange={(e) => set(field, e.target.value)}
-                  className="w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm font-mono focus:border-brand focus:outline-none"
-                />
-              </span>
-            </label>
-          ))}
-        </div>
+        <p className="text-xs text-[#666] mb-2">
+          Pick a palette that sets this ministry apart from the others. It can be changed any time in the
+          ministry&rsquo;s App Settings &rarr; App Branding.
+        </p>
+        <ThemePalettePicker
+          colors={{
+            theme_color: settings.theme_color,
+            theme_color_light: settings.theme_color_light,
+            theme_color_dark: settings.theme_color_dark,
+            my_assigned_header_color: settings.my_assigned_header_color,
+            my_assigned_header_color_light: settings.my_assigned_header_color_light,
+          }}
+          onChange={(colors) => setSettings((prev) => ({ ...prev, ...colors }))}
+        />
       </section>
 
       <section className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
