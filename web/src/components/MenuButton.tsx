@@ -79,12 +79,12 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
 
   const currentGroupId = pathname.match(/^\/g\/([^/]+)/)?.[1] ?? null;
   const cohorts = data?.cohorts ?? [];
-  const current = cohorts.find((c) => c.id === currentGroupId);
   // Owner-requested (revises SIDE_MENU_PLAN.md D8): the cohort row shows
   // for everyone with a cohort, even a single-cohort servant, as an obvious
-  // way back to their Dashboard. With one cohort it's a plain link; with
-  // several it opens the switcher list.
-  const hasSeveral = cohorts.length > 1;
+  // way back to their Dashboard. The arrow (full list) only appears when
+  // there's somewhere else to go, or no default to go to.
+  const defaultEntry = cohorts.find((c) => c.id === data?.defaultCohortId);
+  const showArrow = cohorts.length > 1 || !defaultEntry;
 
   function selectCohort(id: string) {
     onClose();
@@ -123,27 +123,37 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
           </div>
         ) : (
           <>
-            {cohorts.length === 1 && (
-              <button
-                type="button"
-                onClick={() => selectCohort(cohorts[0].id)}
-                className="m-3 flex items-center justify-between gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2.5 text-sm font-semibold text-brand text-left hover:bg-brand/10"
-              >
-                <span className="truncate">{cohorts[0].name}</span>
-                <span className="text-[11px] font-medium text-brand/80 shrink-0">Dashboard ›</span>
-              </button>
-            )}
-            {hasSeveral && (
+            {/* Owner-requested: the row shows the person's DEFAULT cohort
+                (where `/` lands them; Combined for a General Coordinator),
+                not whichever page they're on. Tapping the name goes to its
+                Dashboard; the arrow opens the full list. */}
+            {cohorts.length > 0 && (
               <div className="m-3 rounded-lg border border-brand/30 bg-brand/5 overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setSwitcherOpen((o) => !o)}
-                  aria-expanded={switcherOpen}
-                  className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-brand"
-                >
-                  <span className="truncate">{current?.name ?? `Choose a ${data.groupLabel.toLowerCase()}`}</span>
-                  <ChevronDownIcon className={`h-4 w-4 shrink-0 transition-transform ${switcherOpen ? "rotate-180" : ""}`} />
-                </button>
+                <div className="flex items-stretch">
+                  <button
+                    type="button"
+                    onClick={() => (defaultEntry ? selectCohort(defaultEntry.id) : setSwitcherOpen((o) => !o))}
+                    className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-brand text-left hover:bg-brand/10"
+                  >
+                    <span className="truncate">
+                      {defaultEntry?.name ?? `Choose a ${data.groupLabel.toLowerCase()}`}
+                    </span>
+                    {defaultEntry && (
+                      <span className="ml-auto text-[11px] font-medium text-brand/80 shrink-0">Dashboard ›</span>
+                    )}
+                  </button>
+                  {showArrow && (
+                    <button
+                      type="button"
+                      onClick={() => setSwitcherOpen((o) => !o)}
+                      aria-expanded={switcherOpen}
+                      aria-label={`Show all ${data.groupLabel.toLowerCase()}s`}
+                      className="px-3 border-l border-brand/20 text-brand hover:bg-brand/10"
+                    >
+                      <ChevronDownIcon className={`h-4 w-4 transition-transform ${switcherOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  )}
+                </div>
                 {switcherOpen &&
                   cohorts.map((c) => (
                     <button

@@ -2,8 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAppSettings } from "@/lib/app-settings";
-import { getAccessibleGroups, getServingGroups, LAST_GROUP_COOKIE } from "@/lib/groups";
-import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
+import { getAccessibleGroups, LAST_GROUP_COOKIE, pickDefaultGroupId } from "@/lib/groups";
 import { getAccessSummary } from "@/lib/roles";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
@@ -40,15 +39,8 @@ export default async function LandingPage() {
     cookies(),
   ]);
 
-  const serving = getServingGroups(groups, access);
-  if (serving.length > 0) {
-    const lastOpened = cookieStore.get(LAST_GROUP_COOKIE)?.value;
-    const target = serving.find((g) => g.id === lastOpened) ?? serving[0];
-    redirect(`/g/${target.id}/dashboard`);
-  }
-  if (access.isAdmin || access.isGeneralCoordinator) {
-    redirect(`/g/${ALL_COHORTS_GROUP_ID}/dashboard`);
-  }
+  const defaultGroupId = pickDefaultGroupId(groups, access, cookieStore.get(LAST_GROUP_COOKIE)?.value);
+  if (defaultGroupId) redirect(`/g/${defaultGroupId}/dashboard`);
 
   const settings = await getAppSettings();
   // The proxy gate (src/lib/supabase/proxy.ts) already redirects anyone

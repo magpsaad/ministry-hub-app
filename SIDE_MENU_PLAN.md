@@ -23,6 +23,7 @@
 | D8 | **Cohort switcher at the top of the side menu**, collapsed to one line showing the current cohort. **Hidden for anyone with only one cohort.** | ✅ |
 | D9 | **Bible verse moves into the top banner**, near its bottom edge. | ✅ |
 | D8a | **Revised after QA (30 Sep):** the cohort row shows for **everyone with a cohort**, even a single-cohort servant, as an obvious way back to their Dashboard. With one cohort it's a plain "<cohort> Dashboard ›" link; with several it opens the switcher list. | ✅ |
+| D8b | **Cohort row (after QA, round 2):** shows the person's **default cohort** (where `/` lands them; Combined for a General Coordinator), not the page they're on. Tapping the name opens its Dashboard; the arrow opens the full list. The list is always in the **same fixed order** for everyone: Yr 0 (Admins only), Yr 1 up through the last, then Combined at the bottom, each person seeing only the ones they can open. | ✅ |
 | D12 | **Header, all pages (after QA):** Exit and Version move to the menu only. The banner's top left is **Menu** then **Back** (previous screen, no reload; with nothing to go back to, your Dashboard); **Refresh** moves to the top right. Signed-out youth on member QR codes see neither Menu nor Back. On the Service Calendar, Menu closes the calendar (the menu is still open beneath it) and Back closes both. | ✅ |
 | D13 | **Verse in yellow; menu headings shaded in the brand colour, entries indented** (after QA). | ✅ |
 | D10 | **Burger everywhere, on phone and desktop alike.** No permanent desktop sidebar. | ✅ |

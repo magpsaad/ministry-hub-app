@@ -84,12 +84,13 @@ export function getServingGroups(groups: GroupSummary[], access: AccessSummary):
 export type SwitcherEntry = { id: string; name: string; tag: "serving" | "view only" | "admin" | null };
 
 /**
- * SIDE_MENU_PLAN.md §3.2 -- the side menu's cohort switcher, in order: the
- * cohorts this person serves, then Combined (Admin/General Coordinator
- * only, same rule as the group layout), then every other cohort they can
- * open, then the hidden pre-entry group for Admins (moved here from the old
- * System Admin Corner). Built only from filterSelectableGroups(), so it
- * never lists a cohort the landing page's old dropdown wouldn't have.
+ * SIDE_MENU_PLAN.md §3.2 (revised) -- the side menu's cohort switcher. Always
+ * the same fixed order for everyone: by level (the hidden pre-entry group
+ * first, for Admins only, then Yr 1 up through the last), then Combined
+ * (Admin/General Coordinator only, same rule as the group layout) at the
+ * bottom. Each person only sees the ones they can open. Built only from
+ * filterSelectableGroups(), so it never lists a cohort the landing page's
+ * old dropdown wouldn't have.
  */
 export function buildSwitcherEntries(
   groups: GroupSummary[],
@@ -97,18 +98,37 @@ export function buildSwitcherEntries(
   combinedName: string,
 ): SwitcherEntry[] {
   const hasFullGroupAccess = access.isAdmin || access.isGeneralCoordinator;
-  const serving = getServingGroups(groups, access);
-  const servingIds = new Set(serving.map((g) => g.id));
+  const servingIds = new Set(getServingGroups(groups, access).map((g) => g.id));
+  const preEntry = access.isAdmin ? groups.filter((g) => g.ladder_position === 0) : [];
+  const ordered = [...preEntry, ...filterSelectableGroups(groups, access)].sort(
+    (a, b) => a.ladder_position - b.ladder_position,
+  );
 
-  const entries: SwitcherEntry[] = serving.map((g) => ({ id: g.id, name: g.name, tag: "serving" }));
+  const entries: SwitcherEntry[] = ordered.map((g) => ({
+    id: g.id,
+    name: g.name,
+    tag: g.ladder_position === 0 ? "admin" : servingIds.has(g.id) ? "serving" : hasFullGroupAccess ? null : "view only",
+  }));
   if (hasFullGroupAccess) entries.push({ id: ALL_COHORTS_GROUP_ID, name: combinedName, tag: null });
-  for (const g of filterSelectableGroups(groups, access)) {
-    if (servingIds.has(g.id)) continue;
-    entries.push({ id: g.id, name: g.name, tag: hasFullGroupAccess ? null : "view only" });
-  }
-  const preEntry = access.isAdmin ? groups.find((g) => g.ladder_position === 0) : undefined;
-  if (preEntry) entries.push({ id: preEntry.id, name: preEntry.name, tag: "admin" });
   return entries;
+}
+
+/**
+ * SIDE_MENU_PLAN.md §3.1 -- a person's default cohort: where `/` lands them
+ * and what the side menu's cohort row shows. The cohort they serve (the
+ * last one opened from the switcher if they serve several and it's still
+ * theirs, otherwise the first listed); else Combined for an Admin/General
+ * Coordinator; else none. Worked out from the current roles every time.
+ */
+export function pickDefaultGroupId(
+  groups: GroupSummary[],
+  access: AccessSummary,
+  lastOpenedId: string | undefined,
+): string | null {
+  const serving = getServingGroups(groups, access);
+  if (serving.length > 0) return (serving.find((g) => g.id === lastOpenedId) ?? serving[0]).id;
+  if (access.isAdmin || access.isGeneralCoordinator) return ALL_COHORTS_GROUP_ID;
+  return null;
 }
 
 /** SIDE_MENU_PLAN.md D6 -- the last cohort opened from the switcher, used

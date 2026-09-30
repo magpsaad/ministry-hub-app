@@ -4,7 +4,13 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { getAppSettings } from "@/lib/app-settings";
-import { buildSwitcherEntries, getAccessibleGroups, LAST_GROUP_COOKIE, type SwitcherEntry } from "@/lib/groups";
+import {
+  buildSwitcherEntries,
+  getAccessibleGroups,
+  LAST_GROUP_COOKIE,
+  pickDefaultGroupId,
+  type SwitcherEntry,
+} from "@/lib/groups";
 import { getPendingServantsCount } from "@/lib/pending-servants";
 import { getAccessSummary } from "@/lib/roles";
 
@@ -53,6 +59,9 @@ export type MenuData = {
   groupLabel: string;
   appVersion: string;
   cohorts: SwitcherEntry[];
+  /** The person's default cohort (where `/` lands them), shown on the
+   * menu's cohort row; null when they have none. */
+  defaultCohortId: string | null;
 };
 
 /** SIDE_MENU_PLAN.md §3.4 -- everything the side menu shows, fetched only
@@ -65,11 +74,12 @@ export async function getMenuDataAction(): Promise<MenuData | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [access, settings, groups, pendingServantsCount] = await Promise.all([
+  const [access, settings, groups, pendingServantsCount, cookieStore] = await Promise.all([
     getAccessSummary(user.id),
     getAppSettings(),
     getAccessibleGroups(),
     getPendingServantsCount(),
+    cookies(),
   ]);
   const isAdminOrGeneralCoordinator = access.isAdmin || access.isGeneralCoordinator;
 
@@ -82,5 +92,6 @@ export async function getMenuDataAction(): Promise<MenuData | null> {
     groupLabel: settings.group_label,
     appVersion: settings.app_version,
     cohorts: buildSwitcherEntries(groups, access, `All ${settings.group_label}s Combined`),
+    defaultCohortId: pickDefaultGroupId(groups, access, cookieStore.get(LAST_GROUP_COOKIE)?.value),
   };
 }
