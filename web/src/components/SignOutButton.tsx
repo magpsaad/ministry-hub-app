@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { signOut } from "@/app/login/actions";
 import { LogOutIcon } from "@/components/icons";
 import { MY_ASSIGNED_STORAGE_KEY } from "@/components/MyAssignedContext";
+import { clearMenuData } from "@/components/menuStore";
 
 /** Clears "My Assigned List" before signing out -- sessionStorage otherwise
  * survives a sign-out/sign-in cycle for as long as the browser tab stays
@@ -19,6 +20,8 @@ export function SignOutButton({ className }: { className?: string }) {
     } catch {
       // sessionStorage unavailable (e.g. private browsing); sign-out still proceeds.
     }
+    // The side menu's saved copy is this person's; never show it to the next.
+    clearMenuData();
     startTransition(async () => {
       await signOut();
     });

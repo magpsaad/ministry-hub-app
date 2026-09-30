@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AccessSummary } from "@/lib/roles";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
+export { LAST_GROUP_COOKIE } from "@/lib/allCohorts";
 
 export type GroupSummary = {
   id: string;
@@ -134,8 +135,3 @@ export function pickDefaultGroupId(
   const viewOnly = filterSelectableGroups(groups, access).sort((a, b) => a.ladder_position - b.ladder_position);
   return viewOnly[0]?.id ?? null;
 }
-
-/** SIDE_MENU_PLAN.md D6 -- the last cohort opened from the switcher, used
- * only to pick between several cohorts a person serves. Never trusted on
- * its own: the landing rule ignores it unless it is still one of theirs. */
-export const LAST_GROUP_COOKIE = "last_group";

@@ -79,9 +79,13 @@ Opens from the burger at the top left of every banner, and slides in over the pa
 
 The Home button (icon + "Home") becomes a burger icon, with a spinner while the menu data loads. Refresh, Sign out and Version stay where they are. The cohort name stays under the title (D2). The verse sits along the bottom edge of the cohort banner (D9, Q1, Q2: one line, small font, tap to expand).
 
-### 3.4 Keeping tab switching fast
+### 3.4 Keeping tab switching fast (revised after QA: menu speed)
 
-This is the main thing to get right. The menu appears on every page, but its data (roles, cohort list, Pending Servants count) is **only fetched when the burger is first tapped**, then kept for the rest of the visit. Nothing extra is loaded when you move between tabs. The verse is fetched by the cohort layout, which Next.js does **not** re-run when you switch tabs within the same cohort, so it adds no delay per tab either.
+The menu's data comes from a plain data URL (`/api/menu`), not a server action. Next.js runs server actions one at a time, behind any navigation in flight, and they're meant for changes, not reads. It checks who you are locally from the sign-in token (no extra trip to the sign-in server).
+
+Once a page has settled (browser idle), the menu's code and data are **preloaded quietly in the background**, once per page load. They're kept for the browser tab's session, so the menu opens **instantly**, even after a full reload, and refreshes in the background when opened, keeping the Pending Servants count current. The saved copy is cleared on Exit and on the sign-in page, so the next person on a shared device never sees it. Nothing is added to the page load itself or to tab switching.
+
+The verse is fetched by the cohort layout, which Next.js does **not** re-run when you switch tabs within the same cohort, so it adds no delay per tab either.
 
 ---
 

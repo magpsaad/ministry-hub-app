@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getBranding } from "@/lib/branding";
 import { createClient } from "@/lib/supabase/server";
 import { AppLogo } from "@/components/AppLogo";
+import { ClearMenuCache } from "@/components/ClearMenuCache";
 import { signInWithGoogle, signInWithPassword, signUpWithPassword, requestPasswordReset } from "./actions";
 
 export default async function LoginPage({
@@ -23,6 +24,7 @@ export default async function LoginPage({
 
   return (
     <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] px-4 py-12">
+      <ClearMenuCache />
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-6">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={60} />
