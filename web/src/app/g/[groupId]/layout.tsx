@@ -9,6 +9,7 @@ import { GroupNavShell } from "@/components/GroupNavShell";
 import { MyAssignedProvider } from "@/components/MyAssignedContext";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 import { Skeleton } from "@/components/Skeleton";
+import { getRandomVerseAction } from "@/app/actions";
 
 /**
  * Owner-reported: every tab under a cohort (Dashboard/Members/Attendance/
@@ -27,7 +28,7 @@ import { Skeleton } from "@/components/Skeleton";
  *
  * GroupNavShell itself needs no data beyond its props, so the fallback
  * below renders the exact same component with safe placeholder values --
- * header/logo/tab bar all appear and are fully clickable (Home, every tab)
+ * header/logo/tab bar all appear and are fully clickable (Menu, every tab)
  * instantly, then swap to the real title/cohort name/last-service-date the
  * moment this layout's own fetch resolves. Once resolved, the requested
  * tab's own page renders inside it exactly as before, with its own
@@ -104,10 +105,14 @@ async function GroupLayoutContent({
   // The group lookup runs in the same parallel batch as everything else
   // (it used to wait for this batch first -- one extra round trip before
   // the header could render).
-  const [access, settings, lastServiceDate, groupResult] = await Promise.all([
+  // The verse (SIDE_MENU_PLAN.md D9) is picked here, not per tab: Next.js
+  // doesn't re-run this layout when moving between a cohort's tabs, so it
+  // stays the same verse for the whole visit and adds nothing per tab.
+  const [access, settings, lastServiceDate, verse, groupResult] = await Promise.all([
     getAccessSummary(userId),
     getAppSettings(),
     getLastServiceDate(),
+    getRandomVerseAction(),
     isCombined ? Promise.resolve(null) : supabase.from("groups").select("id, name").eq("id", groupId).maybeSingle(),
   ]);
 
@@ -135,6 +140,7 @@ async function GroupLayoutContent({
         logoUrl={settings.logo_url}
         appVersion={settings.app_version}
         lastServiceDate={lastServiceDate}
+        verse={verse}
         combined
       >
         {children}
@@ -158,6 +164,7 @@ async function GroupLayoutContent({
         logoUrl={settings.logo_url}
         appVersion={settings.app_version}
         lastServiceDate={lastServiceDate}
+        verse={verse}
       >
         {children}
       </GroupNavShell>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -24,6 +25,7 @@ export function GroupNavShell({
   logoUrl,
   appVersion,
   lastServiceDate,
+  verse = null,
   combined = false,
   children,
 }: {
@@ -34,6 +36,11 @@ export function GroupNavShell({
   logoUrl: string | null;
   appVersion: string;
   lastServiceDate: string | null;
+  /** SIDE_MENU_PLAN.md D9/Q2 -- the Bible verse that used to sit on the
+   * landing page: one small line along the banner's bottom edge (the
+   * banner is sticky, so a full verse would permanently eat phone screen);
+   * tapping it shows the whole verse. */
+  verse?: { text: string; reference: string | null } | null;
   /** The "Load Youth Data for all cohorts" view (REQUIREMENTS.md §6.1
    * addendum) -- hides "My Assigned List" (owner-reported: doesn't apply
    * once multiple cohorts' data is combined; the group layout also doesn't
@@ -46,6 +53,7 @@ export function GroupNavShell({
   const pathname = usePathname();
   const { myAssignedOnly, toggle, hydrated } = useMyAssigned();
   const filtered = hydrated && myAssignedOnly;
+  const [verseExpanded, setVerseExpanded] = useState(false);
 
   return (
     <div className="min-h-full flex flex-col bg-[#f5f5f5]">
@@ -71,6 +79,19 @@ export function GroupNavShell({
             <h1 className="text-2xl font-bold">{appTitleShort}</h1>
           </Link>
           <p className="mt-1 text-sm opacity-90">{groupName}</p>
+          {verse && (
+            <button
+              type="button"
+              onClick={() => setVerseExpanded((v) => !v)}
+              aria-expanded={verseExpanded}
+              title={verseExpanded ? "Show less" : "Show the whole verse"}
+              className={`mt-1.5 -mb-2 block w-full max-w-2xl mx-auto text-[11px] italic text-white/80 hover:text-white ${
+                verseExpanded ? "whitespace-normal" : "truncate"
+              }`}
+            >
+              &ldquo;{verse.text}&rdquo;{verse.reference && <span className="not-italic"> — {verse.reference}</span>}
+            </button>
+          )}
 
           <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
             <SignOutButton className="text-white/70 hover:text-white transition-colors" />
