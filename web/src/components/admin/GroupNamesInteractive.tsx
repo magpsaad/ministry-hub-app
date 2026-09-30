@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import type { AdminGroupRow, AddGroupTierInput } from "@/app/admin/actions-needed-config/actions";
-import { renameGroupAction, addGroupTierAction, deleteGroupTierAction } from "@/app/admin/actions-needed-config/actions";
+import {
+  renameGroupAction,
+  addGroupTierAction,
+  deleteGroupTierAction,
+  updateGroupQrColorAction,
+} from "@/app/admin/actions-needed-config/actions";
 
 /** REQUIREMENTS.md §6.9/§6.14 -- rename any active group's display name,
  * and extend/shrink the active ladder by a tier. Add/Delete go through
@@ -17,12 +22,39 @@ export function GroupNamesInteractive({
   initial,
   positionLabel,
   groupLabel,
+  servantsQrColor,
 }: {
   initial: AdminGroupRow[];
   positionLabel: string;
   groupLabel: string;
+  /** What a group with no colour of its own prints in (lib/qrcodes.ts). */
+  servantsQrColor: string;
 }) {
   const [groups, setGroups] = useState(initial);
+  const [colorStatus, setColorStatus] = useState<Record<string, "saving" | "saved">>({});
+  const colorTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  // The colour picker reports every step while dragging, so save once the
+  // colour has stopped changing for a moment.
+  function handleQrColor(groupId: string, color: string) {
+    setError(null);
+    setGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, qr_color: color } : g)));
+    setColorStatus((prev) => ({ ...prev, [groupId]: "saving" }));
+    clearTimeout(colorTimers.current[groupId]);
+    colorTimers.current[groupId] = setTimeout(async () => {
+      const res = await updateGroupQrColorAction(groupId, color);
+      if (res.error) {
+        setError(res.error);
+        setColorStatus((prev) => {
+          const next = { ...prev };
+          delete next[groupId];
+          return next;
+        });
+        return;
+      }
+      setColorStatus((prev) => ({ ...prev, [groupId]: "saved" }));
+    }, 600);
+  }
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [pending, startTransition] = useTransition();
@@ -92,6 +124,7 @@ export function GroupNamesInteractive({
       <p className="text-sm text-[#666] mb-4">
         Every active group in the cohort ladder, position 0 (pre-entry) through the terminal group. Rename any of
         them directly, or add/remove a tier if this deployment needs more or fewer active years than the default.
+        Click a group&rsquo;s colour dot to change its QR code colour; it saves straight away.
       </p>
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 
@@ -134,6 +167,17 @@ export function GroupNamesInteractive({
               ) : (
                 <>
                   <span className="flex-1 min-w-0 truncate text-sm text-[#333]">{g.name}</span>
+                  {colorStatus[g.id] && (
+                    <span className="text-[11px] text-[#999]">{colorStatus[g.id] === "saving" ? "Saving…" : "Saved"}</span>
+                  )}
+                  <input
+                    type="color"
+                    value={g.qr_color ?? servantsQrColor}
+                    onChange={(e) => handleQrColor(g.id, e.target.value)}
+                    title={`QR code colour for ${g.name}`}
+                    aria-label={`QR code colour for ${g.name}`}
+                    className="h-7 w-7 shrink-0 cursor-pointer appearance-none rounded-full border border-[#ddd] bg-transparent p-0 [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-none [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none [&::-webkit-color-swatch-wrapper]:p-0"
+                  />
                   <button
                     type="button"
                     onClick={() => startEdit(g)}
@@ -141,7 +185,7 @@ export function GroupNamesInteractive({
                   >
                     Rename
                   </button>
-                  {!isPreEntry && !isTerminal && (
+                  {!isPreEntry && !isTerminal ? (
                     <button
                       type="button"
                       onClick={() => handleDelete(g)}
@@ -150,6 +194,14 @@ export function GroupNamesInteractive({
                     >
                       Delete
                     </button>
+                  ) : (
+                    // Same size as Delete, so every row's colour dot lines up.
+                    <span
+                      aria-hidden="true"
+                      className="invisible rounded-md border px-3 py-1.5 text-xs font-semibold"
+                    >
+                      Delete
+                    </span>
                   )}
                 </>
               )}

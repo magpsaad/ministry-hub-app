@@ -73,6 +73,22 @@ export async function renameGroupAction(groupId: string, name: string) {
   return { error: null };
 }
 
+/** A group's QR code colour (groups.qr_color), edited from the Group Names
+ * panel; the QR Codes page and print view read it live. Admins only (the
+ * groups_admin_write security rule) -- a refused update touches 0 rows
+ * without an error, so the row count is checked. */
+export async function updateGroupQrColorAction(groupId: string, color: string) {
+  if (!HEX_COLOR.test(color)) return { error: `"${color}" isn't a valid colour -- use the #RRGGBB form.` };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("groups").update({ qr_color: color }).eq("id", groupId).select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to change this group's QR colour." };
+
+  revalidatePath("/admin/actions-needed-config");
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
 export type AddGroupTierInput = { cohortYear: number | null; name: string; qrColor: string };
 
 /** Extends the active ladder by one tier, inserted just below the current

@@ -340,6 +340,7 @@ export function ActionsNeededConfigInteractive({
       initial={initialGroups}
       positionLabel={appSettings.ladder_position_label}
       groupLabel={appSettings.group_label}
+      servantsQrColor={initialAppSettings.servants_qr_color}
     />
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
