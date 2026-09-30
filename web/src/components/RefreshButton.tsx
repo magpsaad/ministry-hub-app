@@ -19,10 +19,9 @@ import { RefreshIcon, SpinnerIcon } from "@/components/icons";
  * inside a transition -- the icon becomes a spinner and further clicks are
  * ignored until the data is back.
  *
- * Pass `onRefresh` for a screen that already has its own reload callback
- * (e.g. ServiceCalendarModal, which isn't a real route and reloads its
- * data via a prop) instead of the router-based default. If it returns a
- * promise, the spinner lasts until that resolves.
+ * Pass `onRefresh` for a screen that has its own reload callback instead
+ * of the router-based default. If it returns a promise, the spinner lasts
+ * until that resolves.
  */
 export function RefreshButton({
   onRefresh,

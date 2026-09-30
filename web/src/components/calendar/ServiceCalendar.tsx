@@ -1,14 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { CalendarEvent } from "@/lib/calendar-types";
 import { EVENT_TYPE_COLORS, contrastText } from "@/lib/calendar-types";
-import { AppLogo } from "@/components/AppLogo";
-import { MenuIcon } from "@/components/icons";
-import { BackButton } from "@/components/BackButton";
-import { RefreshButton } from "@/components/RefreshButton";
 import { EventForm } from "./EventForm";
 
 type View = "month" | "week" | "list" | "fridays";
@@ -161,31 +156,24 @@ function DateRow({
   );
 }
 
-/** REQUIREMENTS.md §6.8 -- fullscreen modal, 4 views (Month/Week/List/the
- * deployment's actual service-day view). Event creation/editing/deletion is
- * open to all Servants (RLS enforces this regardless of the UI). */
-export function ServiceCalendarModal({
+/** REQUIREMENTS.md §6.8 -- 4 views (Month/Week/List/the deployment's
+ * actual service-day view). Event creation/editing/deletion is open to all
+ * Servants (RLS enforces this regardless of the UI).
+ *
+ * Owner-requested: now the body of an ordinary page (/calendar) with the
+ * same header as every other page, instead of a full-screen pop-up over
+ * whatever page it was opened from. Its data comes from that page; after
+ * an event is saved or deleted the page simply re-fetches it. */
+export function ServiceCalendar({
   events,
   serviceWeekdayLabel,
   serviceWeekday,
-  logoUrl,
-  appTitleShort,
-  onClose,
-  onExit,
-  onRefresh,
 }: {
   events: CalendarEvent[];
   serviceWeekdayLabel: string;
   serviceWeekday: number;
-  logoUrl: string | null;
-  appTitleShort: string;
-  /** Closes just the calendar (the Menu button -- the side menu it was
-   * opened from is still open beneath it). */
-  onClose: () => void;
-  /** Closes the calendar and the side menu (Back, and the logo). */
-  onExit: () => void;
-  onRefresh: () => void;
 }) {
+  const router = useRouter();
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState(new Date());
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | "new" | null>(null);
@@ -247,38 +235,9 @@ export function ServiceCalendarModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
 
-  return createPortal(
-    <div className="fixed inset-0 z-[70] bg-[#f5f5f5] flex flex-col">
-      <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative shrink-0">
-        {/* Owner-requested: looks and behaves like every other page's
-            header. The calendar opens from the side menu, so Menu just
-            closes the calendar, revealing the menu still open beneath it;
-            Back (and the logo) close both, returning to the page
-            underneath. */}
-        <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
-          <button
-            type="button"
-            onClick={onClose}
-            title="Menu"
-            aria-label="Menu"
-            className="inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
-          >
-            <MenuIcon className="h-8 w-8" />
-            <span className="text-xs font-medium">Menu</span>
-          </button>
-          <BackButton onBack={onExit} />
-        </div>
-        <div className="absolute top-2.5 right-4">
-          <RefreshButton onRefresh={onRefresh} />
-        </div>
-        <Link href="/" onClick={onExit} className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
-          <AppLogo logoUrl={logoUrl} title={appTitleShort} size={32} circular={false} />
-          <h1 className="text-2xl font-bold">{appTitleShort}</h1>
-        </Link>
-        <p className="mt-1 text-sm opacity-90">Service Calendar</p>
-      </header>
-
-      <div className="bg-white border-b border-[#ddd] px-4 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
+  return (
+    <>
+      <div className="bg-white border-b border-[#ddd] px-4 py-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1">
           {(["month", "week", "list", "fridays"] as View[]).map((v) => (
             <button
@@ -313,7 +272,7 @@ export function ServiceCalendarModal({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 max-w-5xl w-full mx-auto">
+      <div className="p-4 max-w-5xl w-full mx-auto">
         {view === "month" && (
           <DayGrid
             days={monthGrid(cursor)}
@@ -365,10 +324,9 @@ export function ServiceCalendarModal({
           event={editingEvent === "new" ? null : editingEvent}
           defaultDate={newEventDate}
           onClose={() => setEditingEvent(null)}
-          onSaved={onRefresh}
+          onSaved={() => router.refresh()}
         />
       )}
-    </div>,
-    document.body,
+    </>
   );
 }

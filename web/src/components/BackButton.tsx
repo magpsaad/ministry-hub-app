@@ -10,16 +10,12 @@ import { ArrowLeftIcon } from "@/components/icons";
  * navigation, no reload. With nothing to go back to (the app was just
  * opened in this tab), it goes to `/`, which lands on the person's own
  * Dashboard.
- *
- * Pass `onBack` for a screen that isn't a real route (ServiceCalendarModal),
- * where "back" means closing it rather than leaving the page underneath.
  */
-export function BackButton({ onBack }: { onBack?: () => void }) {
+export function BackButton() {
   const router = useRouter();
 
   function handleClick() {
-    if (onBack) onBack();
-    else if (window.history.length > 1) router.back();
+    if (window.history.length > 1) router.back();
     else router.push("/");
   }
 

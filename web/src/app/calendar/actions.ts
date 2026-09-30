@@ -2,37 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCalendarEvents, type CalendarEvent, type CalendarEventType } from "@/lib/calendar";
+import type { CalendarEventType } from "@/lib/calendar";
 import { calendarBucket, ministryFilePath } from "@/lib/storage";
 import { getActiveMinistry } from "@/lib/ministry-context";
-import { getAppSettings, weekdayName } from "@/lib/app-settings";
 import { logAudit } from "@/lib/audit";
-
-export async function getCalendarEventsAction(): Promise<CalendarEvent[]> {
-  return getCalendarEvents();
-}
-
-/** Bootstraps the calendar modal: events plus the ministry's configured
- * service weekday, dynamically labeling the 4th view (was hardcoded
- * "Fridays" in the old app). */
-export async function getCalendarBootstrapAction(): Promise<{
-  events: CalendarEvent[];
-  serviceWeekday: number;
-  serviceWeekdayLabel: string;
-  logoUrl: string | null;
-  appTitleShort: string;
-  appVersion: string;
-}> {
-  const [events, settings] = await Promise.all([getCalendarEvents(), getAppSettings()]);
-  return {
-    events,
-    serviceWeekday: settings.service_weekday,
-    serviceWeekdayLabel: `${weekdayName(settings.service_weekday)}s`,
-    logoUrl: settings.logo_url,
-    appTitleShort: settings.app_title_short,
-    appVersion: settings.app_version,
-  };
-}
 
 export type EventInput = {
   title: string;
@@ -63,7 +36,7 @@ export async function createEventAction(input: EventInput) {
   if (error) return { error: error.message, id: null };
 
   await logAudit(user.id, "CALENDAR_EVENT_CREATED", { details: { eventId: data.id } });
-  revalidatePath("/");
+  revalidatePath("/calendar");
   return { error: null, id: data.id as string };
 }
 
@@ -76,7 +49,7 @@ export async function updateEventAction(eventId: string, input: EventInput) {
   if (error) return { error: error.message };
 
   if (user) await logAudit(user.id, "CALENDAR_EVENT_UPDATED", { details: { eventId } });
-  revalidatePath("/");
+  revalidatePath("/calendar");
   return { error: null };
 }
 
@@ -89,7 +62,7 @@ export async function deleteEventAction(eventId: string) {
   if (error) return { error: error.message };
 
   if (user) await logAudit(user.id, "CALENDAR_EVENT_DELETED", { details: { eventId } });
-  revalidatePath("/");
+  revalidatePath("/calendar");
   return { error: null };
 }
 
@@ -122,7 +95,7 @@ export async function uploadEventAttachmentAction(eventId: string, formData: For
     await supabase.storage.from(calendarBucket()).remove([existing.attachment_url]);
   }
 
-  revalidatePath("/");
+  revalidatePath("/calendar");
   return { error: null, path };
 }
 
@@ -133,6 +106,6 @@ export async function removeEventAttachmentAction(eventId: string, path: string)
   const { error } = await supabase.from("service_calendar_events").update({ attachment_url: null }).eq("id", eventId);
   if (error) return { error: error.message };
 
-  revalidatePath("/");
+  revalidatePath("/calendar");
   return { error: null };
 }

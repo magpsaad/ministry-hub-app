@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { logGroupSelectedAction } from "@/app/actions";
-import { ServiceCalendarButton } from "@/components/calendar/ServiceCalendarButton";
 import { ChevronDownIcon, CloseIcon, SpinnerIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { LAST_GROUP_COOKIE } from "@/lib/allCohorts";
@@ -136,7 +135,7 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
 
             <Section title="Servant Corner">
               {link("/servants-directory", "Servant Directory")}
-              <ServiceCalendarButton className={ITEM} onExit={onClose} />
+              {link("/calendar", "Service Calendar")}
               {link("/qr-codes", "Checkin - QR Codes")}
               {link("/version-control", "Release History")}
             </Section>
