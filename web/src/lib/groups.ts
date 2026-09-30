@@ -118,7 +118,10 @@ export function buildSwitcherEntries(
  * and what the side menu's cohort row shows. The cohort they serve (the
  * last one opened from the switcher if they serve several and it's still
  * theirs, otherwise the first listed); else Combined for an Admin/General
- * Coordinator; else none. Worked out from the current roles every time.
+ * Coordinator; else (owner-requested) the first cohort they have read-only
+ * access to, in the switcher's fixed order; else none -- only someone with
+ * no cohort they can open at all. Worked out from the current roles every
+ * time.
  */
 export function pickDefaultGroupId(
   groups: GroupSummary[],
@@ -128,7 +131,8 @@ export function pickDefaultGroupId(
   const serving = getServingGroups(groups, access);
   if (serving.length > 0) return (serving.find((g) => g.id === lastOpenedId) ?? serving[0]).id;
   if (access.isAdmin || access.isGeneralCoordinator) return ALL_COHORTS_GROUP_ID;
-  return null;
+  const viewOnly = filterSelectableGroups(groups, access).sort((a, b) => a.ladder_position - b.ladder_position);
+  return viewOnly[0]?.id ?? null;
 }
 
 /** SIDE_MENU_PLAN.md D6 -- the last cohort opened from the switcher, used

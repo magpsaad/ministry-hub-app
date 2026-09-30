@@ -24,7 +24,11 @@ import { RefreshButton } from "@/components/RefreshButton";
  *    otherwise the first listed (D4, D6). An Admin/General Coordinator who
  *    also serves a cohort lands here too (D3).
  * 2. Admin or General Coordinator without a cohort: the Combined Dashboard.
- * 3. Anyone else: "No group assigned yet" (D5).
+ * 3. Read-only access only: the first of those cohorts (owner-requested,
+ *    replacing Q3 -- they used to land on "No group assigned yet").
+ * 4. Anyone else (no cohort they can open at all): "No group assigned yet"
+ *    (D5).
+ * All of this lives in pickDefaultGroupId(), shared with the side menu.
  */
 export default async function LandingPage() {
   const user = await getCurrentUser();

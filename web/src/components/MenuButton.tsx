@@ -83,11 +83,11 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
   // for everyone with a cohort, even a single-cohort servant, as an obvious
   // way back to their Dashboard. The arrow (full list) only appears when
   // there's somewhere else to go, or no default to go to.
-  // Someone with no default of their own (e.g. read-only access only) but
-  // just one cohort to open gets that one on the row, not "Choose a ...".
-  const defaultEntry =
-    cohorts.find((c) => c.id === data?.defaultCohortId) ?? (cohorts.length === 1 ? cohorts[0] : undefined);
-  const showArrow = cohorts.length > 1 || !defaultEntry;
+  // Owner-requested: nobody ever sees "Choose a cohort" -- the default
+  // (pickDefaultGroupId) always exists for anyone with a cohort; the first
+  // one listed is only a safety net.
+  const defaultEntry = cohorts.find((c) => c.id === data?.defaultCohortId) ?? cohorts[0];
+  const showArrow = cohorts.length > 1;
 
   function selectCohort(id: string) {
     onClose();
@@ -130,20 +130,16 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
                 (where `/` lands them; Combined for a General Coordinator),
                 not whichever page they're on. Tapping the name goes to its
                 Dashboard; the arrow opens the full list. */}
-            {cohorts.length > 0 && (
+            {defaultEntry && (
               <div className="m-3 rounded-lg border border-brand/30 bg-brand/5 overflow-hidden">
                 <div className="flex items-stretch">
                   <button
                     type="button"
-                    onClick={() => (defaultEntry ? selectCohort(defaultEntry.id) : setSwitcherOpen((o) => !o))}
+                    onClick={() => selectCohort(defaultEntry.id)}
                     className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-brand text-left hover:bg-brand/10"
                   >
-                    <span className="truncate">
-                      {defaultEntry?.name ?? `Choose a ${data.groupLabel.toLowerCase()}`}
-                    </span>
-                    {defaultEntry && (
-                      <span className="ml-auto text-[11px] font-medium text-brand/80 shrink-0">Dashboard ›</span>
-                    )}
+                    <span className="truncate">{defaultEntry.name}</span>
+                    <span className="ml-auto text-[11px] font-medium text-brand/80 shrink-0">Dashboard ›</span>
                   </button>
                   {showArrow && (
                     <button

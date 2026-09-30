@@ -30,7 +30,7 @@
 | D11 | **HSY coordinators** land on their first listed class for now. This gets revisited under the Group Ladder Redesign. | ✅ |
 | Q1 | **Which banners show the verse?** Recommendation: **the cohort pages only** (Dashboard, Member List, Attendance, Outreach, Analytics), since they replace the landing page. It is picked once when a cohort is opened and stays the same as you move between its tabs; it doesn't change on every tab click and costs no extra time per tab (§3.4). Admin and directory pages keep their plain banner. | ✅ |
 | Q2 | **A long verse on a phone.** The banner is "sticky" (it stays on screen when you scroll), so a 4-line verse would permanently take a quarter of the phone screen. Decision: **one line in a small font, cut with "…"; tapping it shows the full verse**. | ✅ |
-| Q3 | **Person with read-only access only** (no servant role anywhere). §4.2 of the requirements says read-only is always layered on top of a real role, so this shouldn't happen. Recommendation: follow D5 strictly ("No group assigned yet"). They can still open the read-only cohort from the switcher, which is shown for them even with a single cohort (🔎 QA has 5 such users). | ✅ |
+| Q3 | **Revised after QA (round 3):** a person with read-only access only **lands straight on the first of their read-only cohorts** (fixed switcher order), and the menu row shows it. "No group assigned yet" is now only for someone with no cohort they can open at all, and **nobody ever sees "Choose a cohort"**. | ✅ |
 
 ---
 
