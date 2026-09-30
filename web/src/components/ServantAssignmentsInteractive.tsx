@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AssignmentPerson, RoleGrant } from "@/lib/servant-assignments";
 import type { GroupSummary } from "@/lib/groups";
@@ -78,8 +78,15 @@ export function ServantAssignmentsInteractive({
   canManageServants: boolean;
 }) {
   const router = useRouter();
+  // Picks up the fresh list after a Refresh by adjusting state during
+  // render when the prop changes (React's recommended pattern), rather than
+  // in an effect, which drew the screen twice (react-hooks/set-state-in-effect).
   const [roster, setRoster] = useState(people);
-  useEffect(() => setRoster(people), [people]);
+  const [prevPeople, setPrevPeople] = useState(people);
+  if (people !== prevPeople) {
+    setPrevPeople(people);
+    setRoster(people);
+  }
 
   const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [search, setSearch] = useState("");

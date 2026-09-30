@@ -23,7 +23,6 @@ export function GroupNavShell({
   appTitleShort,
   memberLabel,
   logoUrl,
-  appVersion,
   lastServiceDate,
   verse = null,
   combined = false,
@@ -34,7 +33,6 @@ export function GroupNavShell({
   appTitleShort: string;
   memberLabel: string;
   logoUrl: string | null;
-  appVersion: string;
   lastServiceDate: string | null;
   /** SIDE_MENU_PLAN.md D9/Q2 -- the Bible verse that used to sit on the
    * landing page: one small line along the banner's bottom edge (the

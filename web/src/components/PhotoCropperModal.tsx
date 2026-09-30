@@ -33,10 +33,13 @@ export function PhotoCropperModal({
   const imgRef = useRef<HTMLImageElement>(null);
   const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
 
+  // Read as a data URL: the state is set when the read finishes, not
+  // synchronously inside the effect (lint: react-hooks/set-state-in-effect).
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setObjectUrl(url);
-    return () => URL.revokeObjectURL(url);
+    const reader = new FileReader();
+    reader.onload = () => setObjectUrl(typeof reader.result === "string" ? reader.result : null);
+    reader.readAsDataURL(file);
+    return () => reader.abort();
   }, [file]);
 
   function baseScale(r: Rendered) {

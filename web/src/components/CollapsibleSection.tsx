@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { setSessionFlag, useSessionFlag } from "@/components/useSessionFlag";
 
 /** REQUIREMENTS.md §6.3 -- collapse state persists per browser session, same
  * sessionStorage mechanism as "My Assigned List", resetting each new session. */
@@ -14,18 +14,12 @@ export function CollapsibleSection({
   children: React.ReactNode;
 }) {
   const key = `collapsed:${id}`;
-  const [open, setOpen] = useState(true);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setOpen(sessionStorage.getItem(key) !== "true");
-    setHydrated(true);
-  }, [key]);
+  const collapsed = useSessionFlag(key);
+  const hydrated = collapsed !== null;
+  const open = collapsed !== true;
 
   function toggle() {
-    const next = !open;
-    setOpen(next);
-    sessionStorage.setItem(key, String(!next));
+    setSessionFlag(key, open);
   }
 
   const showBody = !hydrated || open;

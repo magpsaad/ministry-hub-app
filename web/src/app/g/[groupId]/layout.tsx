@@ -74,7 +74,6 @@ function GroupShellFallback({ groupId, combined }: { groupId: string; combined: 
       appTitleShort=""
       memberLabel="Member"
       logoUrl={null}
-      appVersion=""
       lastServiceDate={null}
       combined={combined}
     >
@@ -138,7 +137,6 @@ async function GroupLayoutContent({
         appTitleShort={settings.app_title_short}
         memberLabel={settings.member_label}
         logoUrl={settings.logo_url}
-        appVersion={settings.app_version}
         lastServiceDate={lastServiceDate}
         verse={verse}
         combined
@@ -162,7 +160,6 @@ async function GroupLayoutContent({
         appTitleShort={settings.app_title_short}
         memberLabel={settings.member_label}
         logoUrl={settings.logo_url}
-        appVersion={settings.app_version}
         lastServiceDate={lastServiceDate}
         verse={verse}
       >

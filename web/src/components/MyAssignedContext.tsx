@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext } from "react";
+import { setSessionFlag, useSessionFlag } from "@/components/useSessionFlag";
 
 export const MY_ASSIGNED_STORAGE_KEY = "myAssignedOnly";
 const STORAGE_KEY = MY_ASSIGNED_STORAGE_KEY;
@@ -21,20 +22,12 @@ const MyAssignedCtx = createContext<{ myAssignedOnly: boolean; toggle: () => voi
  * the same page).
  */
 export function MyAssignedProvider({ children }: { children: React.ReactNode }) {
-  const [myAssignedOnly, setMyAssignedOnly] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setMyAssignedOnly(sessionStorage.getItem(STORAGE_KEY) === "true");
-    setHydrated(true);
-  }, []);
+  const stored = useSessionFlag(STORAGE_KEY);
+  const hydrated = stored !== null;
+  const myAssignedOnly = stored === true;
 
   function toggle() {
-    setMyAssignedOnly((prev) => {
-      const next = !prev;
-      sessionStorage.setItem(STORAGE_KEY, String(next));
-      return next;
-    });
+    setSessionFlag(STORAGE_KEY, !myAssignedOnly);
   }
 
   return (

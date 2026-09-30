@@ -26,9 +26,9 @@ export function AppLogo({
 
   if (logoUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- small remote
-      // branding image on a dynamic Supabase Storage host; not worth the
-      // next/image remotePatterns config for a header logo.
+      // Small remote branding image on a dynamic Supabase Storage host; not
+      // worth the next/image remotePatterns config for a header logo.
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={logoUrl}
         alt={title}
