@@ -79,6 +79,10 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
   const currentGroupId = pathname.match(/^\/g\/([^/]+)/)?.[1] ?? null;
   const cohorts = data?.cohorts ?? [];
   const current = cohorts.find((c) => c.id === currentGroupId);
+  // Hidden for anyone with only one cohort (SIDE_MENU_PLAN.md D8) -- except
+  // when that one cohort is view-only: such a person lands on "No group
+  // assigned yet" (D5/Q3), so the switcher is their only way into it.
+  const showSwitcher = cohorts.length > 1 || cohorts.some((c) => c.tag === "view only");
 
   function selectCohort(id: string) {
     onClose();
@@ -114,8 +118,7 @@ function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => voi
           </div>
         ) : (
           <>
-            {/* Hidden for anyone with only one cohort (SIDE_MENU_PLAN.md D8). */}
-            {cohorts.length > 1 && (
+            {showSwitcher && (
               <div className="m-3 rounded-lg border border-brand/30 bg-brand/5 overflow-hidden">
                 <button
                   type="button"
