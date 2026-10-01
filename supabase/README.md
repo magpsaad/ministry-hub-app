@@ -56,9 +56,16 @@ For a brand-new environment, first `create schema if not exists qa;` (or `prod`)
 | `0067` | RLS performance: `accessible_group_ids()` evaluated once per query instead of per row |
 | `0068_qa_only_…` | **QA only.** "Refresh QA from production" for the QA console: `refresh_prod_ministries`, `refresh_qa_only_access`, `refresh_from_prod` (reads `prod.*`, writes only `qa.*`, keeps a backup in `qa_refresh_backup`), plus `refresh_keep_list` and `refresh_log`. Never run with `search_path` prod. |
 
+| `0069` | **Group ladder** (`GROUP_LADDER_PLAN.md` v1.3): group kinds (hidden pre-entry, regular, hidden hand-over), display order, per-group name patterns, QR switches, shared check-in codes, hidden groups enforced in the security rules, the new Group Transition (preview = the run, undone), archive tool, check-in placement by birth year. Creates an empty hand-over group per ministry. Undo: `0069_down` (only before 0070 and before any new-model transition). |
+| `0070` | **SAY only, one time**: splits "2004 & older" into "2004 - Yr 5", "2003 - Yr 6" and the hidden "2002 - Transitioning". Stops unless the counts per destination equal the rehearsal's (`v_expect`, per environment; a rehearsal sets `ladder.split_rehearsal = on`). Undo: `0070_down`. |
+
+**Refresh QA from production (0068) between 0069 in QA and 0069 in production:** it refuses (the new `groups.kind` column has no value in production yet) and changes nothing. It works again once production has 0069.
+
 `project_b/` holds the one-off Project B rollout scripts, all already run in QA and production: `B1_backup.sql` (the in-database backup schema `<env>_premm_backup`), the SAY file move (`B5_copy_say_files.mjs`, `B5_switch_say_paths.sql` and its `_down`, `B5_delete_old_say_files.mjs`), and `delete_test_ministry_qa_only.sql` (removes the QA Test Ministry, TST). The `.mjs` scripts need a service-role key in `web/.env.local`, which should be removed again afterwards.
 
 `tests/project_b/` holds the rehearsal checks: `rehearsal_pre.sql` / `rehearsal_post.sql` (what each type of user can see, before and after, plus every check-in list) and `isolation.sql` (35 cross-ministry isolation tests on a throwaway ministry, run inside a rolled-back transaction). They are safe to re-run after future changes.
+
+`tests/group_ladder/` holds the 0069/0070 checks, run inside a rolled-back rehearsal after the migration: `ladder_tests.sql` (hidden-group security for every role, isolation, QR switches, the TST ladder and transitions incl. per-gender hand-over, Q6/Q12; 57 checks) and `split_tests.sql` (the SAY split, the shared code and placement by birth year; 15 checks).
 
 ## The public QR check-in functions
 

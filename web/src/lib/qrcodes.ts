@@ -31,6 +31,9 @@ export type QrCodeForPrinting = {
   checkInUrl: string;
   svg: string;
   color: string;
+  /** D13 -- other groups that check in with this code (hidden ones are
+   * named to Admins only). */
+  sharedWith: string[];
 };
 
 async function siteOrigin(): Promise<string> {
@@ -47,8 +50,10 @@ async function siteOrigin(): Promise<string> {
  * who can see them, at any time (the old "Mark as Printed" tracking was
  * removed -- MULTI_TENANT_PLAN.md P3).
  *
- * Ordered Servants first, then Year 0 -> Year 5+ (owner-requested) --
- * every code, for every app user (migration 0040). Reads through
+ * Ordered Servants first, then the groups' display order (GROUP_LADDER_PLAN
+ * §4.5). The pre-entry and hand-over codes appear only while their "QR code
+ * active" switch is on, for everyone, Admins included (D5, Q4 = No), and a
+ * code other groups share lists them (D13). Reads through
  * get_qr_codes_with_groups() rather than a plain embedded-join select:
  * groups_select's position-0 branch stays Admin-only for every OTHER
  * screen, so a plain select's embedded `groups` join for the Yr0 row
@@ -71,12 +76,13 @@ export async function getQrCodesForPrinting(): Promise<QrCodeForPrinting[]> {
     label: string;
     check_in_token: string;
     group_id: string | null;
-    ladder_position: number | null;
+    display_order: number | null;
     qr_color: string | null;
+    shared_with: string[] | null;
   }[];
 
   const sorted = [...rows].sort((a, b) => {
-    const rank = (r: (typeof rows)[number]) => (r.group_id === null ? -1 : (r.ladder_position ?? 999));
+    const rank = (r: (typeof rows)[number]) => (r.group_id === null ? -1 : (r.display_order ?? 999));
     return rank(a) - rank(b);
   });
 
@@ -94,7 +100,7 @@ export async function getQrCodesForPrinting(): Promise<QrCodeForPrinting[]> {
       // its colour is an App Setting (was hard-coded).
       const color = r.qr_color ?? settings.servants_qr_color;
 
-      return { id: r.id, label: r.label, checkInUrl, svg, color };
+      return { id: r.id, label: r.label, checkInUrl, svg, color, sharedWith: r.shared_with ?? [] };
     }),
   );
 }

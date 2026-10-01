@@ -28,6 +28,7 @@ export function CreateMinistryInteractive({
   const [admin1, setAdmin1] = useState("");
   const [admin2, setAdmin2] = useState("");
   const [preEntryGroupName, setPreEntryGroupName] = useState("");
+  const [terminalGroupName, setTerminalGroupName] = useState("Transitioning");
   const [copyFrom, setCopyFrom] = useState("");
   const [templateEdited, setTemplateEdited] = useState(false);
   const [settings, setSettings] = useState<CreateMinistryInput["settings"]>({
@@ -36,7 +37,9 @@ export function CreateMinistryInteractive({
     group_label: "Group",
     member_label: "Member",
     ladder_position_label: "Level",
-    group_name_template: "{cohort_year} - Level {position_label}",
+    group_name_template: "{cohort_year} - Level {level}",
+    level_number_offset: 0,
+    terminal_name_pattern: "{cohort_year} - Transitioning",
     university_label: "School",
     program_label: "Field of Focus",
     service_weekday: 0,
@@ -61,7 +64,7 @@ export function CreateMinistryInteractive({
       // Keep the naming template in step with the position label until the
       // Church Admin edits the template by hand.
       if (field === "ladder_position_label" && !templateEdited) {
-        next.group_name_template = `{cohort_year} - ${String(value).trim() || "Level"} {position_label}`;
+        next.group_name_template = `{cohort_year} - ${String(value).trim() || "Level"} {level}`;
       }
       return next;
     });
@@ -80,6 +83,7 @@ export function CreateMinistryInteractive({
         addresses: hosts,
         adminEmails: [admin1, admin2],
         preEntryGroupName,
+        terminalGroupName,
         copyFrom: copyFrom || null,
         settings,
       });
@@ -249,8 +253,29 @@ export function CreateMinistryInteractive({
               className={`${inputClass} font-mono`}
             />
             <span className="mt-0.5 block text-[11px] text-[#999]">
-              {"{cohort_year}"} and {"{position_label}"} (the position number) are filled in by Group Transition.
+              {"{cohort_year}"}, {"{level}"} (the level number) and {"{label}"} (the position label) are filled in by
+              Group Transition.
             </span>
+          </label>
+          <label className="text-xs text-[#666]">
+            Number of the first level (e.g. 1, or 9 for Grade 9)
+            <input
+              type="number"
+              min={1}
+              max={51}
+              value={settings.level_number_offset + 1}
+              onChange={(e) => set("level_number_offset", Math.max(0, Number(e.target.value) - 1))}
+              className={inputClass}
+            />
+          </label>
+          <label className="text-xs text-[#666]">
+            Hand-over group name pattern
+            <input
+              value={settings.terminal_name_pattern}
+              onChange={(e) => set("terminal_name_pattern", e.target.value)}
+              className={`${inputClass} font-mono`}
+            />
+            <span className="mt-0.5 block text-[11px] text-[#999]">Renames the hand-over group at each Group Transition.</span>
           </label>
           <label className="text-xs text-[#666]">
             School label
@@ -271,6 +296,10 @@ export function CreateMinistryInteractive({
             <span className="mt-0.5 block text-[11px] text-[#999]">
               More groups are added afterwards from the ministry&rsquo;s App Settings.
             </span>
+          </label>
+          <label className="text-xs text-[#666] sm:col-span-2">
+            Name of the hand-over group (hidden; people waiting to move to the next ministry)
+            <input value={terminalGroupName} onChange={(e) => setTerminalGroupName(e.target.value)} className={inputClass} />
           </label>
         </div>
       </section>

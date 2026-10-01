@@ -6,6 +6,7 @@ export type RoleGrant = {
   group_id: string | null;
   group_name: string | null;
   ladder_position: number | null;
+  display_order: number | null;
 };
 
 export type AssignmentPerson = {
@@ -32,7 +33,7 @@ export async function getServantAssignmentsRoster(): Promise<AssignmentPerson[]>
 
   const { data: roleRows } = await supabase
     .from("user_roles")
-    .select("id, user_id, role, group_id, groups(name, ladder_position)")
+    .select("id, user_id, role, group_id, groups(name, ladder_position, display_order)")
     .in("role", ["servant", "sub_coordinator", "read_only", "general_coordinator"]);
 
   const { data: profileRows } = await supabase.from("profiles").select("id, full_name, photo_path, gender");
@@ -41,13 +42,14 @@ export async function getServantAssignmentsRoster(): Promise<AssignmentPerson[]>
   const grantsByUser = new Map<string, RoleGrant[]>();
   for (const r of roleRows ?? []) {
     if (!grantsByUser.has(r.user_id)) grantsByUser.set(r.user_id, []);
-    const group = r.groups as unknown as { name: string; ladder_position: number } | null;
+    const group = r.groups as unknown as { name: string; ladder_position: number; display_order: number } | null;
     grantsByUser.get(r.user_id)!.push({
       id: r.id,
       role: r.role,
       group_id: r.group_id,
       group_name: group?.name ?? null,
       ladder_position: group?.ladder_position ?? null,
+      display_order: group?.display_order ?? null,
     });
   }
 

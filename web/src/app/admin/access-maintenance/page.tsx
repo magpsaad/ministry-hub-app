@@ -31,7 +31,9 @@ export default async function AccessMaintenancePage() {
     getAllRoleRowsAction(),
     getAccessibleGroups(),
   ]);
-  const servingGroups = groups.filter((g) => g.ladder_position > 0);
+  // Roles can only be given on regular groups (migration 0069 refuses the
+  // hidden pre-entry and hand-over groups).
+  const servingGroups = groups.filter((g) => g.kind === "regular");
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">

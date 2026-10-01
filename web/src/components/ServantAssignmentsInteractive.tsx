@@ -8,6 +8,7 @@ import { servantPhotoUrl } from "@/lib/storage";
 import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import {
   reassignRoleGroupAction,
+  countAssignmentsInGroupAction,
   revokeRoleGrantAction,
   grantServantRoleAction,
   type AddableRole,
@@ -101,7 +102,7 @@ export function ServantAssignmentsInteractive({
   const [bringUserId, setBringUserId] = useState("");
   const [bringRole, setBringRole] = useState<AddableRole>("servant");
 
-  const sortedGroups = useMemo(() => [...groups].sort((a, b) => a.ladder_position - b.ladder_position), [groups]);
+  const sortedGroups = useMemo(() => [...groups].sort((a, b) => a.display_order - b.display_order), [groups]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -122,6 +123,12 @@ export function ServantAssignmentsInteractive({
   function handleReassign(personId: string, grant: RoleGrant, newGroupId: string) {
     setError(null);
     startTransition(async () => {
+      // Q6 -- the move clears this servant's assignments in the group they
+      // leave (reassign_role_group, migration 0069), so say how many first.
+      if (grant.group_id && grant.group_id !== newGroupId) {
+        const n = await countAssignmentsInGroupAction(personId, grant.group_id);
+        if (n > 0 && !confirm(`This will clear ${n} youth assignment(s) in ${grant.group_name}. Continue?`)) return;
+      }
       const res = await reassignRoleGroupAction(grant.id, newGroupId || null);
       if (res.error) {
         setError(res.error);
@@ -132,6 +139,7 @@ export function ServantAssignmentsInteractive({
         group_id: g?.id ?? null,
         group_name: g?.name ?? null,
         ladder_position: g?.ladder_position ?? null,
+        display_order: g?.display_order ?? null,
       });
       router.refresh();
     });
@@ -171,7 +179,7 @@ export function ServantAssignmentsInteractive({
                 ...p,
                 grants: [
                   ...p.grants,
-                  { id: res.id!, role: addRole, group_id: g?.id ?? null, group_name: g?.name ?? null, ladder_position: g?.ladder_position ?? null },
+                  { id: res.id!, role: addRole, group_id: g?.id ?? null, group_name: g?.name ?? null, ladder_position: g?.ladder_position ?? null, display_order: g?.display_order ?? null },
                 ],
               }
             : p,
@@ -199,7 +207,7 @@ export function ServantAssignmentsInteractive({
       setRoster((prev) =>
         prev.map((p) =>
           p.id === bringUserId
-            ? { ...p, grants: [...p.grants, { id: res.id!, role: bringRole, group_id: g?.id ?? null, group_name: g?.name ?? null, ladder_position: g?.ladder_position ?? null }] }
+            ? { ...p, grants: [...p.grants, { id: res.id!, role: bringRole, group_id: g?.id ?? null, group_name: g?.name ?? null, ladder_position: g?.ladder_position ?? null, display_order: g?.display_order ?? null }] }
             : p,
         ),
       );

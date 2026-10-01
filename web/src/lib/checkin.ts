@@ -14,9 +14,12 @@ export type CheckInFlow = {
  * which list/mark/submit RPCs to call next. Returns null for an invalid or
  * unknown token, or a ministry that's been switched off (never throws to
  * the caller). */
-export async function getCheckInFlow(token: string): Promise<CheckInFlow | null> {
+/** null = not a check-in code; "switched_off" = a pre-entry or hand-over
+ * code whose "QR code active" switch is off (GROUP_LADDER_PLAN.md D5). */
+export async function getCheckInFlow(token: string): Promise<CheckInFlow | "switched_off" | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("checkin_get_flow", { p_token: token }).single();
+  if (error?.message.includes("isn't active")) return "switched_off";
   if (error || !data) return null;
   const row = data as { is_servant: boolean; flow_type: CheckInFlow["flowType"]; label: string; ministry_id: string };
   return { isServant: row.is_servant, flowType: row.flow_type, label: row.label, ministryId: row.ministry_id };

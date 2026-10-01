@@ -80,6 +80,9 @@ export function QrCodesInteractive({ qrCodes }: { qrCodes: QrCodeForPrinting[] }
               >
                 {q.label}
               </div>
+              {q.sharedWith.length > 0 && (
+                <p className="mt-2 text-xs text-[#666] print:hidden">Also used by {q.sharedWith.join(", ")}</p>
+              )}
 
             </div>
           );

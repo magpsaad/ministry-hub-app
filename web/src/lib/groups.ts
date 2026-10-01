@@ -1,78 +1,108 @@
 import { createClient } from "@/lib/supabase/server";
-import type { AccessSummary } from "@/lib/roles";
+import { getAccessSummary, type AccessSummary } from "@/lib/roles";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 export { LAST_GROUP_COOKIE } from "@/lib/allCohorts";
+
+/** GROUP_LADDER_PLAN.md §3.1 -- pre_entry (hidden intake group, level 0),
+ * regular (levels 1..N, several may share a level) and terminal (the hidden
+ * hand-over group). */
+export type GroupKind = "pre_entry" | "regular" | "terminal";
 
 export type GroupSummary = {
   id: string;
   name: string;
+  /** The level (Yr 3, Grade 10 before the ministry's number offset). */
   ladder_position: number;
+  /** Where the group appears in lists and the cohort switcher (D4). */
+  display_order: number;
+  kind: GroupKind;
   is_terminal: boolean;
 };
 
 /**
- * Groups the current user can see, per RLS (REQUIREMENTS.md §2.2, §4.4):
- * Admins see every group including the hidden position-0 pre-entry cohort;
- * everyone else sees only groups they hold a role against. No extra
- * filtering needed here -- the database already enforces this.
- *
- * `is_terminal` used to be a generated column hardcoded to `ladder_position
- * >= 5` -- now that the ladder length is admin-configurable (§6.9, migration
- * 0030), "terminal" just means "whichever position is currently highest
- * among this set of active groups," computed here from the rows already
- * fetched rather than a fixed number.
+ * Groups the current user can see, per RLS, in display order (D4): Admins
+ * see every group including the hidden pre-entry and hand-over groups; the
+ * database hides those two from everyone else (migration 0069), so no extra
+ * filtering is needed here.
  */
 export async function getAccessibleGroups(): Promise<GroupSummary[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("groups")
-    .select("id, name, ladder_position")
+    .select("id, name, ladder_position, display_order, kind")
     .eq("is_archived", false)
     .order("display_order");
 
-  const rows = data ?? [];
-  const terminalPosition = rows.length > 0 ? Math.max(...rows.map((g) => g.ladder_position)) : null;
-  return rows.map((g) => ({ ...g, is_terminal: g.ladder_position === terminalPosition }));
+  return (data ?? []).map((g) => ({ ...(g as Omit<GroupSummary, "is_terminal">), is_terminal: g.kind === "terminal" }));
+}
+
+/** GROUP_LADDER_PLAN.md D14/§4.6 -- the regular groups where this person is
+ * a Coordinator, in display order. Two or more of them give a non-Admin,
+ * non-General-Coordinator their own combined view of just those groups. */
+export function coordinatorScope(groups: GroupSummary[], access: AccessSummary): GroupSummary[] {
+  const coordinated = new Set(
+    access.roles.filter((r) => r.role === "sub_coordinator" && r.group_id !== null).map((r) => r.group_id as string),
+  );
+  return groups.filter((g) => g.kind === "regular" && coordinated.has(g.id));
+}
+
+/** Whether this person gets the coordinator's combined view (D14) rather
+ * than the Admin/General Coordinator "all groups" one. */
+export function hasCoordinatorCombined(groups: GroupSummary[], access: AccessSummary): boolean {
+  return !access.isAdmin && !access.isGeneralCoordinator && coordinatorScope(groups, access).length >= 2;
+}
+
+/** The coordinator's combined view's name (§4.6): the leading words the
+ * group names share, without a dangling "St"/"St." ("Gr10 Boys St Anthony"
+ * + "Gr10 Boys St Moses" -> "Gr10 Boys"); when they share none, the levels
+ * joined ("2004 - Yr 5" + "2003 - Yr 6" -> "Yr 5 + Yr 6"). */
+export function coordinatorCombinedName(
+  scope: GroupSummary[],
+  levelWord: string,
+  levelOffset: number,
+): string {
+  const words = scope.map((g) => g.name.trim().split(/\s+/));
+  const shared: string[] = [];
+  for (let i = 0; words.every((w) => i < w.length - 1 && w[i] === words[0][i]); i++) shared.push(words[0][i]);
+  while (shared.length > 0 && /^(st\.?|-|–)$/i.test(shared[shared.length - 1])) shared.pop();
+  if (shared.length > 0) return shared.join(" ");
+  const levels = [...new Set(scope.map((g) => g.ladder_position))].sort((a, b) => a - b);
+  return levels.map((l) => `${levelWord} ${l + levelOffset}`.trim()).join(" + ");
 }
 
 /**
- * The "Load Youth Data for all cohorts" combined view's group set: every
- * serving cohort (ladder_position > 0) this user can see, per RLS -- same
- * `ladder_position > 0` exclusion the landing page's own group selector
- * already applies (the hidden position-0 pre-entry group stays Admin-only,
- * REQUIREMENTS.md §2.2). A General Coordinator gets literally every real
- * cohort; a Sub-Coordinator gets whichever ones they actually hold a role
- * at (RLS-filtered by getAccessibleGroups() itself, no extra filtering
- * needed here) -- so "all cohorts" always means "everything this specific
- * user can see," never a hardcoded ministry-wide list.
+ * The groups the combined ("all cohorts") pages cover for this person:
+ * every regular group for an Admin or General Coordinator; for a
+ * Coordinator of two or more groups (D14), just those groups. The hidden
+ * pre-entry and hand-over groups are never part of it.
  */
 export async function getCombinedGroups(): Promise<GroupSummary[]> {
-  const groups = await getAccessibleGroups();
-  return groups.filter((g) => g.ladder_position > 0);
+  const [groups, user] = await Promise.all([getAccessibleGroups(), getCurrentUser()]);
+  if (!user) return [];
+  const regular = groups.filter((g) => g.kind === "regular");
+  const access = await getAccessSummary(user.id);
+  if (access.isAdmin || access.isGeneralCoordinator) return regular;
+  return coordinatorScope(regular, access);
 }
 
 /**
  * "Which cohorts can I load/export real member data for" -- narrower than
- * "which cohorts can I see the name of" (groups_select was widened to
- * is_app_user() in migration 0038, so getAccessibleGroups() alone now
- * returns every cohort to any app user). The actual `members` rows stay
- * RLS-gated to has_readonly_or_full_group_access(group_id), so a
- * Sub-Coordinator picking a cohort they don't hold a role at would just
- * silently get zero rows back -- this computes the narrower, real answer
- * up front instead: every non-Yr0 cohort for an Admin/General Coordinator,
- * or only the specific ones a Sub-Coordinator/Servant/Read-Only actually
- * holds a role at.
+ * "which cohorts can I see the name of" (groups_select shows every regular
+ * group to any app user). Regular groups only: every one for an
+ * Admin/General Coordinator, or only the ones a Coordinator/Servant/
+ * Read-Only actually holds a role at.
  */
 export function filterSelectableGroups(groups: GroupSummary[], access: AccessSummary): GroupSummary[] {
   const hasFullGroupAccess = access.isAdmin || access.isGeneralCoordinator;
   const ownGroupIds = new Set(access.roles.map((r) => r.group_id).filter((id): id is string => id !== null));
-  return groups.filter((g) => g.ladder_position > 0 && (hasFullGroupAccess || ownGroupIds.has(g.id)));
+  return groups.filter((g) => g.kind === "regular" && (hasFullGroupAccess || ownGroupIds.has(g.id)));
 }
 
 /**
  * SIDE_MENU_PLAN.md D3/D4 -- the cohorts this person actually serves: any
  * role row other than read-only that points at a specific cohort (Servant,
- * Sub-Coordinator, or an Admin/General Coordinator who also serves one).
+ * Coordinator, or an Admin/General Coordinator who also serves one).
  * Kept in display order, so the first entry is the "first listed" cohort.
  */
 export function getServingGroups(groups: GroupSummary[], access: AccessSummary): GroupSummary[] {
@@ -85,44 +115,49 @@ export function getServingGroups(groups: GroupSummary[], access: AccessSummary):
 export type SwitcherEntry = { id: string; name: string; tag: "serving" | "view only" | "admin" | null };
 
 /**
- * SIDE_MENU_PLAN.md §3.2 (revised) -- the side menu's cohort switcher. Always
- * the same fixed order for everyone: by level (the hidden pre-entry group
- * first, for Admins only, then Yr 1 up through the last), then Combined
- * (Admin/General Coordinator only, same rule as the group layout) at the
- * bottom. Each person only sees the ones they can open. Built only from
- * filterSelectableGroups(), so it never lists a cohort the landing page's
- * old dropdown wouldn't have.
+ * The side menu's cohort switcher, in display order (GROUP_LADDER_PLAN.md
+ * §4.5): for Admins the hidden pre-entry group first and the hidden
+ * hand-over group(s) last, both tagged "admin" (Q5); the regular groups in
+ * between, each person seeing only the ones they can open; then Combined
+ * for an Admin/General Coordinator. A Coordinator of two or more groups gets
+ * their own combined view at the top (D14).
  */
 export function buildSwitcherEntries(
   groups: GroupSummary[],
   access: AccessSummary,
   combinedName: string,
+  coordinatorCombined?: string,
 ): SwitcherEntry[] {
   const hasFullGroupAccess = access.isAdmin || access.isGeneralCoordinator;
   const servingIds = new Set(getServingGroups(groups, access).map((g) => g.id));
-  const preEntry = access.isAdmin ? groups.filter((g) => g.ladder_position === 0) : [];
-  const ordered = [...preEntry, ...filterSelectableGroups(groups, access)].sort(
-    (a, b) => a.ladder_position - b.ladder_position,
-  );
+  const hidden = (kind: GroupKind) => (access.isAdmin ? groups.filter((g) => g.kind === kind) : []);
 
-  const entries: SwitcherEntry[] = ordered.map((g) => ({
-    id: g.id,
-    name: g.name,
-    tag: g.ladder_position === 0 ? "admin" : servingIds.has(g.id) ? "serving" : hasFullGroupAccess ? null : "view only",
-  }));
+  const entries: SwitcherEntry[] = [];
+  if (coordinatorCombined && hasCoordinatorCombined(groups, access)) {
+    entries.push({ id: ALL_COHORTS_GROUP_ID, name: coordinatorCombined, tag: null });
+  }
+  for (const g of hidden("pre_entry")) entries.push({ id: g.id, name: g.name, tag: "admin" });
+  for (const g of filterSelectableGroups(groups, access)) {
+    entries.push({
+      id: g.id,
+      name: g.name,
+      tag: servingIds.has(g.id) ? "serving" : hasFullGroupAccess ? null : "view only",
+    });
+  }
+  for (const g of hidden("terminal")) entries.push({ id: g.id, name: g.name, tag: "admin" });
   if (hasFullGroupAccess) entries.push({ id: ALL_COHORTS_GROUP_ID, name: combinedName, tag: null });
   return entries;
 }
 
 /**
  * SIDE_MENU_PLAN.md §3.1 -- a person's default cohort: where `/` lands them
- * and what the side menu's cohort row shows. The cohort they serve (the
- * last one opened from the switcher if they serve several and it's still
- * theirs, otherwise the first listed); else Combined for an Admin/General
- * Coordinator; else (owner-requested) the first cohort they have read-only
- * access to, in the switcher's fixed order; else none -- only someone with
- * no cohort they can open at all. Worked out from the current roles every
- * time.
+ * and what the side menu's cohort row shows. A Coordinator of two or more
+ * groups lands on their combined view (D14) unless they last opened one of
+ * their own groups. Otherwise: the cohort they serve (the last one opened
+ * if they serve several and it's still theirs, otherwise the first listed);
+ * else Combined for an Admin/General Coordinator; else the first cohort they
+ * have read-only access to; else none. A hidden group is never anyone's
+ * default. Worked out from the current roles every time.
  */
 export function pickDefaultGroupId(
   groups: GroupSummary[],
@@ -130,8 +165,10 @@ export function pickDefaultGroupId(
   lastOpenedId: string | undefined,
 ): string | null {
   const serving = getServingGroups(groups, access);
+  if (hasCoordinatorCombined(groups, access)) {
+    return serving.find((g) => g.id === lastOpenedId)?.id ?? ALL_COHORTS_GROUP_ID;
+  }
   if (serving.length > 0) return (serving.find((g) => g.id === lastOpenedId) ?? serving[0]).id;
   if (access.isAdmin || access.isGeneralCoordinator) return ALL_COHORTS_GROUP_ID;
-  const viewOnly = filterSelectableGroups(groups, access).sort((a, b) => a.ladder_position - b.ladder_position);
-  return viewOnly[0]?.id ?? null;
+  return filterSelectableGroups(groups, access)[0]?.id ?? null;
 }

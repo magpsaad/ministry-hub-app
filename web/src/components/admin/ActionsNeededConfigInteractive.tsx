@@ -12,6 +12,7 @@ import { UploadLogoModal } from "@/components/admin/UploadLogoModal";
 import { ThemePalettePicker } from "@/components/admin/ThemePalettePicker";
 import type { AttendanceWindowSettings } from "@/lib/app-settings";
 import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive";
+import { levelText } from "@/lib/group-names";
 
 // ISO weekday numbering (Monday=1..Sunday=7), matching app_settings.service_weekday.
 const WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -24,6 +25,8 @@ export function ActionsNeededConfigInteractive({
   initialGroups,
   initialLookbackMonths,
   initialServantsQrColor,
+  initialDefaultPattern,
+  initialTerminalPattern,
 }: {
   ministryCode: string;
   initial: ActionsNeededConfigRow[];
@@ -32,6 +35,8 @@ export function ActionsNeededConfigInteractive({
   initialGroups: AdminGroupRow[];
   initialLookbackMonths: number;
   initialServantsQrColor: string;
+  initialDefaultPattern: string | null;
+  initialTerminalPattern: string;
 }) {
   const [rows, setRows] = useState(initial);
   const [pending, startTransition] = useTransition();
@@ -208,6 +213,21 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
         <label className="text-xs text-[#666]">
+          Number of the first level (e.g. 1, or 9 for Grade 9)
+          <input
+            type="number"
+            min={1}
+            max={51}
+            value={appSettings.level_number_offset + 1}
+            onChange={(e) => updateAppField("level_number_offset", Math.max(0, Number(e.target.value) - 1))}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+          />
+          <span className="mt-1 block text-[11px] text-[#999]">
+            Levels display as {levelText(1, appSettings.ladder_position_label, appSettings.level_number_offset)},{" "}
+            {levelText(2, appSettings.ladder_position_label, appSettings.level_number_offset)}…
+          </span>
+        </label>
+        <label className="text-xs text-[#666]">
           School Label (e.g. &ldquo;University/College&rdquo;, &ldquo;School&rdquo;)
           <input
             value={appSettings.university_label}
@@ -346,8 +366,11 @@ export function ActionsNeededConfigInteractive({
     <GroupNamesInteractive
       initial={initialGroups}
       positionLabel={appSettings.ladder_position_label}
+      levelOffset={appSettings.level_number_offset}
       groupLabel={appSettings.group_label}
       initialServantsQrColor={initialServantsQrColor}
+      initialDefaultPattern={initialDefaultPattern}
+      initialTerminalPattern={initialTerminalPattern}
     />
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">

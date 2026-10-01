@@ -2,6 +2,8 @@
 
 **Companion to REQUIREMENTS.md.** This is the implementable Postgres/Supabase schema: tables, types, constraints, indexes, and representative Row-Level Security policies. It began as the original design artifact; the live schema is what `supabase/migrations/` builds (0001 → 0067), applied to both the `qa` and `prod` schemas.
 
+> **Group ladder (0069–0070, built 30 Sep 2026).** Section L describes the group kinds, hidden groups, shared check-in codes and the new Group Transition, and takes precedence over §2 and §15.
+>
 > **Multi-ministry (v6, 29 Sep 2026).** Since Project B (migrations 0064–0067) the schema holds several ministries of one church. **Section M below is authoritative for that layer** and takes precedence over the single-ministry DDL in §1–§17, which is kept as the design record of each table's own columns. Wherever a table below shows a single-column key or a link to `profiles(id)`, read it together with §M: every ministry-owned table now has `ministry_id`, keys and uniqueness are per ministry, and links are composite. Design reasoning: `MULTI_TENANT_PLAN.md`.
 
 ---
@@ -125,6 +127,45 @@ Helpers are wrapped in `(select …)` so Postgres evaluates them once per query.
 Buckets per environment (`qa-photos`, `qa-calendar`, `qa-branding` and the `prod-*` equivalents) hold one folder per ministry: `SAY/members/…`, `SAY/profiles/…`, `SAY/calendar/…`, `SAY/branding/…`. The stored paths in `members.photo_path`, `profiles.photo_path`, `service_calendar_events.attachment_url` and `app_settings.logo_url` include the folder. A `photo_path` that is a web link (a Google profile picture saved at first sign-in) is left as is and shown directly.
 
 Write policies (0065, a separate QA file and production file, so neither ever touches the other environment's rules) call `storage_write_allowed(name, admin_only)`. When the path's first folder is a ministry code, it allows the write only if the caller is an approved user of **that** ministry (for branding, its Admin) or the Church Admin; the folder decides, not the request header. Paths with no folder fall back to the pre-v6 rule for the current ministry; that branch existed for the transition, and the app now writes only folder paths. Any other shape is refused. Reading is unchanged: the buckets are public.
+
+## L. Group ladder (migrations 0069–0070)
+
+`GROUP_LADDER_PLAN.md` v1.3. **Authoritative over §2, the `groups_select` policy in §7, §13's `flow_type` note and §15.**
+
+### L.1 Columns
+
+| Table | Column | Meaning |
+|---|---|---|
+| `groups` | `kind group_kind not null` | `pre_entry` (level 0; one active per ministry, `uq_groups_one_pre_entry`), `regular` (levels 1…N, several may share a level), `terminal` (the hidden hand-over group, stored at level N+1; one or more). Check: `(kind = 'pre_entry') = (ladder_position = 0)`. |
+| `groups` | `name_pattern text` | Yearly name pattern re-applied at each transition (`{cohort_year}`, `{level}`, `{label}`, old spelling `{position_label}`); null = the name never changes. |
+| `groups` | `qr_active boolean not null default true` | D5 switch; only `pre_entry`/`terminal` rows can be false (check `groups_regular_qr_active_check`). |
+| `groups` | `check_in_code_group_id uuid` | D13: this group checks in with that group's code (same ministry, composite FK, deferrable; no chains). A sharing group has no `qr_codes` row of its own. |
+| `groups` | `display_order` (existing) | Now the real list order (pre-entry first, hand-over last), changed with `move_group`. |
+| `groups` | — | `unique (ministry_id, cohort_year)` **dropped** (classes share a year; archived rows must not block reuse); plain index instead. Active names stay unique per ministry, checked by the functions. |
+| `app_settings` | `level_number_offset smallint` (0–50) | Added to a level before it's shown (first level 9 → 8). |
+| `app_settings` | `terminal_name_pattern text` | Default `{cohort_year} - Transitioning`. |
+| `app_settings` | `group_name_template` (existing) | Now the default pattern new groups start from (SAY: `{cohort_year} - Yr {level}`). |
+
+New type `group_kind`. New trigger `trg_user_roles_no_hidden_group` refuses any role grant on a non-regular group, whoever writes it.
+
+### L.2 Functions (all per ministry, pinned `search_path`)
+
+- **App Settings (Admins):** `add_group(name, level, cohort_year, qr_color, name_pattern)` (null colour = `pick_group_color`, the palette colour farthest from every colour in use), `delete_group_tier`, `rename_group`, `move_group(id, 'up'|'down')`, `set_group_level`, `set_group_name_pattern`, `set_group_qr_active`, `set_group_check_in_code`. `add_group_tier` stays as a wrapper for the previous app version.
+- **Transition (Admins):** `group_transition_core` (internal) does everything; `preview_group_transition(year, pre_entry_name, terminal_names[], mode)` runs it and undoes it, returning a JSON report (or `{error}` / `{blocked, occupants}`); `run_group_transition(…)` runs it for real. `archive_terminal_members()` archives everyone in the hand-over group(s). Mode `one`/`by_gender`/`separate` (D12). Grants on graduating groups move to the new level 1 unless the person still holds a grant on a regular group that stays (Q12: dropped). Audit `GROUP_TRANSITION_RUN` with `details.model = 'group_ladder_0069'`.
+- **Access:** `accessible_group_ids()` gives Admins/Church Admin every group, General Coordinators every **regular** group, others their granted regular groups; `has_group_access`/`has_readonly_or_full_group_access` follow the same rule; `export_group_member_names` refuses hidden groups to non-Admins; `reassign_role_group` clears the servant's assignments in the group they leave (Q6).
+- **QR page:** `get_qr_codes_with_groups()` adds `kind`, `display_order`, `flow_type`, `shared_with[]`, and leaves out switched-off codes for everyone.
+- **Check-in:** `checkin_resolve` refuses a switched-off code ("This check-in code isn't active"); `checkin_served_groups(m, owner)` = the code's group plus every active, switched-on group sharing it; list/mark/fill/undo/duplicate use that set; `checkin_place_member(m, owner, dob)` places a new sign-up (and an "Is this you?" move from another group) by birth year (Q11).
+- **Console:** `create_ministry(…, p_terminal_group_name)` also creates the hand-over group; `apply_ministry_settings` accepts the two new settings.
+
+### L.3 Security rules
+
+Hidden = `kind <> 'regular'`. `groups_select`: hidden rows to Admins only. `members_*`, `attendance_*` (member rows) and `outreach_select/insert`: `is_admin()` or the row's group in `accessible_group_ids(…)` (General Coordinators no longer bypass, so they reach regular groups only); `members_update` checks the new group too; `members_delete`: Admin, or GC on a regular group; `qr_codes_write`: hidden groups' codes Admin only.
+
+### L.4 SAY split (0070, one time)
+
+"2004 & older" → "2004 - Yr 5" (same row and code; born 2004–2005), new "2003 - Yr 6" (born 2003, no date, or 2024+), "2002 - Transitioning" (born ≤ 2002); Yr 6 and the hand-over group share Yr 5's code; Kristeen Eshak and Mike Elgabalawi Coordinator + Servant on both; Read-Only on Yr 5 extended to Yr 6. Backups in `<schema>_premm_backup.say_split_0070_*`; undo `0070_down`.
+
+---
 
 Target: Supabase (Postgres 15+). Conventions used throughout: `uuid` primary keys via `gen_random_uuid()` (pgcrypto/pgcrypto-equivalent, available by default on Supabase), `timestamptz` for all timestamps, `text` in place of `varchar` (idiomatic Postgres), soft-delete via status/archived flags rather than hard deletes except where explicitly noted.
 

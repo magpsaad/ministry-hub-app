@@ -164,7 +164,7 @@ export function AnalyticsInteractive({
 
   const monthlyByCohort = useMemo(() => {
     if (!combined || groups.length === 0) return [];
-    const sorted = [...groups].sort((a, b) => a.ladder_position - b.ladder_position);
+    const sorted = [...groups].sort((a, b) => a.display_order - b.display_order);
     return sorted.map((g) => ({
       group: g,
       monthly: computeMonthly(filteredMembers.filter((m) => m.group_id === g.id)),
@@ -188,7 +188,7 @@ export function AnalyticsInteractive({
   // Servant grants at more than one cohort appears under each (same rule
   // those two screens already use).
   const categoricalCohorts = useMemo(() => {
-    const byCohortId = new Map<string, { id: string; name: string; ladder_position: number; servants: ServantOption[] }>();
+    const byCohortId = new Map<string, { id: string; name: string; display_order: number; servants: ServantOption[] }>();
     const unassigned: ServantOption[] = [];
     for (const s of servants) {
       if (s.groups.length === 0) {
@@ -196,11 +196,11 @@ export function AnalyticsInteractive({
         continue;
       }
       for (const g of s.groups) {
-        if (!byCohortId.has(g.id)) byCohortId.set(g.id, { id: g.id, name: g.name, ladder_position: g.ladder_position, servants: [] });
+        if (!byCohortId.has(g.id)) byCohortId.set(g.id, { id: g.id, name: g.name, display_order: g.display_order, servants: [] });
         byCohortId.get(g.id)!.servants.push(s);
       }
     }
-    const cohorts = Array.from(byCohortId.values()).sort((a, b) => a.ladder_position - b.ladder_position);
+    const cohorts = Array.from(byCohortId.values()).sort((a, b) => a.display_order - b.display_order);
     return { cohorts, unassigned };
   }, [servants]);
 

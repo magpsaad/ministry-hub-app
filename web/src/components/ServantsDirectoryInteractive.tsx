@@ -63,12 +63,12 @@ export function ServantsDirectoryInteractive({
     }
 
     for (const s of filtered) {
-      for (const g of s.servantGroups) add(g.name, s, g.ladder_position);
+      for (const g of s.servantGroups) add(g.name, s, g.display_order);
       if (s.isUnassignedServant) add("Unassigned", s);
       if (s.isGeneralCoordinator) add("General Coordinators", s);
     }
 
-    // Youngest-to-oldest cohort order (ladder_position ascending), not
+    // The groups' list order (display_order, GROUP_LADDER_PLAN D4), not
     // alphabetical by name -- same fix as Servant Profiles/Assignments
     // (owner-reported), now consistent across all three screens.
     const groupLabels = order

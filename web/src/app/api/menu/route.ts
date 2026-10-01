@@ -1,7 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getAppSettings } from "@/lib/app-settings";
-import { buildSwitcherEntries, getAccessibleGroups, LAST_GROUP_COOKIE, pickDefaultGroupId } from "@/lib/groups";
+import {
+  buildSwitcherEntries,
+  coordinatorCombinedName,
+  coordinatorScope,
+  getAccessibleGroups,
+  LAST_GROUP_COOKIE,
+  pickDefaultGroupId,
+} from "@/lib/groups";
 import type { MenuData } from "@/lib/menu-types";
 import { getPendingServantsCount } from "@/lib/pending-servants";
 import { getAccessSummary } from "@/lib/roles";
@@ -42,7 +49,12 @@ export async function GET() {
     universityLabel: settings.university_label,
     groupLabel: settings.group_label,
     appVersion: settings.app_version,
-    cohorts: buildSwitcherEntries(groups, access, `All ${settings.group_label}s Combined`),
+    cohorts: buildSwitcherEntries(
+      groups,
+      access,
+      `All ${settings.group_label}s Combined`,
+      coordinatorCombinedName(coordinatorScope(groups, access), settings.ladder_position_label, settings.level_number_offset),
+    ),
     defaultCohortId: pickDefaultGroupId(groups, access, cookieStore.get(LAST_GROUP_COOKIE)?.value),
   };
   // Per person, never shared: no CDN or browser HTTP caching. The browser

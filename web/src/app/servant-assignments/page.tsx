@@ -32,7 +32,7 @@ export default async function ServantAssignmentsPage() {
     getServantAssignmentsRoster(),
     getAccessibleGroups(),
   ]);
-  const servingGroups = groups.filter((g) => g.ladder_position > 0);
+  const servingGroups = groups.filter((g) => g.kind === "regular");
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">

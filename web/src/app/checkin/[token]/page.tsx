@@ -33,6 +33,16 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
   // unrecognized -- this page must never show one ministry's code under
   // another ministry's name, logo or school list (MULTI_TENANT_PLAN.md
   // §3.2, V8).
+  if (flow === "switched_off") {
+    return (
+      <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
+        <div className="max-w-sm w-full text-center bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6">
+          <h1 className="text-lg font-bold text-[#dc3545]">Check-In Code Not Active</h1>
+          <p className="mt-2 text-sm text-[#666]">This QR code isn&rsquo;t in use right now. Please ask a servant for help.</p>
+        </div>
+      </div>
+    );
+  }
   if (!flow || flow.ministryId !== ministryId) {
     return (
       <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">

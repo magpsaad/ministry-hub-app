@@ -45,22 +45,107 @@ export type AdminGroupRow = {
   name: string;
   cohort_year: number | null;
   ladder_position: number;
+  display_order: number;
+  kind: "pre_entry" | "regular" | "terminal";
   qr_color: string | null;
+  /** D5 -- only the pre-entry and hand-over groups can be switched off. */
+  qr_active: boolean;
+  /** Re-applied at every Group Transition; null = the name never changes. */
+  name_pattern: string | null;
+  /** D13 -- set when this group uses another group's check-in code. */
+  check_in_code_group_id: string | null;
+  active_count: number;
 };
 
-/** REQUIREMENTS.md §6.9 -- every active (non-archived) group, for the App
- * Settings "Group Names" panel. Includes the pre-entry group (ladder
- * position 0) same as the raw table -- the UI itself decides what's
- * editable/deletable there, the RPCs underneath refuse unsafe operations
- * regardless (rename_group/add_group_tier/delete_group_tier, migration 0030). */
+/** GROUP_LADDER_PLAN.md §4.5 -- every active group, in display order, for
+ * the App Settings "Group Names & QR Code Colors" panel, with its active
+ * youth count. The functions underneath (migration 0069) refuse anything
+ * unsafe regardless of what the screen offers. */
 export async function getGroupsForAdminAction(): Promise<AdminGroupRow[]> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("groups")
-    .select("id, name, cohort_year, ladder_position, qr_color")
-    .eq("is_archived", false)
-    .order("ladder_position");
-  return data ?? [];
+  const [{ data }, { data: members }] = await Promise.all([
+    supabase
+      .from("groups")
+      .select("id, name, cohort_year, ladder_position, display_order, kind, qr_color, qr_active, name_pattern, check_in_code_group_id")
+      .eq("is_archived", false)
+      .order("display_order"),
+    supabase.from("members").select("group_id").eq("status", "active"),
+  ]);
+  const counts = new Map<string, number>();
+  for (const m of members ?? []) counts.set(m.group_id, (counts.get(m.group_id) ?? 0) + 1);
+  return (data ?? []).map((g) => ({ ...(g as Omit<AdminGroupRow, "active_count">), active_count: counts.get(g.id) ?? 0 }));
+}
+
+function groupsChanged() {
+  revalidatePath("/admin/actions-needed-config");
+  revalidatePath("/", "layout");
+}
+
+/** D4 -- swap a regular group with its neighbour in the list order. */
+export async function moveGroupAction(groupId: string, direction: "up" | "down") {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("move_group", { p_group_id: groupId, p_direction: direction });
+  if (error) return { error: error.message };
+  groupsChanged();
+  return { error: null };
+}
+
+/** Put a regular group at another level (levels stay 1..N without gaps). */
+export async function setGroupLevelAction(groupId: string, level: number) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_group_level", { p_group_id: groupId, p_level: level });
+  if (error) return { error: error.message };
+  groupsChanged();
+  return { error: null };
+}
+
+/** A group's yearly name pattern; empty = keep its name as it is. */
+export async function setGroupNamePatternAction(groupId: string, pattern: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_group_name_pattern", { p_group_id: groupId, p_pattern: pattern });
+  if (error) return { error: error.message };
+  groupsChanged();
+  return { error: null };
+}
+
+/** D5 -- the "QR code active" switch of the pre-entry or hand-over group. */
+export async function setGroupQrActiveAction(groupId: string, active: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_group_qr_active", { p_group_id: groupId, p_active: active });
+  if (error) return { error: error.message };
+  groupsChanged();
+  return { error: null };
+}
+
+/** D13 -- use another group's check-in code (null = back to its own). */
+export async function setGroupCheckInCodeAction(groupId: string, codeGroupId: string | null) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_group_check_in_code", { p_group_id: groupId, p_code_group_id: codeGroupId });
+  if (error) return { error: error.message };
+  groupsChanged();
+  return { error: null };
+}
+
+const PATTERN_PLACEHOLDER = /\{(level|cohort_year|position_label)\}/;
+
+/** Q3/D9 -- the default yearly name pattern new groups start from (empty =
+ * none: names are typed by hand) and the hand-over group's pattern. Admins
+ * only (app_settings_write); a refused update touches 0 rows. */
+export async function updateNamePatternsAction(defaultPattern: string, terminalPattern: string) {
+  const def = defaultPattern.trim();
+  const term = terminalPattern.trim();
+  if (def && !PATTERN_PLACEHOLDER.test(def)) return { error: "The default name pattern needs {level} or {cohort_year}." };
+  if (!term) return { error: "The hand-over name pattern can't be empty." };
+  const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
+  const { data, error } = await supabase
+    .from("app_settings")
+    .update({ group_name_template: def || null, terminal_name_pattern: term })
+    .eq("ministry_id", ministryId)
+    .select("ministry_id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to change the name patterns." };
+  groupsChanged();
+  return { error: null };
 }
 
 export async function renameGroupAction(groupId: string, name: string) {
@@ -109,28 +194,37 @@ export async function updateServantsQrColorAction(color: string) {
   return { error: null };
 }
 
-export type AddGroupTierInput = { cohortYear: number | null; name: string; qrColor: string };
+export type AddGroupInput = {
+  name: string;
+  /** null = a new top level (just below the hand-over group). */
+  level: number | null;
+  cohortYear: number | null;
+  /** null = picked automatically, distinct from the ministry's others (A8). */
+  qrColor: string | null;
+  namePattern: string;
+};
 
-/** Extends the active ladder by one tier, inserted just below the current
- * terminal group (which shifts up to make room -- migration 0030). Name is
- * required (migration 0033) -- no auto-naming from group_name_template. */
-export async function addGroupTierAction(input: AddGroupTierInput) {
+/** D4 -- a new regular group, always listed last before the hand-over
+ * group, at a new top level or sharing an existing one (several classes per
+ * grade). add_group() (migration 0069) checks the name is free. */
+export async function addGroupAction(input: AddGroupInput) {
+  if (input.qrColor && !HEX_COLOR.test(input.qrColor)) return { error: `"${input.qrColor}" isn't a valid colour.` };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("add_group_tier", {
-    p_cohort_year: input.cohortYear,
+  const { error } = await supabase.rpc("add_group", {
     p_name: input.name,
+    p_level: input.level,
+    p_cohort_year: input.cohortYear,
     p_qr_color: input.qrColor,
+    p_name_pattern: input.namePattern,
   });
   if (error) return { error: error.message };
-
-  revalidatePath("/admin/actions-needed-config");
-  revalidatePath("/", "layout");
+  groupsChanged();
   return { error: null };
 }
 
-/** Archives one mid-ladder group and closes the gap (migration 0030). The
- * RPC itself refuses to touch the pre-entry or terminal group, or a group
- * that still has active members/role grants attached. */
+/** Archives a regular group with no youths or role grants left and closes
+ * any gap in the levels. The RPC refuses the pre-entry and hand-over
+ * groups, and a group whose check-in code others share. */
 export async function deleteGroupTierAction(groupId: string) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("delete_group_tier", { p_group_id: groupId });
@@ -152,6 +246,8 @@ export type AppSettingsFormInput = Omit<
   | "servant_attendance_window_weeks"
   | "actions_needed_lookback_months"
   | "servants_qr_color"
+  | "group_name_template"
+  | "terminal_name_pattern"
 >;
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
@@ -170,6 +266,9 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     input.my_assigned_header_color_light,
   ]) {
     if (!HEX_COLOR.test(c)) return { error: `"${c}" isn't a valid colour -- use the #RRGGBB form.` };
+  }
+  if (!Number.isInteger(input.level_number_offset) || input.level_number_offset < 0 || input.level_number_offset > 50) {
+    return { error: "The first level number must be a whole number between 1 and 51." };
   }
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: input.timezone });
@@ -199,6 +298,7 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     proximity_enabled: input.proximity_enabled,
     show_proximity_on_attendance: input.show_proximity_on_attendance,
     ladder_position_label: input.ladder_position_label,
+    level_number_offset: input.level_number_offset,
     sub_coordinator_auto_servant: input.sub_coordinator_auto_servant,
   };
   // Saved by this ministry's code (the settings table has one row per

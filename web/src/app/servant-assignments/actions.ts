@@ -6,6 +6,20 @@ import { logAudit } from "@/lib/audit";
 
 export type AddableRole = "servant" | "sub_coordinator" | "read_only";
 
+/** GROUP_LADDER_PLAN.md Q6 -- how many active youths in a group are
+ * assigned to this person, i.e. the assignments a move would clear (the
+ * screen warns first). */
+export async function countAssignmentsInGroupAction(userId: string, groupId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("members")
+    .select("id", { count: "exact", head: true })
+    .eq("group_id", groupId)
+    .eq("assigned_servant_id", userId)
+    .eq("status", "active");
+  return count ?? 0;
+}
+
 /** General Coordinator/Admin only -- enforced by reassign_role_group itself
  * (security definer, checks is_admin_or_general_coordinator()). Row-scoped
  * -- reassigns exactly the Servant grant identified by roleId, never any

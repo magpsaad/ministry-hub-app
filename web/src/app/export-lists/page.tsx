@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getCombinedGroups } from "@/lib/groups";
+import { getAccessibleGroups } from "@/lib/groups";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
@@ -32,7 +32,12 @@ export default async function ExportListsPage() {
     );
   }
 
-  const [settings, selectableGroups] = await Promise.all([getAppSettings(), getCombinedGroups()]);
+  // Every regular group for any Coordinator (above); Admins also get the
+  // hidden hand-over group(s), to hand the list to the next ministry
+  // (GROUP_LADDER_PLAN.md §4.5). The database only returns hidden groups to
+  // Admins anyway.
+  const [settings, groups] = await Promise.all([getAppSettings(), getAccessibleGroups()]);
+  const selectableGroups = groups.filter((g) => g.kind === "regular" || (access.isAdmin && g.kind === "terminal"));
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">

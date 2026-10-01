@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getTransitionPreview } from "@/lib/group-transition";
+import { previewGroupTransition, suggestedNewCohortYear } from "@/lib/group-transition";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
@@ -24,7 +24,8 @@ export default async function GroupTransitionPage() {
     );
   }
 
-  const [settings, preview] = await Promise.all([getAppSettings(), getTransitionPreview()]);
+  const [settings, year] = await Promise.all([getAppSettings(), suggestedNewCohortYear()]);
+  const preview = await previewGroupTransition({ newPreEntryCohortYear: year });
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -45,8 +46,11 @@ export default async function GroupTransitionPage() {
       <main className="max-w-2xl mx-auto px-4 py-6">
         <GroupTransitionInteractive
           initialPreview={preview}
+          initialYear={year}
           positionLabel={settings.ladder_position_label}
+          levelOffset={settings.level_number_offset}
           groupLabel={settings.group_label}
+          memberLabel={settings.member_label}
         />
       </main>
     </div>

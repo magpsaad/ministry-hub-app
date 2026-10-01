@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { GroupNavShell } from "@/components/GroupNavShell";
 import { MyAssignedProvider } from "@/components/MyAssignedContext";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
+import { coordinatorCombinedName, coordinatorScope, getAccessibleGroups, hasCoordinatorCombined } from "@/lib/groups";
 import { Skeleton } from "@/components/Skeleton";
 import { getRandomVerseAction } from "@/app/actions";
 
@@ -116,24 +117,32 @@ async function GroupLayoutContent({
   ]);
 
   if (isCombined) {
-    // Owner-reported access rule: Admin and General Coordinator only, NOT
-    // Sub-Coordinator -- a Sub-Coordinator only ever has one cohort
-    // anyway, so this would just duplicate the ordinary "Load [Member]
-    // Data" flow for them. Admin gets it by default ("Admin should have
-    // access to everything"). Deliberately narrower than the rest of this
-    // layout, which otherwise defers entirely to RLS/per-page checks.
+    // Admin and General Coordinator: every group. A Coordinator of two or
+    // more groups (GROUP_LADDER_PLAN.md D14): just those groups, under a
+    // name built from them. Anyone else: no combined view. Deliberately
+    // narrower than the rest of this layout, which otherwise defers
+    // entirely to RLS/per-page checks.
+    let combinedName = `All ${settings.group_label}s Combined`;
     if (!access.isAdmin && !access.isGeneralCoordinator) {
-      return (
-        <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
-          <p className="text-sm text-[#666]">You don&rsquo;t have access to this page.</p>
-        </div>
+      const groups = await getAccessibleGroups();
+      if (!hasCoordinatorCombined(groups, access)) {
+        return (
+          <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
+            <p className="text-sm text-[#666]">You don&rsquo;t have access to this page.</p>
+          </div>
+        );
+      }
+      combinedName = coordinatorCombinedName(
+        coordinatorScope(groups, access),
+        settings.ladder_position_label,
+        settings.level_number_offset,
       );
     }
 
     return (
       <GroupNavShell
         groupId={ALL_COHORTS_GROUP_ID}
-        groupName={`All ${settings.group_label}s Combined`}
+        groupName={combinedName}
         appTitleShort={settings.app_title_short}
         memberLabel={settings.member_label}
         logoUrl={settings.logo_url}

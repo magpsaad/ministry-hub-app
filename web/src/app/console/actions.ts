@@ -28,6 +28,8 @@ export type CreateMinistryInput = {
   addresses: string[];
   adminEmails: string[];
   preEntryGroupName: string;
+  /** GROUP_LADDER_PLAN.md §4.2 -- the hidden hand-over group every ministry gets. */
+  terminalGroupName: string;
   copyFrom: string | null;
   settings: {
     app_subtitle: string;
@@ -36,6 +38,9 @@ export type CreateMinistryInput = {
     member_label: string;
     ladder_position_label: string;
     group_name_template: string;
+    /** Added to a level before it's shown (first level 9 -> offset 8). */
+    level_number_offset: number;
+    terminal_name_pattern: string;
     university_label: string;
     program_label: string;
     service_weekday: number;
@@ -97,8 +102,12 @@ export async function createMinistryAction(input: CreateMinistryInput) {
     ["School label", s.university_label],
     ["Field of focus label", s.program_label],
     ["Group name template", s.group_name_template],
+    ["Hand-over name pattern", s.terminal_name_pattern],
   ] as const) {
     if (!v.trim()) return { error: `${label} can't be blank.` };
+  }
+  if (!Number.isInteger(s.level_number_offset) || s.level_number_offset < 0 || s.level_number_offset > 50) {
+    return { error: "The first level number must be a whole number between 1 and 51." };
   }
 
   const { error } = await supabase.rpc("create_ministry", {
@@ -109,6 +118,7 @@ export async function createMinistryAction(input: CreateMinistryInput) {
     p_pre_entry_group_name: input.preEntryGroupName.trim(),
     p_settings: { ...s, logo_url: s.logo_url?.trim() || null },
     p_copy_from: input.copyFrom || null,
+    p_terminal_group_name: input.terminalGroupName.trim() || null,
   });
   if (error) {
     // "No account for x@y -- ask them to sign in once first": nothing was

@@ -2,48 +2,47 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getTransitionPreview, type TransitionPreview } from "@/lib/group-transition";
+import {
+  previewGroupTransition,
+  runGroupTransition,
+  type TransitionInput,
+  type TransitionReport,
+} from "@/lib/group-transition";
 import { getServantAssignmentsRoster, type AssignmentPerson } from "@/lib/servant-assignments";
 import { getAccessibleGroups } from "@/lib/groups";
 import type { GroupSummary } from "@/lib/groups";
 
 /** For the post-transition "Review Servant Assignments" step -- fetched
- * fresh (not passed down from the pre-transition page load), since group
- * assignments just changed. */
+ * fresh, since group assignments just changed. Regular groups only (no
+ * role can be given on a hidden group). */
 export async function getPostTransitionReviewDataAction(): Promise<{
   people: AssignmentPerson[];
   groups: GroupSummary[];
 }> {
   const [people, groups] = await Promise.all([getServantAssignmentsRoster(), getAccessibleGroups()]);
-  return { people, groups: groups.filter((g) => g.ladder_position > 0) };
+  return { people, groups: groups.filter((g) => g.kind === "regular") };
 }
 
-export async function getTransitionPreviewAction(): Promise<TransitionPreview> {
-  return getTransitionPreview();
+/** GROUP_LADDER_PLAN.md §4.5 -- what the transition would do with these
+ * choices (the run itself, undone by the database). */
+export async function previewTransitionAction(input: TransitionInput): Promise<TransitionReport> {
+  return previewGroupTransition(input);
 }
 
-export type RunTransitionResult = {
-  error: string | null;
-  affectedGroupNames?: string[];
-};
-
-/** REQUIREMENTS.md §5 -- the actual transition runs atomically inside
- * run_group_transition() (migration 0028); this action just calls it and
- * reports back which groups' names changed, for the post-transition QR
- * reprint prompt. The RPC itself already writes the GROUP_TRANSITION_RUN
- * audit entry. */
-export async function runGroupTransitionAction(newPreEntryCohortYear: number): Promise<RunTransitionResult> {
+/** D6 -- archive everyone still in the hand-over group(s). Their records,
+ * attendance and outreach are kept. Returns how many were archived. */
+export async function archiveHandOverAction(): Promise<{ error: string | null; count?: number }> {
   const supabase = await createClient();
-
-  const before = await getTransitionPreview();
-  const affectedGroupNames = before.groups
-    .filter((g) => g.nextName && g.nextName !== g.name)
-    .map((g) => g.nextName as string);
-
-  const { error } = await supabase.rpc("run_group_transition", { new_pre_entry_cohort_year: newPreEntryCohortYear });
+  const { data, error } = await supabase.rpc("archive_terminal_members");
   if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { error: null, count: data as number };
+}
 
-  revalidatePath("/");
-  revalidatePath("/admin/group-transition");
-  return { error: null, affectedGroupNames };
+/** The transition itself, all in one database transaction (migration
+ * 0069), which also writes the GROUP_TRANSITION_RUN audit entry. */
+export async function runGroupTransitionAction(input: TransitionInput): Promise<TransitionReport> {
+  const report = await runGroupTransition(input);
+  if (!report.error) revalidatePath("/", "layout");
+  return report;
 }

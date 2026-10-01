@@ -12,7 +12,7 @@ export type ServantDirectoryEntry = {
   father_of_confession: string | null;
   join_date: string | null;
   isGeneralCoordinator: boolean;
-  servantGroups: { id: string; name: string; ladder_position: number }[]; // groups this person holds a 'servant' role for
+  servantGroups: { id: string; name: string; ladder_position: number; display_order: number }[]; // groups this person holds a 'servant' role for
   isUnassignedServant: boolean; // holds a 'servant' role with no group
   averageAttendance: number | null; // null = never attended, or no tracked dates in the window
 };
@@ -41,7 +41,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     getAttendanceWindowSettings(),
     supabase
       .from("user_roles")
-      .select("user_id, role, group_id, groups(name, ladder_position)")
+      .select("user_id, role, group_id, groups(name, ladder_position, display_order)")
       .in("role", ["servant", "sub_coordinator", "general_coordinator"]),
     supabase.from("profiles").select("id, full_name, phone, email, photo_path, gender, father_of_confession, join_date"),
   ]);
@@ -57,7 +57,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
 
   type Accum = {
     isGeneralCoordinator: boolean;
-    servantGroups: { id: string; name: string; ladder_position: number }[];
+    servantGroups: { id: string; name: string; ladder_position: number; display_order: number }[];
     isUnassignedServant: boolean;
   };
   const byUser = new Map<string, Accum>();
@@ -71,12 +71,17 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     if (r.role === "general_coordinator") acc.isGeneralCoordinator = true;
     if (r.role === "servant" || r.role === "sub_coordinator") {
       if (r.group_id) {
-        const group = r.groups as unknown as { name: string; ladder_position: number } | null;
+        const group = r.groups as unknown as { name: string; ladder_position: number; display_order: number } | null;
         // A person can hold both a Servant and a Sub-Coordinator grant for
         // the same cohort (0036's trigger, or the migration tool, grants
         // both) -- de-duped here so they don't appear twice in one cohort.
         if (group?.name != null && !acc.servantGroups.some((sg) => sg.id === r.group_id)) {
-          acc.servantGroups.push({ id: r.group_id, name: group.name, ladder_position: group.ladder_position });
+          acc.servantGroups.push({
+            id: r.group_id,
+            name: group.name,
+            ladder_position: group.ladder_position,
+            display_order: group.display_order,
+          });
         }
       } else if (r.role === "servant") {
         acc.isUnassignedServant = true;

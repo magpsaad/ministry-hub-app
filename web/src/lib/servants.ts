@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/pagination";
 
-export type ServantGroup = { id: string; name: string; ladder_position: number };
+export type ServantGroup = { id: string; name: string; ladder_position: number; display_order: number };
 
 export type ServantOption = {
   id: string;
@@ -35,7 +35,7 @@ export async function getServantsForGroup(groupId: string | string[]): Promise<S
 
   let roleQuery = supabase
     .from("user_roles")
-    .select("user_id, group_id, profiles(id, full_name, gender), groups(name, ladder_position)")
+    .select("user_id, group_id, profiles(id, full_name, gender), groups(name, ladder_position, display_order)")
     .eq("role", "servant");
   roleQuery = Array.isArray(groupId) ? roleQuery.in("group_id", groupId) : roleQuery.eq("group_id", groupId);
 
@@ -61,18 +61,19 @@ export async function getServantsForGroup(groupId: string | string[]): Promise<S
   for (const r of roleRows ?? []) {
     const p = r.profiles as unknown as { id: string; full_name: string; gender: string | null } | null;
     if (!p) continue;
-    const group = r.groups as unknown as { name: string; ladder_position: number } | null;
+    const group = r.groups as unknown as { name: string; ladder_position: number; display_order: number } | null;
+    const entry = group && r.group_id
+      ? { id: r.group_id, name: group.name, ladder_position: group.ladder_position, display_order: group.display_order }
+      : null;
     const existing = byId.get(p.id);
     if (existing) {
-      if (group && r.group_id && !existing.groups.some((g) => g.id === r.group_id)) {
-        existing.groups.push({ id: r.group_id, name: group.name, ladder_position: group.ladder_position });
-      }
+      if (entry && !existing.groups.some((g) => g.id === entry.id)) existing.groups.push(entry);
     } else {
       byId.set(p.id, {
         id: p.id,
         full_name: p.full_name,
         gender: p.gender,
-        groups: group && r.group_id ? [{ id: r.group_id, name: group.name, ladder_position: group.ladder_position }] : [],
+        groups: entry ? [entry] : [],
       });
     }
   }
