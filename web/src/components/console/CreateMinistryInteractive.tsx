@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createMinistryAction, type CreateMinistryInput } from "@/app/console/actions";
-import { addressUrl } from "@/lib/address-url";
 import { ThemePalettePicker } from "@/components/admin/ThemePalettePicker";
 
 // ISO weekday numbering (Monday=1..Sunday=7), matching app_settings.service_weekday.
@@ -56,7 +55,7 @@ export function CreateMinistryInteractive({
   });
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ code: string; name: string; hosts: string[] } | null>(null);
+  const router = useRouter();
 
   function set<K extends keyof CreateMinistryInput["settings"]>(field: K, value: CreateMinistryInput["settings"][K]) {
     setSettings((prev) => {
@@ -92,58 +91,11 @@ export function CreateMinistryInteractive({
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
-      setCreated({
-        code: res.code,
-        name: name.trim(),
-        hosts: hosts.map((h) => h.toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "")),
-      });
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Owner-reported: the next steps used to show here and vanish almost
+      // at once. The ministry's own page now shows them until dismissed
+      // (SetupChecklist).
+      router.push(`/console/ministries/${res.code}?created=1`);
     });
-  }
-
-  if (created) {
-    return (
-      <section className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 space-y-3">
-        <h2 className="text-lg font-bold text-[#155724]">
-          {created.name} ({created.code}) was created in {environment}.
-        </h2>
-        <p className="text-sm text-[#666]">Before anyone can use it, finish these steps (about 10 minutes):</p>
-        <ol className="list-decimal pl-5 space-y-2 text-sm text-[#333]">
-          <li>
-            <strong>Vercel:</strong> in the {environment} project, <em>Settings &rarr; Domains</em>, add{" "}
-            {created.hosts.length > 0 ? created.hosts.join(", ") : "its address"}.
-          </li>
-          <li>
-            <strong>Supabase:</strong> in <em>Authentication &rarr; URL Configuration</em>, add each address to the
-            Redirect URLs, listed exactly (e.g. <code>{`https://${created.hosts[0] ?? "the-address"}/**`}</code>). Never use a
-            broad pattern like <code>*.vercel.app</code>.
-          </li>
-          <li>
-            Open the address, sign in, and check the ministry&rsquo;s App Settings (logo, labels, colours). The first
-            Admin(s) will be asked for their phone and gender the first time they sign in there.
-          </li>
-          {environment === "QA" && (
-            <li>Once it&rsquo;s tested in QA, create it again in the production console with its production address.</li>
-          )}
-        </ol>
-        <div className="flex flex-wrap gap-3 pt-1">
-          {created.hosts.map((h) => (
-            <a
-              key={h}
-              href={addressUrl(h)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-semibold text-brand hover:underline"
-            >
-              Open {h} &#8599;
-            </a>
-          ))}
-          <Link href="/console" className="text-sm font-semibold text-brand hover:underline">
-            Back to Ministries
-          </Link>
-        </div>
-      </section>
-    );
   }
 
   return (
