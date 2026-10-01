@@ -27,8 +27,8 @@
 do $$
 declare
   -- Measured at the rehearsal, per environment: {"yr5": n, "yr6": n, "handover": n}.
-  -- QA measured 30 Sep 2026 (rehearsal). prod: fill in from the prod rehearsal (P1).
-  v_expect jsonb := '{"qa": {"yr5": 152, "yr6": 178, "handover": 63}, "prod": null}'::jsonb;
+  -- QA measured 30 Sep 2026, prod 1 Oct 2026 (rehearsals).
+  v_expect jsonb := '{"qa": {"yr5": 152, "yr6": 178, "handover": 63}, "prod": {"yr5": 152, "yr6": 178, "handover": 63}}'::jsonb;
   v_rehearsal boolean := coalesce(current_setting('ladder.split_rehearsal', true), '') = 'on';
   v_kristeen constant uuid := '907cf923-f0e9-4980-af44-cd889dae6f84';
   v_mike     constant uuid := '0813ff33-dd76-40b0-b976-0b6ee3e19b21';
