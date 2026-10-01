@@ -9,6 +9,7 @@ import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { CohortFilterBar } from "@/components/CohortFilter";
+import type { CohortFilterOption } from "@/lib/group-names";
 
 const TABS = (memberLabel: string) => [
   { slug: "dashboard", label: "Dashboard" },
@@ -27,7 +28,7 @@ export function GroupNavShell({
   lastServiceDate,
   verse = null,
   combined = false,
-  combinedGroups = [],
+  cohortOptions = [],
   groupLabel = "Group",
   children,
 }: {
@@ -46,8 +47,8 @@ export function GroupNavShell({
    * shows "My Assigned List" too, plus the cohort checkboxes, which every
    * tab follows (CohortFilter). */
   combined?: boolean;
-  /** The combined view's groups, for the cohort checkboxes. */
-  combinedGroups?: { id: string; name: string }[];
+  /** The combined view's cohort checkboxes (cohortFilterOptions). */
+  cohortOptions?: CohortFilterOption[];
   groupLabel?: string;
   children: React.ReactNode;
 }) {
@@ -142,7 +143,7 @@ export function GroupNavShell({
         </span>
         {combined && (
           <div className="w-full">
-            <CohortFilterBar groups={combinedGroups} groupLabel={groupLabel} />
+            <CohortFilterBar options={cohortOptions} groupLabel={groupLabel} />
           </div>
         )}
       </div>

@@ -27,4 +27,35 @@ export function levelText(level: number, label: string, offset: number): string 
   return `${label} ${level + offset}`.trim();
 }
 
-export const PATTERN_PLACEHOLDER = /\{(level|cohort_year|position_label)\}/;
+/** One checkbox of the combined view's cohort filter, and the groups it
+ * stands for. */
+export type CohortFilterOption = { key: string; label: string; groupIds: string[] };
+
+/**
+ * Owner-requested (30 Sep 2026): the "All ... Combined" view offers one
+ * checkbox per level, not per group -- a High School's 16 classes become its
+ * 4 grades, each one ticking all of that grade's classes. A level with a
+ * single group keeps that group's own name (so a University ministry's
+ * filters look as before). `perGroup` (a Coordinator's own combined view)
+ * keeps one checkbox per group. `groups` must be in display order.
+ */
+export function cohortFilterOptions(
+  groups: { id: string; name: string; ladder_position: number }[],
+  perGroup: boolean,
+  label: string,
+  offset: number,
+): CohortFilterOption[] {
+  if (perGroup) return groups.map((g) => ({ key: g.id, label: g.name, groupIds: [g.id] }));
+  const byLevel = new Map<number, { id: string; name: string }[]>();
+  for (const g of groups) {
+    if (!byLevel.has(g.ladder_position)) byLevel.set(g.ladder_position, []);
+    byLevel.get(g.ladder_position)!.push(g);
+  }
+  return Array.from(byLevel.entries()).map(([level, members]) => ({
+    key: `level-${level}`,
+    label: members.length === 1 ? members[0].name : levelText(level, label, offset),
+    groupIds: members.map((g) => g.id),
+  }));
+}
+
+export const PATTERN_PLACEHOLDER =/\{(level|cohort_year|position_label)\}/;

@@ -55,19 +55,10 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
     getActionsNeededConfig(),
     getAppSettings(),
   ]);
-  const proximityEnabled = appSettings.proximity_enabled;
 
-  const activeNonVisitors = (members ?? []).filter((m) => !m.is_visitor);
+  const activeNonVisitors = ((members ?? []) as unknown as ActionsNeededInputMember[]).filter((m) => !m.is_visitor);
   if (activeNonVisitors.length === 0) return [];
-
-  const configByProximity = new Map(config.map((c: ConfigRow) => [c.proximity, c]));
   const memberIds = activeNonVisitors.map((m) => m.id);
-
-  // Look-back for presenceCount: App Settings' actions_needed_lookback_months
-  // (was a fixed 12 months -- MULTI_TENANT_PLAN.md §10, A12).
-  const lookbackStart = new Date();
-  lookbackStart.setMonth(lookbackStart.getMonth() - appSettings.actions_needed_lookback_months);
-  const cutoffISO = lookbackStart.toISOString().slice(0, 10);
 
   // One all-time attendance read (paged -- a cohort easily exceeds
   // PostgREST's 1000-row cap, lib/pagination.ts) and one outreach read, run
@@ -101,6 +92,50 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
     ),
   ]);
 
+  return computeActionsNeeded(
+    activeNonVisitors.map((m) => ({ ...m, group_id: groupId })),
+    allPresentRows,
+    outreachRows,
+    config,
+    appSettings.proximity_enabled,
+    appSettings.actions_needed_lookback_months,
+  );
+}
+
+/** A youth as computeActionsNeeded() needs them (the select above). */
+export type ActionsNeededInputMember = {
+  id: string;
+  full_name: string;
+  photo_path: string | null;
+  phone: string | null;
+  is_visitor: boolean | null;
+  assigned_servant_id: string | null;
+  created_at: string | null;
+  assigned_servant: { full_name: string } | null;
+  university: { proximity?: string } | null;
+  group_id: string;
+};
+
+/** The Actions Needed rule itself, from rows already read: active non-visitor
+ * youths, their attendance (newest first) and outreach (newest first).
+ * Shared by the single-group Dashboard and the combined one, which reads
+ * every group's rows at once. */
+export function computeActionsNeeded(
+  activeNonVisitors: ActionsNeededInputMember[],
+  allPresentRows: { member_id: string | null; service_date: string }[],
+  outreachRows: { member_id: string; occurred_at: string }[],
+  config: ConfigRow[],
+  proximityEnabled: boolean,
+  lookbackMonths: number,
+): ActionsNeededMember[] {
+  const configByProximity = new Map(config.map((c: ConfigRow) => [c.proximity, c]));
+
+  // Look-back for presenceCount: App Settings' actions_needed_lookback_months
+  // (was a fixed 12 months -- MULTI_TENANT_PLAN.md §10, A12).
+  const lookbackStart = new Date();
+  lookbackStart.setMonth(lookbackStart.getMonth() - lookbackMonths);
+  const cutoffISO = lookbackStart.toISOString().slice(0, 10);
+
   const presentByMember = new Map<string, Set<string>>();
   const lastPresentByMember = new Map<string, string>();
   for (const row of allPresentRows) {
@@ -122,11 +157,7 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
   for (const m of activeNonVisitors) {
     // Proximity turned off in App Settings: everyone is Local, judged by the
     // Local thresholds alone, whatever their school happens to be tagged.
-    const proximity = (
-      proximityEnabled
-        ? ((m.university as unknown as { proximity?: string } | null)?.proximity ?? "Unknown")
-        : "Local"
-    ) as ActionsNeededMember["proximity"];
+    const proximity = (proximityEnabled ? (m.university?.proximity ?? "Unknown") : "Local") as ActionsNeededMember["proximity"];
     const cfg = configByProximity.get(proximity);
     if (!cfg) continue;
 
@@ -158,12 +189,12 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
         photo_path: m.photo_path,
         phone: m.phone,
         assigned_servant_id: m.assigned_servant_id,
-        assignedServantName: (m.assigned_servant as unknown as { full_name: string } | null)?.full_name ?? null,
+        assignedServantName: m.assigned_servant?.full_name ?? null,
         proximity,
         presenceCount,
         currentConsecutiveAbsences,
         lastOutreachDate: lastOutreach,
-        group_id: groupId,
+        group_id: m.group_id,
       });
     }
   }

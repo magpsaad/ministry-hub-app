@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { GroupNavShell } from "@/components/GroupNavShell";
 import { MyAssignedProvider } from "@/components/MyAssignedContext";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
+import { cohortFilterOptions } from "@/lib/group-names";
 import {
   coordinatorCombinedName,
   coordinatorScope,
@@ -155,7 +156,12 @@ async function GroupLayoutContent({
           lastServiceDate={lastServiceDate}
           verse={verse}
           combined
-          combinedGroups={combinedGroups.map((g) => ({ id: g.id, name: g.name }))}
+          cohortOptions={cohortFilterOptions(
+            combinedGroups,
+            !access.isAdmin && !access.isGeneralCoordinator,
+            settings.ladder_position_label,
+            settings.level_number_offset,
+          )}
           groupLabel={settings.group_label}
         >
           {children}

@@ -99,16 +99,17 @@ export type FollowUpDueEntry = OutreachEntryFull & { member_photo_path: string |
  * the member is currently assigned to. Carries every field EditOutreachEntryModal
  * needs so the Dashboard's "view original entry" link can open it without a
  * second fetch. */
-export async function getFollowUpsDue(groupId: string): Promise<FollowUpDueEntry[]> {
+export async function getFollowUpsDue(groupId: string | string[]): Promise<FollowUpDueEntry[]> {
   const [supabase, settings] = await Promise.all([createClient(), getAppSettings()]);
   const today = todayInZone(settings.timezone);
 
-  const { data } = await supabase
+  let query = supabase
     .from("outreach_entries")
     .select(
       "id, member_id, servant_id, occurred_at, type, notes, follow_up_due, member:members!inner(full_name, phone, photo_path, assigned_servant_id, group_id), servant:profiles(full_name)",
-    )
-    .eq("member.group_id", groupId)
+    );
+  query = Array.isArray(groupId) ? query.in("member.group_id", groupId) : query.eq("member.group_id", groupId);
+  const { data } = await query
     .not("follow_up_due", "is", null)
     .is("follow_up_dismissed_at", null)
     .lte("follow_up_due", today)

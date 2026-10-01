@@ -57,9 +57,10 @@ export function AnalyticsInteractive({
   proximityEnabled: boolean;
   currentUserId: string;
   combined?: boolean;
-  /** Owner-requested: in the combined "all cohorts" view, Average
-   * Attendance by Month also breaks out each cohort's own curve after the
-   * amalgamated one. Only meaningful when `combined` is true. */
+  /** The combined view's groups, for the header's cohort filter. Owner-
+   * requested (30 Sep 2026): the combined view shows aggregates only --
+   * no per-cohort curves or per-cohort servant tables; the cohort filter
+   * narrows what is aggregated. */
   groups?: GroupSummary[];
   /** Owner-reported (§6.7/§6.4 alignment): Average Attendance by Month used
    * to count every tracked date with no rolling-window cap, while the
@@ -138,9 +139,6 @@ export function AnalyticsInteractive({
   // attendance % for no real reason -- aligned to the exact same rules now
   // (isOnServiceWeekday/resolveAttendanceSince, lib/attendance-window.ts),
   // just aggregated per month instead of per person.
-  // Extracted so the same rules (isOnServiceWeekday/resolveAttendanceSince)
-  // can compute both the amalgamated curve and, in the combined view, each
-  // cohort's own curve from the same raw attendance rows.
   function computeMonthly(members: MemberAnalyticsRow[]) {
     const memberIds = new Set(members.map((m) => m.id));
     const relevantAttendance = raw.attendance.filter(
@@ -186,16 +184,6 @@ export function AnalyticsInteractive({
     [filteredMembers, raw.attendance, serviceWeekday, windowWeeks],
   );
 
-  const monthlyByCohort = useMemo(() => {
-    if (!combined || groups.length === 0) return [];
-    const sorted = [...groups].filter((g) => cohort.matches(g.id)).sort((a, b) => a.display_order - b.display_order);
-    return sorted.map((g) => ({
-      group: g,
-      monthly: computeMonthly(filteredMembers.filter((m) => m.group_id === g.id)),
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [combined, groups, cohort, filteredMembers, raw.attendance, serviceWeekday, windowWeeks]);
-
   const sortedServants = useMemo(() => {
     return [...visibleServants].sort((a, b) => {
       let cmp = 0;
@@ -211,7 +199,16 @@ export function AnalyticsInteractive({
   // Profiles): cohorts in ladder order, Unassigned last; a person holding
   // Servant grants at more than one cohort appears under each (same rule
   // those two screens already use).
+  // Combined view (owner-requested 30 Sep 2026): aggregate only -- one
+  // table of every servant of the chosen cohorts, each listed once with
+  // their whole caseload, still split by gender.
   const categoricalCohorts = useMemo(() => {
+    if (combined) {
+      return {
+        cohorts: [{ id: "all", name: "", display_order: 0, servants: visibleServants.filter((s) => s.groups.length > 0) }],
+        unassigned: visibleServants.filter((s) => s.groups.length === 0),
+      };
+    }
     const byCohortId = new Map<string, { id: string; name: string; display_order: number; servants: ServantOption[] }>();
     const unassigned: ServantOption[] = [];
     for (const s of visibleServants) {
@@ -226,7 +223,7 @@ export function AnalyticsInteractive({
     }
     const cohorts = Array.from(byCohortId.values()).sort((a, b) => a.display_order - b.display_order);
     return { cohorts, unassigned };
-  }, [visibleServants]);
+  }, [combined, visibleServants]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDesc((v) => !v);
@@ -311,18 +308,6 @@ export function AnalyticsInteractive({
             : `A rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${weekdayName(serviceWeekday)}s, never counting weeks before someone joined -- same rule as the Member List's average attendance %.`}
         </p>
 
-        {monthlyByCohort.map(({ group, monthly: cohortMonthly }) => (
-          <div key={group.id} className="mt-6 border-t border-[#f0f0f0] pt-4">
-            <h3 className="text-sm font-bold text-brand mb-3">{group.name}</h3>
-            {cohortMonthly.length === 0 ? (
-              <p className="text-sm text-[#666]">No tracked service dates yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <AttendanceTrendChart data={[...cohortMonthly].reverse()} />
-              </div>
-            )}
-          </div>
-        ))}
       </section>
 
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
@@ -350,7 +335,7 @@ export function AnalyticsInteractive({
 
         {servantsView === "categorical" ? (
           <div className="space-y-4">
-            {categoricalCohorts.cohorts.map((cohort) => (
+            {categoricalCohorts.cohorts.filter((c) => c.servants.length > 0).map((cohort) => (
               <ServantCohortTable key={cohort.id} label={cohort.name} servants={cohort.servants} memberLabel={memberLabel} />
             ))}
             {categoricalCohorts.unassigned.length > 0 && (
@@ -437,7 +422,7 @@ function ServantCohortTable({ label, servants, memberLabel }: { label: string; s
   const { female, male, other } = groupByGender(servants, (s) => s.gender);
   return (
     <div>
-      <h3 className="text-sm font-bold text-brand mb-2">{label}</h3>
+      {label && <h3 className="text-sm font-bold text-brand mb-2">{label}</h3>}
       <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
         <table className="w-full text-sm">
           <thead>

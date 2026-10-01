@@ -170,9 +170,21 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
     getAppSettings(),
   ]);
 
-  const daysBefore = settings.birthday_window_days_before;
-  const daysAfter = settings.birthday_window_days_after;
+  return birthdaysInWindow(
+    ((data ?? []) as unknown as Omit<BirthdayMember, "daysFromToday">[]).map((m) => ({ ...m, group_id: groupId })),
+    settings.birthday_window_days_before,
+    settings.birthday_window_days_after,
+  );
+}
 
+/** The birthday window rule on rows already read (shared with the combined
+ * Dashboard): within the days-before/days-after window, wrapping the year,
+ * sorted from most recently passed to soonest upcoming. */
+export function birthdaysInWindow(
+  members: Omit<BirthdayMember, "daysFromToday">[],
+  daysBefore: number,
+  daysAfter: number,
+): BirthdayMember[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dayOfYear = (d: Date) => {
@@ -186,7 +198,7 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
   // most-recently-passed first, through today, to soonest-upcoming last --
   // computed once per member and kept alongside it rather than recomputed
   // twice.
-  return ((data ?? []) as unknown as Omit<BirthdayMember, "group_id" | "daysFromToday">[])
+  return members
     .map((m) => {
       const [, month, day] = m.date_of_birth.split("-").map(Number);
       const bdayThisYear = new Date(today.getFullYear(), month - 1, day);
@@ -198,7 +210,7 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
     })
     .filter(({ diff }) => diff >= -daysBefore && diff <= daysAfter)
     .sort((a, b) => a.diff - b.diff)
-    .map(({ member, diff }) => ({ ...member, group_id: groupId, daysFromToday: diff }));
+    .map(({ member, diff }) => ({ ...member, daysFromToday: diff }));
 }
 
 /** REQUIREMENTS.md §6.3 -- members with no assigned servant yet. */
@@ -215,19 +227,24 @@ export async function getUnassignedMembers(groupId: string): Promise<UnassignedM
     getAppSettings(),
   ]);
 
-  const registeredOn = new Intl.DateTimeFormat("en-CA", {
-    timeZone: settings.timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  return withJoinedOn(
+    ((data ?? []) as unknown as UnassignedInputMember[]).map((m) => ({ ...m, group_id: groupId })),
+    settings.timezone,
+  );
+}
 
-  return ((data ?? []) as unknown as (Omit<UnassignedMember, "joinedOn"> & {
-    join_date: string | null;
-    created_at: string | null;
-  })[]).map(({ join_date, created_at, ...m }) => ({
+export type UnassignedInputMember = Omit<UnassignedMember, "joinedOn"> & {
+  join_date: string | null;
+  created_at: string | null;
+};
+
+/** Join date, or -- for someone who registered but hasn't attended yet --
+ * the day they registered, in the app's timezone (shared with the combined
+ * Dashboard). */
+export function withJoinedOn(rows: UnassignedInputMember[], timeZone: string): UnassignedMember[] {
+  const registeredOn = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+  return rows.map(({ join_date, created_at, ...m }) => ({
     ...m,
-    group_id: groupId,
     joinedOn: join_date ?? (created_at ? registeredOn.format(new Date(created_at)) : null),
   }));
 }
