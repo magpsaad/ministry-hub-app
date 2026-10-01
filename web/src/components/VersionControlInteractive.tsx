@@ -145,7 +145,8 @@ export function VersionControlInteractive({ initial, canManage }: { initial: App
                   <p className="font-semibold text-[#333]">
                     Version {r.version} <span className="font-normal text-[#666]">— {formatDateKey(r.released_on, { month: "short", day: "numeric", year: "numeric" })}</span>
                   </p>
-                  {r.description && <p className="text-[#666] mt-0.5">{r.description}</p>}
+                  {/* Owner-requested: line breaks typed in the notes show as typed. */}
+                  {r.description && <p className="text-[#666] mt-0.5 whitespace-pre-line">{r.description}</p>}
                 </div>
                 {canManage && (
                   <button type="button" onClick={() => startEdit(r)} className="text-brand text-xs font-semibold shrink-0">
