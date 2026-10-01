@@ -18,7 +18,9 @@ export default async function OutreachPage({ params }: { params: Promise<{ group
   // no UI/feature changes here (owner: "No change"), except the Servants
   // filter (and the member picker) now cover the whole service, not just
   // one cohort.
-  const groupIds = groupId === ALL_COHORTS_GROUP_ID ? (await getCombinedGroups()).map((g) => g.id) : groupId;
+  const combined = groupId === ALL_COHORTS_GROUP_ID;
+  const combinedIds = combined ? (await getCombinedGroups()).map((g) => g.id) : [];
+  const groupIds = combined ? combinedIds : groupId;
 
   const [entries, members, servants, settings, profile, access] = await Promise.all([
     getOutreachEntries(groupIds),
@@ -30,8 +32,14 @@ export default async function OutreachPage({ params }: { params: Promise<{ group
       : Promise.resolve(null),
     user ? getAccessSummary(user.id) : Promise.resolve(null),
   ]);
-  // Read-Only access can view outreach but not add it (QA R-1).
-  const canEdit = access ? canEditGroup(access, groupId) : false;
+  // Read-Only access can view outreach but not add it (QA R-1). Combined
+  // view: allowed if they can edit any of its groups (a Coordinator of two
+  // groups, D14); the youth picker and the database still decide per youth.
+  const canEdit = access
+    ? combined
+      ? combinedIds.some((id) => canEditGroup(access, id))
+      : canEditGroup(access, groupId)
+    : false;
 
   return (
     <OutreachInteractive
@@ -43,6 +51,7 @@ export default async function OutreachPage({ params }: { params: Promise<{ group
       currentUserId={user?.id ?? ""}
       currentUserName={profile?.full_name ?? user?.email ?? "Unknown"}
       canAdd={canEdit}
+      groupIds={combinedIds}
     />
   );
 }

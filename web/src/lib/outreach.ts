@@ -30,6 +30,8 @@ export type OutreachEntryFull = {
   member_name: string;
   member_phone: string | null;
   assigned_servant_id: string | null;
+  /** The youth's group (for the combined view's cohort filter). */
+  member_group_id: string | null;
   servant_id: string;
   servant_name: string;
   occurred_at: string;
@@ -70,7 +72,7 @@ export async function getOutreachEntries(groupId: string | string[]): Promise<Ou
     type: string | null;
     notes: string | null;
     follow_up_due: string | null;
-    member: { full_name: string; phone: string | null; assigned_servant_id: string | null } | null;
+    member: { full_name: string; phone: string | null; assigned_servant_id: string | null; group_id: string } | null;
     servant: { full_name: string } | null;
   }[]).map((r) => ({
     id: r.id,
@@ -78,6 +80,7 @@ export async function getOutreachEntries(groupId: string | string[]): Promise<Ou
     member_name: r.member?.full_name ?? "Unknown",
     member_phone: r.member?.phone ?? null,
     assigned_servant_id: r.member?.assigned_servant_id ?? null,
+    member_group_id: r.member?.group_id ?? null,
     servant_id: r.servant_id,
     servant_name: r.servant?.full_name ?? "Unknown",
     occurred_at: r.occurred_at,
@@ -119,7 +122,7 @@ export async function getFollowUpsDue(groupId: string): Promise<FollowUpDueEntry
     type: string | null;
     notes: string | null;
     follow_up_due: string | null;
-    member: { full_name: string; phone: string | null; photo_path: string | null; assigned_servant_id: string | null } | null;
+    member: { full_name: string; phone: string | null; photo_path: string | null; assigned_servant_id: string | null; group_id: string } | null;
     servant: { full_name: string } | null;
   }[]).map((r) => ({
     id: r.id,
@@ -128,6 +131,7 @@ export async function getFollowUpsDue(groupId: string): Promise<FollowUpDueEntry
     member_phone: r.member?.phone ?? null,
     member_photo_path: r.member?.photo_path ?? null,
     assigned_servant_id: r.member?.assigned_servant_id ?? null,
+    member_group_id: r.member?.group_id ?? null,
     servant_id: r.servant_id,
     servant_name: r.servant?.full_name ?? "Unknown",
     occurred_at: r.occurred_at,

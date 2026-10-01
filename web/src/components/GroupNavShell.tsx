@@ -8,6 +8,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { CohortFilterBar } from "@/components/CohortFilter";
 
 const TABS = (memberLabel: string) => [
   { slug: "dashboard", label: "Dashboard" },
@@ -26,6 +27,8 @@ export function GroupNavShell({
   lastServiceDate,
   verse = null,
   combined = false,
+  combinedGroups = [],
+  groupLabel = "Group",
   children,
 }: {
   groupId: string;
@@ -39,13 +42,13 @@ export function GroupNavShell({
    * banner is sticky, so a full verse would permanently eat phone screen);
    * tapping it shows the whole verse. */
   verse?: { text: string; reference: string | null } | null;
-  /** The "Load Youth Data for all cohorts" view (REQUIREMENTS.md §6.1
-   * addendum) -- hides "My Assigned List" (owner-reported: doesn't apply
-   * once multiple cohorts' data is combined; the group layout also doesn't
-   * wrap this tree in MyAssignedProvider in this case, so every screen's
-   * own useMyAssigned() call already resolves to permanently-off regardless
-   * of this prop -- this just keeps the now-inert control from showing). */
+  /** The combined ("all cohorts") view. Owner-requested (30 Sep 2026): it
+   * shows "My Assigned List" too, plus the cohort checkboxes, which every
+   * tab follows (CohortFilter). */
   combined?: boolean;
+  /** The combined view's groups, for the cohort checkboxes. */
+  combinedGroups?: { id: string; name: string }[];
+  groupLabel?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -122,13 +125,11 @@ export function GroupNavShell({
         </nav>
       </div>
 
-      <div className={`max-w-5xl w-full mx-auto px-4 py-3 flex items-center flex-wrap gap-2 ${combined ? "justify-end" : "justify-between"}`}>
-        {!combined && (
-          <label className="inline-flex items-center gap-2 text-sm text-[#333]">
-            <input type="checkbox" checked={filtered} onChange={toggle} className="accent-brand" />
-            My Assigned List
-          </label>
-        )}
+      <div className="max-w-5xl w-full mx-auto px-4 py-3 flex items-center flex-wrap gap-2 justify-between">
+        <label className="inline-flex items-center gap-2 text-sm text-[#333]">
+          <input type="checkbox" checked={filtered} onChange={toggle} className="accent-brand" />
+          My Assigned List
+        </label>
         <span className="text-sm text-[#666]">
           Last Service Date:{" "}
           {lastServiceDate
@@ -139,6 +140,11 @@ export function GroupNavShell({
               })
             : "N/A"}
         </span>
+        {combined && (
+          <div className="w-full">
+            <CohortFilterBar groups={combinedGroups} groupLabel={groupLabel} />
+          </div>
+        )}
       </div>
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 pb-8">{children}</main>

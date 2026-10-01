@@ -43,3 +43,28 @@ export function setSessionFlag(key: string, value: boolean) {
   }
   listeners.forEach((l) => l());
 }
+
+/** Same as useSessionFlag, for a text value ("" when unset; null while
+ * hydrating). */
+export function useSessionString(key: string): string | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => {
+      try {
+        return sessionStorage.getItem(key) ?? "";
+      } catch {
+        return "";
+      }
+    },
+    () => null,
+  );
+}
+
+export function setSessionString(key: string, value: string) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // Unavailable storage: nothing to persist.
+  }
+  listeners.forEach((l) => l());
+}

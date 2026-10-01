@@ -10,6 +10,7 @@ import type { BirthdayMember, DashboardStatsData, NewlyAssignedMember, Unassigne
 import type { ActionsNeededMember } from "@/lib/actions-needed";
 import type { FollowUpDueEntry } from "@/lib/outreach";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { useCohortFilter } from "@/components/CohortFilter";
 import { memberPhotoUrl } from "@/lib/storage";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { AssignServantSelect } from "@/components/members/AssignServantSelect";
@@ -110,6 +111,9 @@ export function DashboardInteractive({
   canEdit,
   currentUserId,
   currentUserName,
+  combinedGroupIds,
+  canEditAll = false,
+  editableGroupIds = [],
 }: {
   groupId: string;
   statsData: DashboardStatsData;
@@ -134,10 +138,24 @@ export function DashboardInteractive({
   canEdit: boolean;
   currentUserId: string;
   currentUserName: string;
+  /** Combined view (owner-requested 30 Sep 2026): its groups. Every item
+   * then carries its own group, the header's cohort checkboxes narrow
+   * every section (CohortFilter), and edit rights and the servants offered
+   * are decided per youth's own group. */
+  combinedGroupIds?: string[];
+  canEditAll?: boolean;
+  editableGroupIds?: string[];
 }) {
   const router = useRouter();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
+  const combined = combinedGroupIds !== undefined;
+  const cohort = useCohortFilter(combinedGroupIds ?? []);
+  const inCohort = (gid: string | null | undefined) => !cohort.isFiltered || (!!gid && cohort.matches(gid));
+  const canEditFor = (gid: string | null | undefined) =>
+    !combined ? canEdit : canEditAll || (!!gid && editableGroupIds.includes(gid));
+  // Only that youth's own group's servants can be assigned to them.
+  const servantsFor = (gid: string) => (!combined ? servants : servants.filter((s) => s.groups.some((g) => g.id === gid)));
   const [showHelp, setShowHelp] = useState(false);
   const [viewingEntry, setViewingEntry] = useState<FollowUpDueEntry | null>(null);
   const [outreachForFollowUp, setOutreachForFollowUp] = useState<FollowUpDueEntry | null>(null);
@@ -158,7 +176,8 @@ export function DashboardInteractive({
   }
 
   const stats = useMemo(() => {
-    const rows = applyFilter ? statsData.rows.filter((r) => r.assigned_servant_id === currentUserId) : statsData.rows;
+    const inView = statsData.rows.filter((r) => inCohort(r.group_id));
+    const rows = applyFilter ? inView.filter((r) => r.assigned_servant_id === currentUserId) : inView;
     const totalMembers = rows.length;
     const neverAttended = rows.filter((r) => !r.everAttended).length;
     const presentLastServiceDate = statsData.lastServiceDate ? rows.filter((r) => r.presentLastService).length : null;
@@ -169,26 +188,30 @@ export function DashboardInteractive({
     // card.
     const absentLastServiceDate = statsData.lastServiceDate ? totalMembers - (presentLastServiceDate ?? 0) - neverAttended : null;
     return { totalMembers, neverAttended, presentLastServiceDate, absentLastServiceDate };
-  }, [statsData, applyFilter, currentUserId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- inCohort follows `cohort`
+  }, [statsData, applyFilter, currentUserId, cohort]);
 
-  const filteredBirthdays = applyFilter
-    ? birthdays.filter((m) => m.assigned_servant_id === currentUserId)
-    : birthdays;
+  const filteredBirthdays = birthdays.filter(
+    (m) => inCohort(m.group_id) && (!applyFilter || m.assigned_servant_id === currentUserId),
+  );
   const filteredUnassigned = applyFilter
-    ? unassigned.filter(() => false) // unassigned members can never be "mine"
-    : unassigned;
+    ? [] // unassigned members can never be "mine"
+    : unassigned.filter((m) => inCohort(m.group_id));
 
   const visibleOutreachNeeded = useMemo(
-    () => (applyFilter ? actionsNeeded.filter((m) => m.assigned_servant_id === currentUserId) : actionsNeeded),
-    [actionsNeeded, applyFilter, currentUserId],
+    () => actionsNeeded.filter((m) => inCohort(m.group_id) && (!applyFilter || m.assigned_servant_id === currentUserId)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- inCohort follows `cohort`
+    [actionsNeeded, applyFilter, currentUserId, cohort],
   );
   const visibleNewlyAssigned = useMemo(
-    () => (applyFilter ? newlyAssigned.filter((m) => m.assigned_servant_id === currentUserId) : newlyAssigned),
-    [newlyAssigned, applyFilter, currentUserId],
+    () => newlyAssigned.filter((m) => inCohort(m.group_id) && (!applyFilter || m.assigned_servant_id === currentUserId)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- inCohort follows `cohort`
+    [newlyAssigned, applyFilter, currentUserId, cohort],
   );
   const visibleFollowUps = useMemo(
-    () => (applyFilter ? followUpsDue.filter((f) => f.servant_id === currentUserId) : followUpsDue),
-    [followUpsDue, applyFilter, currentUserId],
+    () => followUpsDue.filter((f) => inCohort(f.member_group_id) && (!applyFilter || f.servant_id === currentUserId)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- inCohort follows `cohort`
+    [followUpsDue, applyFilter, currentUserId, cohort],
   );
   const totalActionsNeeded = visibleOutreachNeeded.length + visibleNewlyAssigned.length + visibleFollowUps.length;
 
@@ -223,7 +246,7 @@ export function DashboardInteractive({
           <StatCard icon={<CalendarXIcon className="h-3.5 w-3.5" />} label="Absent Last Service" value={stats.absentLastServiceDate ?? "—"} />
           <StatCard icon={<UserXIcon className="h-3.5 w-3.5" />} label="Never Attended" value={stats.neverAttended} />
         </div>
-        {statsData.visitorCount > 0 && (
+        {statsData.visitorCount > 0 && !cohort.isFiltered && (
           <p className="mt-3 text-xs text-[#666]">
             The above counts exclude {statsData.visitorCount} visitor{statsData.visitorCount === 1 ? "" : "s"}.
           </p>
@@ -259,7 +282,7 @@ export function DashboardInteractive({
                         servants={servants}
                         memberLabel={memberLabel}
                         canDelete={canDelete}
-                        canEdit={canEdit}
+                        canEdit={canEditFor(m.group_id)}
                         currentUserName={currentUserName}
                         className="font-semibold text-brand hover:underline text-left truncate"
                       >
@@ -273,7 +296,7 @@ export function DashboardInteractive({
                       Assigned Servant: {m.assigned_servant?.full_name ?? "No assigned servant"}
                     </p>
                   </div>
-                  {canEdit && (
+                  {canEditFor(m.group_id) && (
                     <OutreachQuickLink
                       memberId={m.id}
                       memberName={m.full_name}
@@ -321,7 +344,7 @@ export function DashboardInteractive({
                         servants={servants}
                         memberLabel={memberLabel}
                         canDelete={canDelete}
-                        canEdit={canEdit}
+                        canEdit={canEditFor(m.group_id)}
                         currentUserName={currentUserName}
                         className="font-semibold text-brand hover:underline text-left truncate"
                       >
@@ -343,7 +366,9 @@ export function DashboardInteractive({
                         there's still not enough room. */}
                     {m.phone && <PhoneLink phone={m.phone} className="text-xs truncate" />}
                   </div>
-                  {canEdit && <AssignServantSelect memberId={m.id} groupId={groupId} memberGender={m.gender} servants={servants} />}
+                  {canEditFor(m.group_id) && (
+                    <AssignServantSelect memberId={m.id} groupId={groupId} memberGender={m.gender} servants={servantsFor(m.group_id)} />
+                  )}
                 </div>
               );
             })}
@@ -393,7 +418,7 @@ export function DashboardInteractive({
                               servants={servants}
                               memberLabel={memberLabel}
                               canDelete={canDelete}
-                              canEdit={canEdit}
+                              canEdit={canEditFor(m.group_id)}
                               currentUserName={currentUserName}
                               className="font-semibold text-brand hover:underline text-left truncate block"
                             >
@@ -410,7 +435,7 @@ export function DashboardInteractive({
                               text on the left, unlike Birthdays' Outreach
                               button, which always sits on the right --
                               matched to that same placement here. */}
-                          {canEdit && (
+                          {canEditFor(m.group_id) && (
                             <OutreachQuickLink
                               memberId={m.id}
                               memberName={m.full_name}
@@ -443,7 +468,7 @@ export function DashboardInteractive({
                                 servants={servants}
                                 memberLabel={memberLabel}
                                 canDelete={canDelete}
-                                canEdit={canEdit}
+                                canEdit={canEditFor(m.group_id)}
                                 currentUserName={currentUserName}
                                 className="font-semibold text-brand hover:underline text-left truncate"
                               >
@@ -475,7 +500,7 @@ export function DashboardInteractive({
                               matched to that same placement here. Dismiss
                               stays below the text (a secondary action, not
                               the card's primary one). */}
-                          {canEdit && (
+                          {canEditFor(m.group_id) && (
                             <OutreachQuickLink
                               memberId={m.id}
                               memberName={m.full_name}
@@ -510,7 +535,7 @@ export function DashboardInteractive({
                             servants={servants}
                             memberLabel={memberLabel}
                             canDelete={canDelete}
-                            canEdit={canEdit}
+                            canEdit={canEditFor(f.member_group_id)}
                             currentUserName={currentUserName}
                             className="font-semibold text-brand hover:underline text-left truncate block"
                           >
@@ -546,7 +571,7 @@ export function DashboardInteractive({
                             own row on the left. */}
                         {/* Hidden for Read-Only access, like every other
                             outreach button (QA R-1, retest). */}
-                        {canEdit && (
+                        {canEditFor(f.member_group_id) && (
                           <button
                             type="button"
                             onClick={() => setOutreachForFollowUp(f)}
@@ -660,9 +685,7 @@ export function DashboardInteractive({
   );
 }
 
-/** Exported for CombinedDashboardOverview's per-cohort panels (the "Load
- * Youth Data for all cohorts" view, REQUIREMENTS.md §6.1 addendum) --
- * same card, shared rather than duplicated. */
+/** One Overview number card. */
 export function StatCard({
   label,
   value,

@@ -5,6 +5,7 @@ import { fetchAllRows } from "@/lib/pagination";
 
 export type MemberStatRow = {
   id: string;
+  group_id: string;
   assigned_servant_id: string | null;
   everAttended: boolean;
   presentLastService: boolean;
@@ -24,6 +25,10 @@ export type BirthdayMember = {
   phone: string | null;
   assigned_servant_id: string | null;
   assigned_servant: { full_name: string } | null;
+  group_id: string;
+  /** Signed days from today to this year's birthday (negative = passed);
+   * the list is sorted by it. */
+  daysFromToday: number;
 };
 
 export type UnassignedMember = {
@@ -38,6 +43,7 @@ export type UnassignedMember = {
    * who registered but hasn't attended yet, so has no join date -- the day
    * they registered, in the app's timezone. */
   joinedOn: string | null;
+  group_id: string;
 };
 
 /** REQUIREMENTS.md §6.3/§7.1 -- members recently assigned a servant who
@@ -55,6 +61,7 @@ export type NewlyAssignedMember = {
   gender: string | null;
   assigned_servant_id: string;
   assignedServantName: string;
+  group_id: string;
 };
 
 /** Lightweight, used by the nav shell header on every tab (not just Dashboard).
@@ -135,6 +142,7 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
 
   const rows: MemberStatRow[] = nonVisitors.map((m) => ({
     id: m.id,
+    group_id: groupId,
     assigned_servant_id: m.assigned_servant_id,
     everAttended: everAttendedSet.has(m.id),
     presentLastService: presentLastServiceSet.has(m.id),
@@ -178,7 +186,7 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
   // most-recently-passed first, through today, to soonest-upcoming last --
   // computed once per member and kept alongside it rather than recomputed
   // twice.
-  return ((data ?? []) as unknown as BirthdayMember[])
+  return ((data ?? []) as unknown as Omit<BirthdayMember, "group_id" | "daysFromToday">[])
     .map((m) => {
       const [, month, day] = m.date_of_birth.split("-").map(Number);
       const bdayThisYear = new Date(today.getFullYear(), month - 1, day);
@@ -190,7 +198,7 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
     })
     .filter(({ diff }) => diff >= -daysBefore && diff <= daysAfter)
     .sort((a, b) => a.diff - b.diff)
-    .map(({ member }) => member);
+    .map(({ member, diff }) => ({ ...member, group_id: groupId, daysFromToday: diff }));
 }
 
 /** REQUIREMENTS.md §6.3 -- members with no assigned servant yet. */
@@ -219,6 +227,7 @@ export async function getUnassignedMembers(groupId: string): Promise<UnassignedM
     created_at: string | null;
   })[]).map(({ join_date, created_at, ...m }) => ({
     ...m,
+    group_id: groupId,
     joinedOn: join_date ?? (created_at ? registeredOn.format(new Date(created_at)) : null),
   }));
 }
@@ -261,5 +270,6 @@ export async function getNewlyAssignedMembers(groupId: string): Promise<NewlyAss
     university: m.university,
     assigned_servant_id: m.assigned_servant_id,
     assignedServantName: m.assigned_servant?.full_name ?? "Unknown",
+    group_id: groupId,
   }));
 }

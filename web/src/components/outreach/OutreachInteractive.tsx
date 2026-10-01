@@ -6,6 +6,7 @@ import type { OutreachEntryFull } from "@/lib/outreach";
 import type { MemberBasic } from "@/lib/members";
 import type { ServantOption } from "@/lib/servants";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { useCohortFilter } from "@/components/CohortFilter";
 import { deleteOutreachEntryAction } from "@/app/g/[groupId]/outreach/actions";
 import { PencilIcon, TrashIcon } from "@/components/icons";
 import { AddOutreachEntryModal } from "./AddOutreachEntryModal";
@@ -29,6 +30,7 @@ export function OutreachInteractive({
   currentUserId,
   currentUserName,
   canAdd,
+  groupIds = [],
 }: {
   groupId: string;
   entries: OutreachEntryFull[];
@@ -39,10 +41,17 @@ export function OutreachInteractive({
   currentUserName: string;
   /** False for Read-Only access: "+ Add Outreach Entry" isn't offered (QA R-1). */
   canAdd: boolean;
+  /** Combined view: its groups, for the header's cohort checkboxes. */
+  groupIds?: string[];
 }) {
   const timeZone = useTimezone();
   const router = useRouter();
   const { myAssignedOnly, hydrated } = useMyAssigned();
+  const cohort = useCohortFilter(groupIds);
+  const pickableMembers = useMemo(
+    () => (cohort.isFiltered ? members.filter((m) => cohort.matches(m.group_id)) : members),
+    [members, cohort],
+  );
   const [q, setQ] = useState("");
   const [memberId, setMemberId] = useState("");
   const [servantId, setServantId] = useState("");
@@ -58,6 +67,7 @@ export function OutreachInteractive({
     if (hydrated && myAssignedOnly) {
       result = result.filter((e) => e.assigned_servant_id === currentUserId);
     }
+    if (cohort.isFiltered) result = result.filter((e) => !!e.member_group_id && cohort.matches(e.member_group_id));
     if (q.trim()) {
       const needle = q.trim().toLowerCase();
       result = result.filter((e) => e.member_name.toLowerCase().includes(needle));
@@ -67,7 +77,7 @@ export function OutreachInteractive({
     if (dateFrom) result = result.filter((e) => dateKeyInZone(e.occurred_at, timeZone) >= dateFrom);
     if (dateTo) result = result.filter((e) => dateKeyInZone(e.occurred_at, timeZone) <= dateTo);
     return result;
-  }, [entries, hydrated, myAssignedOnly, currentUserId, q, memberId, servantId, dateFrom, dateTo, timeZone]);
+  }, [entries, hydrated, myAssignedOnly, cohort, currentUserId, q, memberId, servantId, dateFrom, dateTo, timeZone]);
 
   function handleDelete(entry: OutreachEntryFull) {
     if (!confirm(`Delete this outreach entry for ${entry.member_name}?`)) return;
@@ -100,7 +110,7 @@ export function OutreachInteractive({
             className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
           >
             <option value="">All {memberLabel}s</option>
-            {members.map((m) => (
+            {pickableMembers.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.full_name}
               </option>

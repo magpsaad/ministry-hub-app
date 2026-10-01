@@ -14,6 +14,7 @@ export type ActionsNeededMember = {
   presenceCount: number;
   currentConsecutiveAbsences: number;
   lastOutreachDate: string | null;
+  group_id: string;
 };
 
 type ConfigRow = { proximity: string; min_presence_count: number; min_absence_weeks: number; min_outreach_weeks: number };
@@ -162,6 +163,7 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
         presenceCount,
         currentConsecutiveAbsences,
         lastOutreachDate: lastOutreach,
+        group_id: groupId,
       });
     }
   }

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { logGroupSelectedAction } from "@/app/actions";
-import { ChevronDownIcon, CloseIcon, SpinnerIcon } from "@/components/icons";
+import { ChevronDownIcon, CloseIcon, GearIcon, SpinnerIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { LAST_GROUP_COOKIE } from "@/lib/allCohorts";
 import type { MenuData } from "@/lib/menu-types";
@@ -167,7 +167,13 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
                 {link("/admin/universities-maintenance", `${data.universityLabel} Maintenance`)}
                 {link("/admin/calendar-maintenance", "Calendar Maintenance")}
                 {link("/admin/verses-maintenance", "Verses Maintenance")}
-                {link("/admin/actions-needed-config", "App Settings")}
+                {link(
+                  "/admin/actions-needed-config",
+                  <span className="inline-flex items-center gap-2">
+                    <GearIcon className="h-4 w-4" />
+                    App Settings
+                  </span>,
+                )}
                 {link("/admin/group-transition", "Group Transition")}
                 {link("/admin/audit-logs", "Audit Logs")}
                 {link("/admin/audit-report", "Audit Report")}

@@ -7,6 +7,7 @@ import type { ServantOption } from "@/lib/servants";
 import type { GroupSummary } from "@/lib/groups";
 import { resolveAttendanceSince } from "@/lib/attendance-window";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { useCohortFilter } from "@/components/CohortFilter";
 import { MemberDetailLink } from "@/components/members/MemberDetailLink";
 import { setAttendanceAction } from "@/app/g/[groupId]/attendance/actions";
 import { AttendanceHistoryModal } from "./AttendanceHistoryModal";
@@ -73,6 +74,10 @@ export function AttendanceInteractive({
   memberRecord: AttendanceMemberRecordContext;
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
+  // Combined view: the header's cohort checkboxes (CohortFilter). With a
+  // single group there's nothing to filter (memberRecord.groups is empty).
+  const cohortGroupIds = useMemo(() => memberRecord.groups.map((g) => g.id), [memberRecord.groups]);
+  const cohort = useCohortFilter(cohortGroupIds);
   const [attendanceByMember, setAttendanceByMember] = useState(bundle.attendanceByMember);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -168,6 +173,7 @@ export function AttendanceInteractive({
   const visible = useMemo(() => {
     let filtered =
       hydrated && myAssignedOnly ? bundle.members.filter((m) => m.assigned_servant_id === currentUserId) : bundle.members;
+    if (cohort.isFiltered) filtered = filtered.filter((m) => cohort.matches(m.group_id));
     if (excludeVisitors) filtered = filtered.filter((m) => !m.is_visitor);
     const sorted = [...filtered].sort((a, b) => {
       let cmp = 0;
@@ -178,7 +184,7 @@ export function AttendanceInteractive({
     });
     return sorted;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bundle.members, hydrated, myAssignedOnly, excludeVisitors, currentUserId, sortKey, sortDesc, date, attendanceByMember]);
+  }, [bundle.members, hydrated, myAssignedOnly, cohort, excludeVisitors, currentUserId, sortKey, sortDesc, date, attendanceByMember]);
 
   function sortIndicator(key: SortKey) {
     return sortKey === key ? (sortDesc ? " ▼" : " ▲") : "";

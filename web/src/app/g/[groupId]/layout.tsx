@@ -8,7 +8,13 @@ import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { GroupNavShell } from "@/components/GroupNavShell";
 import { MyAssignedProvider } from "@/components/MyAssignedContext";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
-import { coordinatorCombinedName, coordinatorScope, getAccessibleGroups, hasCoordinatorCombined } from "@/lib/groups";
+import {
+  coordinatorCombinedName,
+  coordinatorScope,
+  getAccessibleGroups,
+  getCombinedGroups,
+  hasCoordinatorCombined,
+} from "@/lib/groups";
 import { Skeleton } from "@/components/Skeleton";
 import { getRandomVerseAction } from "@/app/actions";
 
@@ -84,9 +90,7 @@ function GroupShellFallback({ groupId, combined }: { groupId: string; combined: 
       </div>
     </GroupNavShell>
   );
-  // Matches the real content's wrapping below -- the combined view never
-  // wraps in MyAssignedProvider (useMyAssigned() safely no-ops without one).
-  return combined ? shell : <MyAssignedProvider>{shell}</MyAssignedProvider>;
+  return <MyAssignedProvider>{shell}</MyAssignedProvider>;
 }
 
 async function GroupLayoutContent({
@@ -139,19 +143,24 @@ async function GroupLayoutContent({
       );
     }
 
+    const combinedGroups = await getCombinedGroups();
     return (
-      <GroupNavShell
-        groupId={ALL_COHORTS_GROUP_ID}
-        groupName={combinedName}
-        appTitleShort={settings.app_title_short}
-        memberLabel={settings.member_label}
-        logoUrl={settings.logo_url}
-        lastServiceDate={lastServiceDate}
-        verse={verse}
-        combined
-      >
-        {children}
-      </GroupNavShell>
+      <MyAssignedProvider>
+        <GroupNavShell
+          groupId={ALL_COHORTS_GROUP_ID}
+          groupName={combinedName}
+          appTitleShort={settings.app_title_short}
+          memberLabel={settings.member_label}
+          logoUrl={settings.logo_url}
+          lastServiceDate={lastServiceDate}
+          verse={verse}
+          combined
+          combinedGroups={combinedGroups.map((g) => ({ id: g.id, name: g.name }))}
+          groupLabel={settings.group_label}
+        >
+          {children}
+        </GroupNavShell>
+      </MyAssignedProvider>
     );
   }
 

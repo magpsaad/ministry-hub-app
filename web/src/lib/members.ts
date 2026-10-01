@@ -151,6 +151,7 @@ export type MemberBasic = {
   full_name: string;
   phone: string | null;
   assigned_servant_id: string | null;
+  group_id: string;
 };
 
 /** Lightweight roster fetch for contexts that just need id/name/phone/
@@ -164,7 +165,7 @@ export async function getGroupMembersLite(groupId: string | string[]): Promise<M
   return fetchAllRows((from, to) => {
     let q = supabase
       .from("members")
-      .select("id, full_name, phone, assigned_servant_id")
+      .select("id, full_name, phone, assigned_servant_id, group_id")
       .eq("status", "active")
       .order("full_name")
       .order("id")

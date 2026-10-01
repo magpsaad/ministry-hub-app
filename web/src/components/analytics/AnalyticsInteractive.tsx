@@ -5,6 +5,7 @@ import type { AnalyticsRawData, MemberAnalyticsRow } from "@/lib/analytics";
 import type { ServantOption } from "@/lib/servants";
 import type { GroupSummary } from "@/lib/groups";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { useCohortFilter } from "@/components/CohortFilter";
 import { isOnServiceWeekday, resolveAttendanceSince, weekdayName } from "@/lib/attendance-window";
 import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import { ClipboardCheckIcon, UsersIcon, ChartBarIcon, MapPinIcon } from "@/components/icons";
@@ -73,14 +74,37 @@ export function AnalyticsInteractive({
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
+  // Combined view: the header's cohort checkboxes (CohortFilter).
+  const groupIds = useMemo(() => (combined ? groups.map((g) => g.id) : []), [combined, groups]);
+  const cohort = useCohortFilter(groupIds);
+  // Every youth (visitors too) in the chosen cohorts -- the base for the
+  // servants' caseloads and the unassigned count when filtered.
+  const cohortMembers = useMemo(
+    () => (cohort.isFiltered ? raw.members.filter((m) => cohort.matches(m.group_id)) : raw.members),
+    [raw.members, cohort],
+  );
+  // Servants of the chosen cohorts, with caseloads counted in them only.
+  const visibleServants = useMemo(() => {
+    if (!cohort.isFiltered) return servants;
+    return servants
+      .filter((s) => s.groups.some((g) => cohort.matches(g.id)))
+      .map((s) => ({
+        ...s,
+        groups: s.groups.filter((g) => cohort.matches(g.id)),
+        caseload: cohortMembers.filter((m) => m.assigned_servant_id === s.id).length,
+      }));
+  }, [servants, cohort, cohortMembers]);
+  const visibleUnassignedCount = cohort.isFiltered
+    ? cohortMembers.filter((m) => !m.assigned_servant_id).length
+    : unassignedCount;
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
   const [servantsView, setServantsView] = useState<"categorical" | "alphabetical">("categorical");
 
   const filteredMembers = useMemo(() => {
-    const rows = applyFilter ? raw.members.filter((m) => m.assigned_servant_id === currentUserId) : raw.members;
+    const rows = applyFilter ? cohortMembers.filter((m) => m.assigned_servant_id === currentUserId) : cohortMembers;
     return rows.filter((m) => !m.is_visitor);
-  }, [raw.members, applyFilter, currentUserId]);
+  }, [cohortMembers, applyFilter, currentUserId]);
 
   const completeness = useMemo(() => {
     const total = filteredMembers.length;
@@ -164,16 +188,16 @@ export function AnalyticsInteractive({
 
   const monthlyByCohort = useMemo(() => {
     if (!combined || groups.length === 0) return [];
-    const sorted = [...groups].sort((a, b) => a.display_order - b.display_order);
+    const sorted = [...groups].filter((g) => cohort.matches(g.id)).sort((a, b) => a.display_order - b.display_order);
     return sorted.map((g) => ({
       group: g,
       monthly: computeMonthly(filteredMembers.filter((m) => m.group_id === g.id)),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [combined, groups, filteredMembers, raw.attendance, serviceWeekday, windowWeeks]);
+  }, [combined, groups, cohort, filteredMembers, raw.attendance, serviceWeekday, windowWeeks]);
 
   const sortedServants = useMemo(() => {
-    return [...servants].sort((a, b) => {
+    return [...visibleServants].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "gender") cmp = (a.gender ?? "").localeCompare(b.gender ?? "");
@@ -181,7 +205,7 @@ export function AnalyticsInteractive({
       else cmp = a.caseload - b.caseload;
       return sortDesc ? -cmp : cmp;
     });
-  }, [servants, sortKey, sortDesc]);
+  }, [visibleServants, sortKey, sortDesc]);
 
   // Categorical view (owner-requested, matches Servant Assignments/Servant
   // Profiles): cohorts in ladder order, Unassigned last; a person holding
@@ -190,7 +214,7 @@ export function AnalyticsInteractive({
   const categoricalCohorts = useMemo(() => {
     const byCohortId = new Map<string, { id: string; name: string; display_order: number; servants: ServantOption[] }>();
     const unassigned: ServantOption[] = [];
-    for (const s of servants) {
+    for (const s of visibleServants) {
       if (s.groups.length === 0) {
         unassigned.push(s);
         continue;
@@ -202,7 +226,7 @@ export function AnalyticsInteractive({
     }
     const cohorts = Array.from(byCohortId.values()).sort((a, b) => a.display_order - b.display_order);
     return { cohorts, unassigned };
-  }, [servants]);
+  }, [visibleServants]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDesc((v) => !v);
@@ -337,12 +361,12 @@ export function AnalyticsInteractive({
                 <tbody>
                   <tr className="bg-[#f9f9f9]">
                     <td className="px-4 py-2.5 font-semibold text-[#333]">Unassigned {memberLabel}s (no servant)</td>
-                    <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{unassignedCount}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{visibleUnassignedCount}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            {servants.length === 0 && <p className="text-sm text-[#666] text-center py-6">No servants assigned yet.</p>}
+            {visibleServants.length === 0 && <p className="text-sm text-[#666] text-center py-6">No servants assigned yet.</p>}
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
@@ -386,7 +410,7 @@ export function AnalyticsInteractive({
                   <td className="px-4 py-2.5 font-semibold text-[#333]" colSpan={combined ? 3 : 2}>
                     Unassigned
                   </td>
-                  <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{unassignedCount}</td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{visibleUnassignedCount}</td>
                 </tr>
                 {sortedServants.length === 0 && (
                   <tr>
