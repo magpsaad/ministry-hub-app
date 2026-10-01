@@ -62,9 +62,11 @@ export function coordinatorCombinedName(
   levelWord: string,
   levelOffset: number,
 ): string {
+  if (scope.length < 2) return "";
   const words = scope.map((g) => g.name.trim().split(/\s+/));
   const shared: string[] = [];
-  for (let i = 0; words.every((w) => i < w.length - 1 && w[i] === words[0][i]); i++) shared.push(words[0][i]);
+  const longest = Math.min(...words.map((w) => w.length - 1));
+  for (let i = 0; i < longest && words.every((w) => w[i] === words[0][i]); i++) shared.push(words[0][i]);
   while (shared.length > 0 && /^(st\.?|-|–)$/i.test(shared[shared.length - 1])) shared.pop();
   if (shared.length > 0) return shared.join(" ");
   const levels = [...new Set(scope.map((g) => g.ladder_position))].sort((a, b) => a - b);
