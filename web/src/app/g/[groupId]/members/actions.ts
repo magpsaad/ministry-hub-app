@@ -52,7 +52,7 @@ export async function deleteMemberAction(memberId: string, groupId: string) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data, error } = await supabase.from("members").delete().eq("id", memberId).select("id");
+  const { data, error } = await supabase.from("members").delete().eq("id", memberId).select("id, group_id");
   if (error) {
     // Owner-reported: the raw FK-violation message ("update or delete on
     // table \"members\" violates foreign key constraint
@@ -68,7 +68,8 @@ export async function deleteMemberAction(memberId: string, groupId: string) {
   }
   if (!data || data.length === 0) return { error: "You don't have permission to delete this record." };
 
-  if (user) await logAudit(user.id, "MEMBER_DELETED", { groupId, details: { memberId } });
+  // The youth is gone, so the audit entry takes their group from the deleted row.
+  if (user) await logAudit(user.id, "MEMBER_DELETED", { groupId: data[0].group_id ?? groupId, details: { memberId } });
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };

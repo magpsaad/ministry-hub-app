@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 export type AuditActionType =
   | "APP_ACCESS"
@@ -48,12 +49,14 @@ export async function logAudit(
   actionType: AuditActionType,
   opts?: { groupId?: string | null; details?: Record<string, unknown> },
 ): Promise<void> {
-  // The "Load Data for all cohorts" combined view (§ the /g/all/* routes)
-  // passes the literal route param "all" as groupId through every call
-  // site that already threads groupId into logAudit -- normalized to null
-  // here, once, rather than patching each call site, since group_id is a
-  // real FK to groups(id) and "all" isn't a real group.
-  const groupId = opts?.groupId === "all" ? null : (opts?.groupId ?? null);
+  // The combined view (the /g/all/* routes) passes the literal route param
+  // "all" as groupId, which isn't a real group (group_id is a real FK to
+  // groups(id)). Owner-requested (1 Oct 2026): instead of no group, record
+  // the group of the youth the action was for, looked up from the details
+  // (memberId or an outreach entryId) after the response is sent. Opening
+  // the combined view itself (no youth) still records no group.
+  const combined = opts?.groupId === ALL_COHORTS_GROUP_ID;
+  const explicitGroupId = combined ? null : (opts?.groupId ?? null);
 
   try {
     // The Supabase client (which reads the request's cookies) is created
@@ -71,6 +74,7 @@ export async function logAudit(
           .maybeSingle();
         if (config && config.enabled === false) return;
 
+        const groupId = combined ? await groupFromDetails(supabase, opts?.details) : explicitGroupId;
         await supabase.from("audit_log").insert({
           user_id: userId,
           action_type: actionType,
@@ -84,4 +88,22 @@ export async function logAudit(
   } catch {
     // Best-effort -- never let audit logging break the underlying action.
   }
+}
+
+/** The group of the youth an action from the combined view was for. */
+async function groupFromDetails(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  details: Record<string, unknown> | undefined,
+): Promise<string | null> {
+  const memberId = typeof details?.memberId === "string" ? details.memberId : null;
+  if (memberId) {
+    const { data } = await supabase.from("members").select("group_id").eq("id", memberId).maybeSingle();
+    return data?.group_id ?? null;
+  }
+  const entryId = typeof details?.entryId === "string" ? details.entryId : null;
+  if (entryId) {
+    const { data } = await supabase.from("outreach_entries").select("member:members(group_id)").eq("id", entryId).maybeSingle();
+    return (data?.member as unknown as { group_id: string } | null)?.group_id ?? null;
+  }
+  return null;
 }
