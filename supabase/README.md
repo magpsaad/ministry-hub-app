@@ -58,6 +58,7 @@ For a brand-new environment, first `create schema if not exists qa;` (or `prod`)
 
 | `0069` | **Group ladder** (`GROUP_LADDER_PLAN.md` v1.3): group kinds (hidden pre-entry, regular, hidden hand-over), display order, per-group name patterns, QR switches, shared check-in codes, hidden groups enforced in the security rules, the new Group Transition (preview = the run, undone), archive tool, check-in placement by birth year. Creates an empty hand-over group per ministry. Undo: `0069_down` (only before 0070 and before any new-model transition). |
 | `0070` | **SAY only, one time**: splits "2004 & older" into "2004 - Yr 5", "2003 - Yr 6" and the hidden "2002 - Transitioning". Stops unless the counts per destination equal the rehearsal's (`v_expect`, per environment; a rehearsal sets `ladder.split_rehearsal = on`). Undo: `0070_down`. |
+| `0071` | **Audit Report for General Coordinators**: `get_audit_report_rows()` (when and who only; Admins and General Coordinators) and `get_audit_log_users()` opened to General Coordinators. The audit log itself stays Admin-only. Functions only. Undo: `0071_down`. |
 
 **Refresh QA from production (0068) between 0069 in QA and 0069 in production:** it refuses (the new `groups.kind` column has no value in production yet) and changes nothing. It works again once production has 0069.
 

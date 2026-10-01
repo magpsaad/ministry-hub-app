@@ -146,27 +146,30 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
                 {link("/servant-assignments", "Servant Assignments")}
                 {link("/servants-attendance", "Servant Attendance")}
                 {link("/export-lists", "Print/Export Lists")}
-                {data.isAdminOrGeneralCoordinator &&
-                  link(
-                    "/admin/pending-servants",
-                    <span className="flex items-center gap-2">
-                      Pending Servants
-                      {data.pendingServantsCount > 0 && (
-                        <span className="rounded-full bg-[#dc3545] text-white text-[11px] px-2 py-0.5">
-                          {data.pendingServantsCount}
-                        </span>
-                      )}
-                    </span>,
-                  )}
+              </Section>
+            )}
+
+            {/* Owner-requested: what only General Coordinators (and Admins)
+                can do, in its own section. */}
+            {data.isAdminOrGeneralCoordinator && (
+              <Section title="General Coordinators">
+                {link(
+                  "/admin/pending-servants",
+                  <span className="flex items-center gap-2">
+                    Pending Servants
+                    {data.pendingServantsCount > 0 && (
+                      <span className="rounded-full bg-[#dc3545] text-white text-[11px] px-2 py-0.5">
+                        {data.pendingServantsCount}
+                      </span>
+                    )}
+                  </span>,
+                )}
+                {link("/admin/audit-report", "Audit Report")}
               </Section>
             )}
 
             {data.isAdmin && (
               <Section title="System Admin Corner">
-                {link("/admin/access-maintenance", "Access Maintenance")}
-                {link("/admin/universities-maintenance", `${data.universityLabel} Maintenance`)}
-                {link("/admin/calendar-maintenance", "Calendar Maintenance")}
-                {link("/admin/verses-maintenance", "Verses Maintenance")}
                 {link(
                   "/admin/actions-needed-config",
                   <span className="inline-flex items-center gap-2">
@@ -174,9 +177,12 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
                     App Settings
                   </span>,
                 )}
+                {link("/admin/access-maintenance", "Access Maintenance")}
+                {link("/admin/universities-maintenance", `${data.universityLabel} Maintenance`)}
+                {link("/admin/calendar-maintenance", "Calendar Maintenance")}
+                {link("/admin/verses-maintenance", "Verses Maintenance")}
                 {link("/admin/group-transition", "Group Transition")}
                 {link("/admin/audit-logs", "Audit Logs")}
-                {link("/admin/audit-report", "Audit Report")}
               </Section>
             )}
 

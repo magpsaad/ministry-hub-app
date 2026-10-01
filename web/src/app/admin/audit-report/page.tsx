@@ -10,13 +10,14 @@ import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { AuditReportInteractive } from "@/components/admin/AuditReportInteractive";
 
-/** REQUIREMENTS.md §6.14/§6.1 -- Admin Corner, Admins only. */
+/** REQUIREMENTS.md §6.14/§6.1 -- General Coordinators section: Admins and
+ * General Coordinators (owner-requested 30 Sep 2026, migration 0071). */
 export default async function AuditReportPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const access = await getAccessSummary(user.id);
-  if (!access.isAdmin) {
+  if (!access.isAdmin && !access.isGeneralCoordinator) {
     return (
       <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
         <p className="text-sm text-[#666]">You don&rsquo;t have access to this page.</p>

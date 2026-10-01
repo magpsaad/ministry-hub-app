@@ -22,24 +22,23 @@ export type AuditReportRow = {
  * what the client asks for, silently, no error. Paged via fetchAllRows
  * (lib/pagination.ts) so the real cap is 15,000, not 1,000 -- audit_log
  * already has 4,000+ rows, well past that ceiling. */
+/** Read through get_audit_report_rows() (migration 0071): General
+ * Coordinators see the report too, but only its when-and-who columns --
+ * the audit log itself stays Admin-only. */
 export async function getAuditReportDataAction(): Promise<AuditReportRow[]> {
   const supabase = await createClient();
-  const rows = await fetchAllRows(
+  const rows = (await fetchAllRows(
     (from, to) =>
       supabase
-        .from("audit_log")
-        .select("occurred_at, user_id, profiles(full_name)")
+        .rpc("get_audit_report_rows")
         .order("occurred_at", { ascending: false })
+        .order("id", { ascending: false })
         .range(from, to),
     1000,
     15000,
-  );
+  )) as { occurred_at: string; user_id: string | null; user_name: string | null }[];
 
-  return rows.map((r) => ({
-    occurred_at: r.occurred_at,
-    user_id: r.user_id,
-    user_name: (r.profiles as unknown as { full_name: string } | null)?.full_name ?? null,
-  }));
+  return rows.map((r) => ({ occurred_at: r.occurred_at, user_id: r.user_id, user_name: r.user_name }));
 }
 
 export type AuditReportUser = { id: string; full_name: string };
