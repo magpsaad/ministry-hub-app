@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import { getBranding } from "@/lib/branding";
+import { getAddressContext } from "@/lib/ministry-context";
 import { QaEnvBanner } from "@/components/QaEnvBanner";
 import { TimezoneProvider } from "@/components/TimezoneProvider";
 import "./globals.css";
@@ -18,7 +19,12 @@ export async function generateMetadata(): Promise<Metadata> {
   // manifest.ts icons Android reads). Owner tried it on qa, approved, then
   // asked for prod-only permanently -- kept in sync with manifest.ts's
   // identical check.
-  const useLogo = process.env.NEXT_PUBLIC_APP_ENV === "prod" && !!settings.logo_url;
+  const isProd = process.env.NEXT_PUBLIC_APP_ENV === "prod";
+  const useLogo = isProd && !!settings.logo_url;
+  // Owner-requested (1 Oct 2026): the console (no ministry, so no App
+  // Settings logo) gets the church's Coptic cross, on an opaque white
+  // square since iOS fills transparency with black. Same prod-only rule.
+  const consoleIcon = isProd && (await getAddressContext()).kind === "console";
   return {
     title: {
       default: settings.app_title_long,
@@ -31,7 +37,7 @@ export async function generateMetadata(): Promise<Metadata> {
       statusBarStyle: "default",
       title: settings.app_title_short,
     },
-    icons: useLogo ? { apple: settings.logo_url! } : undefined,
+    icons: consoleIcon ? { apple: "/console-icon-180.png" } : useLogo ? { apple: settings.logo_url! } : undefined,
   };
 }
 

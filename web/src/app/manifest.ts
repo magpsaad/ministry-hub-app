@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getBranding } from "@/lib/branding";
+import { getAddressContext } from "@/lib/ministry-context";
 
 /** PWA "Add to Home Screen" icon (Android Chrome/Chromium) -- owner-
  * requested: use the ministry's own configured logo (app_settings.logo_url)
@@ -17,7 +18,10 @@ import { getBranding } from "@/lib/branding";
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const settings = await getBranding();
-  const useLogo = process.env.NEXT_PUBLIC_APP_ENV === "prod" && !!settings.logo_url;
+  const isProd = process.env.NEXT_PUBLIC_APP_ENV === "prod";
+  const useLogo = isProd && !!settings.logo_url;
+  // The console's own icon, the church's Coptic cross (see layout.tsx).
+  const consoleIcon = isProd && (await getAddressContext()).kind === "console";
 
   return {
     name: settings.app_title_long,
@@ -26,7 +30,12 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     display: "standalone",
     background_color: "#f5f5f5",
     theme_color: settings.theme_color,
-    icons: useLogo
+    icons: consoleIcon
+      ? [
+          { src: "/console-icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/console-icon-512.png", sizes: "512x512", type: "image/png" },
+        ]
+      : useLogo
       ? [
           { src: settings.logo_url!, sizes: "192x192", type: "image/png" },
           { src: settings.logo_url!, sizes: "512x512", type: "image/png" },
