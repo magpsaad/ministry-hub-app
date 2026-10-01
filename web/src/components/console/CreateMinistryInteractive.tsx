@@ -139,7 +139,7 @@ export function CreateMinistryInteractive({
             <input value={settings.app_subtitle} onChange={(e) => set("app_subtitle", e.target.value)} className={inputClass} />
           </label>
           <label className="text-xs text-[#666] sm:col-span-3">
-            Logo URL (optional &mdash; can be added later in App Settings)
+            Logo URL (optional &mdash; can be added later in Ministry Settings)
             <input
               value={settings.logo_url ?? ""}
               onChange={(e) => set("logo_url", e.target.value || null)}
@@ -246,7 +246,7 @@ export function CreateMinistryInteractive({
               className={inputClass}
             />
             <span className="mt-0.5 block text-[11px] text-[#999]">
-              More groups are added afterwards from the ministry&rsquo;s App Settings.
+              More groups are added afterwards from its Ministry Settings.
             </span>
           </label>
           <label className="text-xs text-[#666] sm:col-span-2">
@@ -316,8 +316,8 @@ export function CreateMinistryInteractive({
           </label>
         </div>
         <p className="text-xs text-[#666] mb-2">
-          Pick a palette that sets this ministry apart from the others. It can be changed any time in the
-          ministry&rsquo;s App Settings &rarr; App Branding.
+          Pick a palette that sets this ministry apart from the others. It can be changed any time in its
+          Ministry Settings &rarr; App Branding.
         </p>
         <ThemePalettePicker
           colors={{

@@ -68,7 +68,7 @@ export function SetupChecklist({
           broad pattern like <code>*.vercel.app</code>.
         </li>
         <li>
-          Open the address, sign in, and check the ministry&rsquo;s App Settings (logo, labels, colours). The first
+          Open the address, sign in, and check its Ministry Settings (logo, labels, colours). The first
           Admin(s) will be asked for their phone and gender the first time they sign in there.
         </li>
         {environment === "QA" && (

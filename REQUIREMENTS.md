@@ -345,7 +345,7 @@ Faithfully reproduce all of the following from the current app, using "Group"/"M
   - **Servant Corner** (everyone): Servant Directory, Service Calendar, Checkin - QR Codes, Release History.
   - **Coordinator Corner** (General/Sub-Coordinators and Admins): Servant Profiles, Servant Assignments, Servant Attendance, Print/Export Lists.
   - **General Coordinators** (General Coordinators and Admins; owner-requested 30 Sep 2026): Pending Servants with its count, Audit Report.
-  - **System Admin Corner** (Admins): App Settings (first, with a gear icon), Access Maintenance, [University] Maintenance, Calendar Maintenance, Verses Maintenance, Group Transition, Audit Logs.
+  - **System Admin Corner** (Admins): Ministry Settings (first, with a gear icon; called App Settings until 1 Oct 2026), Access Maintenance, [University] Maintenance, Calendar Maintenance, Verses Maintenance, Group Transition, Audit Logs.
   - Footer: version number and Exit (no longer in the page banners).
   - Headings are shaded in the brand colour; their entries are indented.
 - **Page banner buttons (every page):** top left **Menu**, then **Back** (the previous screen, no reload; with nothing to go back to, your Dashboard); top right **Refresh**. On member check-in QR pages a signed-out youth sees neither Menu nor Back (they led to sign-in, which puts a youth in Pending Servants). The Service Calendar is an ordinary page (`/calendar`) with the same header as every other page.

@@ -174,7 +174,7 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
                   "/admin/actions-needed-config",
                   <span className="inline-flex items-center gap-2">
                     <GearIcon className="h-4 w-4" />
-                    App Settings
+                    Ministry Settings
                   </span>,
                 )}
                 {link("/admin/access-maintenance", "Access Maintenance")}

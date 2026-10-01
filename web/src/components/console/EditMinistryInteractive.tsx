@@ -129,7 +129,7 @@ export function EditMinistryInteractive({ ministry }: { ministry: MinistryListRo
                   rel="noopener noreferrer"
                   className="text-xs font-semibold text-brand hover:underline"
                 >
-                  App Settings &#8599;
+                  Ministry Settings &#8599;
                 </a>
                 <button
                   type="button"
@@ -165,8 +165,8 @@ export function EditMinistryInteractive({ ministry }: { ministry: MinistryListRo
       <section className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="text-lg font-bold text-brand mb-1">Logo, labels, colours and schedule</h2>
         <p className="text-sm text-[#666]">
-          These live in the ministry&rsquo;s own App Settings. As Church Admin you&rsquo;re an Admin on every
-          ministry&rsquo;s address, so use the <strong>App Settings</strong> link next to an address above (you may need
+          These live in its own Ministry Settings. As Church Admin you&rsquo;re an Admin on every
+          ministry&rsquo;s address, so use the <strong>Ministry Settings</strong> link next to an address above (you may need
           to sign in there first).
         </p>
       </section>
