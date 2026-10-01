@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SignOutButton } from "@/components/SignOutButton";
 
@@ -11,7 +12,9 @@ const NAV = [
 
 /** Page frame for the Church Admin console (MULTI_TENANT_PLAN.md §3.8):
  * neutral chrome -- the console belongs to no ministry, so it never shows a
- * ministry's name, logo or colours in its own header. */
+ * ministry's name, logo or colours in its own header. Owner-requested
+ * (1 Oct 2026): the church's own logo, the Coptic cross
+ * (public/console-logo.png), sits beside the page title. */
 export function ConsoleShell({
   title,
   email,
@@ -29,7 +32,17 @@ export function ConsoleShell({
           {email && <span className="text-[10px] text-white/60">{email}</span>}
         </div>
         <p className="text-center text-xs uppercase tracking-widest opacity-80">Church Admin Console</p>
-        <h1 className="mt-1 text-center text-2xl font-bold">{title}</h1>
+        <div className="mt-1 flex items-center justify-center gap-2">
+          <Image
+            src="/console-logo.png"
+            alt="Coptic cross"
+            width={40}
+            height={40}
+            priority
+            className="shrink-0 rounded-full bg-white p-1 shadow-[0_2px_10px_rgba(0,0,0,0.2)]"
+          />
+          <h1 className="text-2xl font-bold">{title}</h1>
+        </div>
         <nav className="mt-3 flex flex-wrap justify-center gap-1">
           {NAV.map((n) => (
             <Link
