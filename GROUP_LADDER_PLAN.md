@@ -504,8 +504,8 @@ Facts: Kristeen's and Mike's assigned youths are **28 born 2004 + 6 with no date
 | **Q5. QA split** | With O1/O2 answered: 0070 rehearsed (rolled back) on QA, then committed; V9 checks | **G3**: you sign off QA |
 | **Q6. Acceptance** | Testers check SAY on QA (side-menu switcher and where `/` lands them, hidden groups per role, QR page and print, check-in on the terminal QR on a QA service day) | **G4**: you decide it's ready |
 | **P0. Prod pre-flight** | Read-only: prod structure = QA's before 0069; counts re-taken; you take a fresh `pg_dump` | – |
-| **P1. Prod rehearsal** | 0069 then 0070 in one rolled-back transaction on prod, off-Friday, lock window measured | **Explicit go-ahead** |
-| **P2. Prod apply** | 0069 → code to `main` → 0070, same evening (not Friday); post-checks V1–V9 | – |
+| **P1. Prod rehearsal** | 0069 then 0070 in one rolled-back transaction on prod, off-Friday, lock window measured. ✅ **Done 1 Oct 2026**: split tests 15/15, tables locked 0.84 s, prod counts 152/178/63 written into 0070 | **Explicit go-ahead** |
+| **P2. Prod apply** | 0069 → code to `main` → 0070, same evening (not Friday); post-checks V1–V9. ✅ **Done 1 Oct 2026** after a fresh `pg_dump`: 0069 → 0071 (Audit Report for GCs, function-only) → code (`main` 49a9fce) → 0070. Totals unchanged; GC sees 984 (63 hidden); Kristeen and Mike see Yr 5 + Yr 6 (330) with their 34 assignments; no new functions open to signed-out visitors | – |
 | **P3. Posters** | 🔄 Nothing needs reprinting (shared code, §5.5). Optionally reprint the "2004 & older" sheet with its new name "2004 - Yr 5"; add any extra servants to "2003 - Yr 6" | – |
 
 Docs updated with the code: REQUIREMENTS §2.2, §4.3, §5, §6.9, §6.10, §6.15 and DATABASE_SCHEMA §2, §15 and M.
