@@ -8,3 +8,10 @@ Archives/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Database backups (pg_dump) -- hold personal data, never commit.
+Backups/
+*.dump
+
+# Claude working files (rehearsal SQL, exports, reports) -- may hold personal data.
+Working/
