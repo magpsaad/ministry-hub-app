@@ -27,9 +27,10 @@ const brandButton =
   "rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60";
 
 /** GROUP_LADDER_PLAN.md §4.5 -- the App Settings "Group Names & QR Code
- * Colors" panel. One list in display order: the hidden pre-entry group
- * first, the regular groups (▲/▼ to reorder, each at a level; several may
- * share one), the hidden hand-over group last, then the Servants code.
+ * Colors" panel. One list: the Servants code, then the groups in display
+ * order -- the hidden pre-entry group first, the regular groups (▲/▼ to
+ * reorder, each at a level; several may share one), the hidden hand-over
+ * group last.
  * Each row has its QR colour dot (or, when it shares another group's code,
  * which one), and the hidden groups have a "QR code active" switch (D5).
  * "More" opens a row's level, yearly name pattern and check-in code. The
@@ -244,6 +245,21 @@ export function GroupNamesInteractive({
       </div>
 
       <div className="divide-y divide-[#f0f0f0] mb-4">
+        {/* The Servants code first (owner-requested), lined up with the
+            groups' dots, Rename and More columns. */}
+        <div className="py-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="w-20 shrink-0 text-xs font-semibold text-[#666]">Servants</span>
+          <span className="w-12 shrink-0" />
+          <span className="flex-1 min-w-[8rem] truncate text-sm text-[#333]">Servants check-in</span>
+          {colorDot(SERVANTS, servantsQrColor, "the Servants QR")}
+          <span aria-hidden="true" className="invisible rounded-md px-3 py-1.5 text-xs font-semibold">
+            Rename
+          </span>
+          <span aria-hidden="true" className="invisible rounded-md px-3 py-1.5 text-xs font-semibold">
+            More
+          </span>
+          <span aria-hidden="true" className="w-[4.75rem] shrink-0" />
+        </div>
         {groups.map((g) => {
           const isRegular = g.kind === "regular";
           const regularIndex = regular.findIndex((r) => r.id === g.id);
@@ -541,20 +557,6 @@ export function GroupNamesInteractive({
           + Add Group
         </button>
       )}
-
-      <div className="mt-4 border-t border-[#f0f0f0] py-2 flex items-center gap-3">
-        <span className="w-20 shrink-0" />
-        <span className="w-12 shrink-0" />
-        <span className="flex-1 min-w-0 truncate text-sm text-[#333]">Servants</span>
-        {colorDot(SERVANTS, servantsQrColor, "the Servants QR")}
-        <span aria-hidden="true" className="invisible rounded-md px-3 py-1.5 text-xs font-semibold">
-          Rename
-        </span>
-        <span aria-hidden="true" className="invisible rounded-md px-3 py-1.5 text-xs font-semibold">
-          More
-        </span>
-        <span aria-hidden="true" className="w-[4.75rem] shrink-0" />
-      </div>
 
       {/* D9 -- the hand-over group's yearly name. */}
       <div className="mt-4 rounded-md border border-[#eee] bg-[#fafafa] p-3">
