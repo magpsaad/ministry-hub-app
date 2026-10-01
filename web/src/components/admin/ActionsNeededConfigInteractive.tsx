@@ -364,6 +364,7 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <GroupNamesInteractive
+      key={JSON.stringify([initialGroups, initialServantsQrColor, initialDefaultPattern, initialTerminalPattern])}
       initial={initialGroups}
       positionLabel={appSettings.ladder_position_label}
       levelOffset={appSettings.level_number_offset}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { AdminGroupRow, AddGroupInput } from "@/app/admin/actions-needed-config/actions";
 import {
   renameGroupAction,
@@ -56,6 +57,7 @@ export function GroupNamesInteractive({
   initialDefaultPattern: string | null;
   initialTerminalPattern: string;
 }) {
+  const router = useRouter();
   const [groups, setGroups] = useState(initial);
   const [servantsQrColor, setServantsQrColor] = useState(initialServantsQrColor);
   const [colorStatus, setColorStatus] = useState<Record<string, "saving" | "saved">>({});
@@ -77,8 +79,12 @@ export function GroupNamesInteractive({
   const graduatingYear = regular.find((g) => g.ladder_position === topLevel && g.cohort_year !== null)?.cohort_year ?? null;
   const nameOf = (id: string | null) => groups.find((g) => g.id === id)?.name ?? "another group";
 
-  // Runs a server action; on success reloads (one change can renumber,
-  // reorder or rename several rows, so the page re-reads them all).
+  // Runs a server action; on success re-reads every row (one change can
+  // renumber, reorder or rename several). Owner-reported: a full page
+  // reload sent the page back to the top after every Add Group, so it
+  // refreshes the data in place instead -- the parent keys this panel on
+  // the rows, so it re-mounts with the fresh ones and the scroll position
+  // stays put.
   function run(action: () => Promise<{ error: string | null }>, reload = true) {
     setError(null);
     startTransition(async () => {
@@ -87,7 +93,7 @@ export function GroupNamesInteractive({
         setError(res.error);
         return;
       }
-      if (reload) window.location.reload();
+      if (reload) router.refresh();
     });
   }
 
