@@ -12,6 +12,7 @@ import {
   moveGroupAction,
   setGroupLevelAction,
   setGroupNamePatternAction,
+  setGroupGenderSaintAction,
   setGroupQrActiveAction,
   setGroupCheckInCodeAction,
   updateNamePatternsAction,
@@ -68,6 +69,9 @@ export function GroupNamesInteractive({
   const [editingName, setEditingName] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [patternDrafts, setPatternDrafts] = useState<Record<string, string>>({});
+  // 0073 -- drafts of each group's gender and patron saint ({gender}, {patron_saint}).
+  const [genderDrafts, setGenderDrafts] = useState<Record<string, string>>({});
+  const [saintDrafts, setSaintDrafts] = useState<Record<string, string>>({});
   const [defaultPattern, setDefaultPattern] = useState(initialDefaultPattern ?? "");
   const [terminalPattern, setTerminalPattern] = useState(initialTerminalPattern);
   const [patternsSaved, setPatternsSaved] = useState(false);
@@ -171,14 +175,22 @@ export function GroupNamesInteractive({
   }
 
   // Add Group --------------------------------------------------------------
-  const blankAdd = (): AddGroupInput => ({ name: "", level: null, cohortYear: null, qrColor: null, namePattern: defaultPattern });
+  const blankAdd = (): AddGroupInput => ({
+    name: "",
+    level: null,
+    cohortYear: null,
+    qrColor: null,
+    namePattern: defaultPattern,
+    gender: "",
+    patronSaint: "",
+  });
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState<AddGroupInput>(blankAdd);
   const [nameTyped, setNameTyped] = useState(false);
   const addLevel = addForm.level ?? topLevel + 1;
   const suggestedName =
     addForm.namePattern && PATTERN_PLACEHOLDER.test(addForm.namePattern)
-      ? renderGroupName(addForm.namePattern, addForm.cohortYear, addLevel, levelOffset, positionLabel)
+      ? renderGroupName(addForm.namePattern, addForm.cohortYear, addLevel, levelOffset, positionLabel, addForm.gender, addForm.patronSaint)
       : "";
   const addName = nameTyped ? addForm.name : suggestedName;
 
@@ -223,7 +235,8 @@ export function GroupNamesInteractive({
         </label>
         <p className="mt-1 text-xs text-[#888]">
           New {groupLabel.toLowerCase()}s start from this. {"{cohort_year}"} = the year, {"{level}"} = the level number,{" "}
-          {"{label}"} = &ldquo;{positionLabel}&rdquo;.
+          {"{label}"} = &ldquo;{positionLabel}&rdquo;, {"{gender}"} and {"{patron_saint}"} = the {groupLabel.toLowerCase()}&rsquo;s own
+          gender and patron saint (set under <em>More</em>).
           {PATTERN_PLACEHOLDER.test(defaultPattern) && (
             <>
               {" "}
@@ -272,6 +285,8 @@ export function GroupNamesInteractive({
           const sharesCode = g.check_in_code_group_id !== null;
           const expanded = expandedId === g.id;
           const draft = patternDrafts[g.id] ?? g.name_pattern ?? "";
+          const genderDraft = genderDrafts[g.id] ?? g.gender_label ?? "";
+          const saintDraft = saintDrafts[g.id] ?? g.patron_saint ?? "";
           const codeOwners = groups.filter(
             (o) => o.id !== g.id && o.kind !== "pre_entry" && o.check_in_code_group_id === null,
           );
@@ -417,7 +432,15 @@ export function GroupNamesInteractive({
                         <p className="mt-1 text-[#888]">
                           After the next Group Transition:{" "}
                           <strong>
-                            {renderGroupName(draft, g.cohort_year, isRegular ? g.ladder_position + 1 : 1, levelOffset, positionLabel)}
+                            {renderGroupName(
+                              draft,
+                              g.cohort_year,
+                              isRegular ? g.ladder_position + 1 : 1,
+                              levelOffset,
+                              positionLabel,
+                              genderDraft,
+                              saintDraft,
+                            )}
                           </strong>
                         </p>
                       )}
@@ -428,6 +451,40 @@ export function GroupNamesInteractive({
                         className={`mt-2 ${brandButton}`}
                       >
                         Save pattern
+                      </button>
+                    </div>
+                  )}
+                  {g.kind !== "terminal" && (
+                    <div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <label className="block">
+                          Gender (for {"{gender}"})
+                          <input
+                            value={genderDraft}
+                            onChange={(e) => setGenderDrafts((prev) => ({ ...prev, [g.id]: e.target.value }))}
+                            placeholder="e.g. Girls"
+                            className={`mt-1 w-full ${inputClass}`}
+                          />
+                        </label>
+                        <label className="block">
+                          Patron saint (for {"{patron_saint}"})
+                          <input
+                            value={saintDraft}
+                            onChange={(e) => setSaintDrafts((prev) => ({ ...prev, [g.id]: e.target.value }))}
+                            placeholder="e.g. St. Marina"
+                            className={`mt-1 w-full ${inputClass}`}
+                          />
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={
+                          pending || (genderDraft === (g.gender_label ?? "") && saintDraft === (g.patron_saint ?? ""))
+                        }
+                        onClick={() => run(() => setGroupGenderSaintAction(g.id, genderDraft, saintDraft))}
+                        className={`mt-2 ${brandButton}`}
+                      >
+                        Save gender &amp; saint
                       </button>
                     </div>
                   )}
@@ -497,6 +554,24 @@ export function GroupNamesInteractive({
               <input
                 value={addForm.namePattern}
                 onChange={(e) => setAddForm((prev) => ({ ...prev, namePattern: e.target.value }))}
+                className={`mt-1 w-full ${inputClass}`}
+              />
+            </label>
+            <label className="text-xs text-[#666]">
+              Gender (optional, for {"{gender}"})
+              <input
+                value={addForm.gender}
+                onChange={(e) => setAddForm((prev) => ({ ...prev, gender: e.target.value }))}
+                placeholder="e.g. Girls"
+                className={`mt-1 w-full ${inputClass}`}
+              />
+            </label>
+            <label className="text-xs text-[#666]">
+              Patron saint (optional, for {"{patron_saint}"})
+              <input
+                value={addForm.patronSaint}
+                onChange={(e) => setAddForm((prev) => ({ ...prev, patronSaint: e.target.value }))}
+                placeholder="e.g. St. Marina"
                 className={`mt-1 w-full ${inputClass}`}
               />
             </label>

@@ -54,6 +54,9 @@ export type AdminGroupRow = {
   name_pattern: string | null;
   /** D13 -- set when this group uses another group's check-in code. */
   check_in_code_group_id: string | null;
+  /** 0073 -- fill {gender} and {patron_saint} in name patterns. */
+  gender_label: string | null;
+  patron_saint: string | null;
   active_count: number;
 };
 
@@ -66,7 +69,7 @@ export async function getGroupsForAdminAction(): Promise<AdminGroupRow[]> {
   const [{ data }, { data: members }] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, name, cohort_year, ladder_position, display_order, kind, qr_color, qr_active, name_pattern, check_in_code_group_id")
+      .select("id, name, cohort_year, ladder_position, display_order, kind, qr_color, qr_active, name_pattern, check_in_code_group_id, gender_label, patron_saint")
       .eq("is_archived", false)
       .order("display_order"),
     supabase.from("members").select("group_id").eq("status", "active"),
@@ -103,6 +106,20 @@ export async function setGroupLevelAction(groupId: string, level: number) {
 export async function setGroupNamePatternAction(groupId: string, pattern: string) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_group_name_pattern", { p_group_id: groupId, p_pattern: pattern });
+  if (error) return { error: error.message };
+  groupsChanged();
+  return { error: null };
+}
+
+/** 0073 -- a group's gender and patron saint, for {gender} and
+ * {patron_saint} in its yearly name pattern. Admins only (checked by the RPC). */
+export async function setGroupGenderSaintAction(groupId: string, gender: string, patronSaint: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_group_gender_saint", {
+    p_group_id: groupId,
+    p_gender: gender,
+    p_patron_saint: patronSaint,
+  });
   if (error) return { error: error.message };
   groupsChanged();
   return { error: null };
@@ -202,6 +219,9 @@ export type AddGroupInput = {
   /** null = picked automatically, distinct from the ministry's others (A8). */
   qrColor: string | null;
   namePattern: string;
+  /** 0073 -- optional, for {gender} and {patron_saint}. */
+  gender: string;
+  patronSaint: string;
 };
 
 /** D4 -- a new regular group, always listed last before the hand-over
@@ -210,7 +230,7 @@ export type AddGroupInput = {
 export async function addGroupAction(input: AddGroupInput) {
   if (input.qrColor && !HEX_COLOR.test(input.qrColor)) return { error: `"${input.qrColor}" isn't a valid colour.` };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("add_group", {
+  const { data: newId, error } = await supabase.rpc("add_group", {
     p_name: input.name,
     p_level: input.level,
     p_cohort_year: input.cohortYear,
@@ -218,6 +238,17 @@ export async function addGroupAction(input: AddGroupInput) {
     p_name_pattern: input.namePattern,
   });
   if (error) return { error: error.message };
+  if (newId && (input.gender.trim() || input.patronSaint.trim())) {
+    const res = await supabase.rpc("set_group_gender_saint", {
+      p_group_id: newId as string,
+      p_gender: input.gender,
+      p_patron_saint: input.patronSaint,
+    });
+    if (res.error) {
+      groupsChanged();
+      return { error: `The group was added, but its gender and patron saint weren't saved: ${res.error.message}` };
+    }
+  }
   groupsChanged();
   return { error: null };
 }

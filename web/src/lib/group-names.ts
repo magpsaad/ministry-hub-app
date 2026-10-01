@@ -5,13 +5,18 @@
  *                    {position_label} is its old spelling
  *   {label}          the ministry's level word ("Yr", "Gr")
  *   {cohort_year}    the group's cohort year
- * Spaces and dashes left at either end by an empty placeholder are trimmed. */
+ *   {gender}         the group's gender ("Girls"), migration 0073
+ *   {patron_saint}   the group's patron saint ("St. Marina"), 0073
+ * Spaces and dashes left at either end by an empty placeholder are trimmed,
+ * and a double space one leaves in the middle is squeezed. */
 export function renderGroupName(
   pattern: string,
   cohortYear: number | null,
   level: number,
   offset: number,
   label: string,
+  gender: string | null = null,
+  patronSaint: string | null = null,
 ): string {
   const shown = String(level + offset);
   return pattern
@@ -19,6 +24,9 @@ export function renderGroupName(
     .replaceAll("{level}", shown)
     .replaceAll("{position_label}", shown)
     .replaceAll("{label}", label)
+    .replaceAll("{gender}", (gender ?? "").trim())
+    .replaceAll("{patron_saint}", (patronSaint ?? "").trim())
+    .replace(/\s{2,}/g, " ")
     .replace(/^[\s-]+|[\s-]+$/g, "");
 }
 
