@@ -305,17 +305,6 @@ export function GroupNamesInteractive({
                         {sharesCode && ` · uses ${nameOf(g.check_in_code_group_id)}'s QR code`}
                       </span>
                     </span>
-                    {!isRegular && (
-                      <label className="flex items-center gap-1 text-[11px] text-[#555]" title="QR code active (D5)">
-                        <input
-                          type="checkbox"
-                          checked={g.qr_active}
-                          disabled={pending}
-                          onChange={(e) => handleQrActive(g, e.target.checked)}
-                        />
-                        QR active
-                      </label>
-                    )}
                     {sharesCode ? (
                       <span aria-hidden="true" className="h-7 w-7 shrink-0" />
                     ) : (
@@ -340,20 +329,31 @@ export function GroupNamesInteractive({
                     >
                       {expanded ? "Less" : "More"}
                     </button>
-                    {isRegular ? (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(g)}
-                        disabled={pending}
-                        className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-[#dc3545] border border-[#dc3545] hover:bg-[#f8d7da] disabled:opacity-60"
-                      >
-                        Delete
-                      </button>
-                    ) : (
-                      <span aria-hidden="true" className="invisible rounded-md border px-3 py-1.5 text-xs font-semibold">
-                        Delete
-                      </span>
-                    )}
+                    {/* Same-width end slot on every row: Delete on regular
+                        groups, the "QR active" switch on the hidden ones, so
+                        the dots, Rename and More buttons line up. */}
+                    <span className="flex w-[4.75rem] shrink-0 justify-center">
+                      {isRegular ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(g)}
+                          disabled={pending}
+                          className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-[#dc3545] border border-[#dc3545] hover:bg-[#f8d7da] disabled:opacity-60"
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <label className="flex items-center gap-1 text-[11px] text-[#555]" title="QR code active">
+                          <input
+                            type="checkbox"
+                            checked={g.qr_active}
+                            disabled={pending}
+                            onChange={(e) => handleQrActive(g, e.target.checked)}
+                          />
+                          QR active
+                        </label>
+                      )}
+                    </span>
                   </>
                 )}
               </div>
@@ -553,9 +553,7 @@ export function GroupNamesInteractive({
         <span aria-hidden="true" className="invisible rounded-md px-3 py-1.5 text-xs font-semibold">
           More
         </span>
-        <span aria-hidden="true" className="invisible rounded-md border px-3 py-1.5 text-xs font-semibold">
-          Delete
-        </span>
+        <span aria-hidden="true" className="w-[4.75rem] shrink-0" />
       </div>
 
       {/* D9 -- the hand-over group's yearly name. */}
