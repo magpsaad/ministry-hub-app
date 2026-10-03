@@ -40,10 +40,12 @@ export async function generateMetadata(): Promise<Metadata> {
       statusBarStyle: "default",
       title: settings.app_title_short,
     },
-    // The tab icon is set here, not by app/favicon.ico, so the console can
+    // The tab icon is set here, not by app/favicon.ico, so each address can
     // have its own (a file-based favicon would be added to every page).
+    // Owner-requested (3 Oct 2026): a ministry's tab shows its own logo
+    // (QA and production); the default icon only when it has none.
     icons: {
-      icon: isConsole ? "/brand/ministryhub-icon-192.png" : "/favicon.ico",
+      icon: isConsole ? "/brand/ministryhub-icon-192.png" : (settings.logo_url ?? "/favicon.ico"),
       ...(consoleIcon ? { apple: "/brand/ministryhub-icon-180.png" } : useLogo ? { apple: settings.logo_url! } : {}),
     },
   };
