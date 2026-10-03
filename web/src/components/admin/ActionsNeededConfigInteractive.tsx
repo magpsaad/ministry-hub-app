@@ -267,6 +267,15 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
         <label className="text-xs text-[#666]">
+          Timezone (IANA name)
+          <input
+            value={appSettings.timezone}
+            onChange={(e) => updateAppField("timezone", e.target.value)}
+            placeholder="e.g. America/Toronto"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
           Check-in opens
           <input
             type="time"
@@ -281,15 +290,6 @@ export function ActionsNeededConfigInteractive({
             type="time"
             value={appSettings.checkin_closes_at.slice(0, 5)}
             onChange={(e) => updateAppField("checkin_closes_at", e.target.value)}
-            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
-          />
-        </label>
-        <label className="text-xs text-[#666]">
-          Timezone (IANA name)
-          <input
-            value={appSettings.timezone}
-            onChange={(e) => updateAppField("timezone", e.target.value)}
-            placeholder="e.g. America/Toronto"
             className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
