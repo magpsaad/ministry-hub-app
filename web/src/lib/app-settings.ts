@@ -40,6 +40,11 @@ export type AppSettings = {
   /** "HH:MM:SS" -- same-day cutoff time for the Attendance tab's "Today
    * becomes available" rule (§7.2), paired with `timezone` below. */
   same_day_cutoff_time: string;
+  /** "HH:MM:SS" -- migration 0074: the public check-in page (searching for a
+   * name, checking in) is open on the service day between these two times,
+   * in `timezone` (default the whole day). */
+  checkin_opens_at: string;
+  checkin_closes_at: string;
   /** IANA timezone every "which calendar day is it" question is answered
    * in -- dates, cutoffs, follow-ups, audit filters, displayed times. */
   timezone: string;
@@ -78,7 +83,7 @@ export type AppSettings = {
 };
 
 const SETTINGS_COLUMNS =
-  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, my_assigned_header_color, my_assigned_header_color_light, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, level_number_offset, group_name_template, terminal_name_pattern, youth_attendance_window_weeks, servant_attendance_window_weeks, sub_coordinator_auto_servant";
+  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, my_assigned_header_color, my_assigned_header_color_light, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, checkin_opens_at, checkin_closes_at, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, level_number_offset, group_name_template, terminal_name_pattern, youth_attendance_window_weeks, servant_attendance_window_weeks, sub_coordinator_auto_servant";
 
 /**
  * REQUIREMENTS.md §2 -- everything about the app's identity, vocabulary,

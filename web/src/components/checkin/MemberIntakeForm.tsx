@@ -124,9 +124,6 @@ export function MemberIntakeForm({
       <PossibleDuplicateMemberModal
         token={token}
         match={duplicateMatch}
-        universities={universities}
-        universityLabel={universityLabel}
-        programLabel={programLabel}
         groupLabel={groupLabel}
         formInput={form}
         currentGroupName={currentGroupName}

@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import type { CheckInPerson } from "@/lib/checkin";
 import {
   SERVANT_CHECKIN_COOKIE,
   MEMBER_CHECKIN_COOKIE,
@@ -205,29 +206,47 @@ export type NewMemberInput = {
   comments: string | null;
 };
 
+/** Migration 0074 -- the check-in page's name search: nothing until 3
+ * letters are typed, then at most 10 matches as short names ("Mina H.").
+ * `closed` = outside check-in hours (the page then shows when it opens). */
+export async function searchCheckInPeopleAction(
+  token: string,
+  query: string,
+  isServant: boolean,
+): Promise<{ people: CheckInPerson[]; closed: boolean }> {
+  const supabase = await createClient();
+  if (isServant) {
+    const { data, error } = await supabase.rpc("checkin_search_servants", { p_token: token, p_query: query });
+    if (error) return { people: [], closed: error.message.includes("closed") };
+    return {
+      people: ((data ?? []) as { id: string; display_name: string; kind: "servant" | "pending" }[]).map((r) => ({
+        id: r.id,
+        full_name: r.display_name,
+        kind: r.kind,
+      })),
+      closed: false,
+    };
+  }
+  const { data, error } = await supabase.rpc("checkin_search_members", { p_token: token, p_query: query });
+  if (error) return { people: [], closed: error.message.includes("closed") };
+  return {
+    people: ((data ?? []) as { member_id: string; display_name: string }[]).map((r) => ({
+      id: r.member_id,
+      full_name: r.display_name,
+      kind: "member" as const,
+    })),
+    closed: false,
+  };
+}
+
 /** Owner-reported: a youth's real, already-registered record (possibly in
- * a different cohort) went undetected when she used "New Youth
- * Registration" instead of finding her name in the tap-a-name list --
- * which only ever searches the ONE cohort's own roster. Called before
- * submitNewMemberAction actually creates anything -- searches every
- * cohort in one query for an exact match on name, phone, or email (see
- * migration 0054 for the exact ranking rule when more than one
- * candidate matches). Only ever returns same/different booleans, never
- * the matched record's actual field values -- the client already has
- * whatever she typed herself, so there's nothing else it needs to
- * display without risking exposing someone else's real data. */
-export type DuplicateMatch = {
-  memberId: string;
-  groupName: string;
-  sameGroup: boolean;
-  nameMatches: boolean;
-  phoneMatches: boolean;
-  emailMatches: boolean;
-  universityMatches: boolean | null;
-  programMatches: boolean | null;
-  dobMatches: boolean | null;
-  genderMatches: boolean | null;
-};
+ * another cohort) went undetected when she used "New Youth Registration"
+ * instead of finding her name -- so before creating anything, check for an
+ * existing record. Migration 0074 (owner-requested hardening): the database
+ * re-finds the record itself and only when at least two of name, phone and
+ * email match; it answers only "found" and "same class", never which
+ * details matched, the record's id or its class. */
+export type DuplicateMatch = { sameGroup: boolean };
 
 export async function checkPossibleDuplicateMemberAction(token: string, input: NewMemberInput): Promise<DuplicateMatch | null> {
   const supabase = await createClient();
@@ -237,88 +256,35 @@ export async function checkPossibleDuplicateMemberAction(token: string, input: N
       p_full_name: input.full_name.trim(),
       p_phone: formatPhone(input.phone ?? ""),
       p_email: input.email?.trim() ?? "",
-      p_university_id: input.university_id,
-      p_program_of_study: input.program_of_study,
-      p_date_of_birth: input.date_of_birth,
-      p_gender: input.gender,
     })
     .maybeSingle();
   if (error || !data) return null;
-
-  const row = data as {
-    member_id: string;
-    group_name: string;
-    same_group: boolean;
-    name_matches: boolean;
-    phone_matches: boolean;
-    email_matches: boolean;
-    university_matches: boolean | null;
-    program_matches: boolean | null;
-    dob_matches: boolean | null;
-    gender_matches: boolean | null;
-  };
-  return {
-    memberId: row.member_id,
-    groupName: row.group_name,
-    sameGroup: row.same_group,
-    nameMatches: row.name_matches,
-    phoneMatches: row.phone_matches,
-    emailMatches: row.email_matches,
-    universityMatches: row.university_matches,
-    programMatches: row.program_matches,
-    dobMatches: row.dob_matches,
-    genderMatches: row.gender_matches,
-  };
+  const row = data as { match_found: boolean; same_group: boolean };
+  return row.match_found ? { sameGroup: row.same_group } : null;
 }
 
-export type DuplicateResolution = {
-  updatePhone: boolean;
-  updateDob: boolean;
-  updateGender: boolean;
-  updateUniversity: boolean;
-  updateProgram: boolean;
-  updateHomeAddress: boolean;
-  updateFatherOfConfession: boolean;
-  moveToScannedGroup: boolean;
-};
-
-/** The "yes, it's me" path -- applies only the specific field updates she
- * opted into, optionally moves her record to the cohort she actually
- * scanned into, and marks today's attendance against her EXISTING
- * record. Deliberately not markMemberAttendanceAction/
- * checkin_mark_attendance -- that requires the member's group to match
- * the scanned QR's group, which is correct for the normal tap-a-name
- * flow but wrong here: the whole point is letting her check in today
- * even if she doesn't move cohorts. */
-export async function resolveDuplicateMemberAction(
-  token: string,
-  memberId: string,
-  input: NewMemberInput,
-  resolution: DuplicateResolution,
-) {
+/** The "yes, it's me" path (migration 0074): checks her in against her
+ * existing record. Whatever she typed only fills that record's BLANK
+ * fields; anything that differs, and a request to move to the class she
+ * scanned, becomes a dated note on the record for the servants to review
+ * -- the public page can never overwrite or move a record. */
+export async function resolveDuplicateMemberAction(token: string, input: NewMemberInput, moveRequested: boolean) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .rpc("checkin_resolve_duplicate_member", {
       p_token: token,
-      p_member_id: memberId,
-      p_move_to_scanned_group: resolution.moveToScannedGroup,
-      p_phone: resolution.updatePhone ? formatPhone(input.phone ?? "") : null,
-      p_update_phone: resolution.updatePhone,
-      p_date_of_birth: resolution.updateDob ? input.date_of_birth : null,
-      p_update_dob: resolution.updateDob,
-      p_gender: resolution.updateGender ? input.gender : null,
-      p_update_gender: resolution.updateGender,
-      p_university_id: resolution.updateUniversity ? input.university_id : null,
-      p_update_university: resolution.updateUniversity,
-      p_program_of_study: resolution.updateProgram ? input.program_of_study : null,
-      p_update_program: resolution.updateProgram,
-      p_home_address: resolution.updateHomeAddress ? input.home_address : null,
-      p_update_home_address: resolution.updateHomeAddress,
-      p_father_of_confession: resolution.updateFatherOfConfession ? input.father_of_confession : null,
-      p_update_father_of_confession: resolution.updateFatherOfConfession,
+      p_full_name: input.full_name.trim(),
+      p_phone: input.phone ? formatPhone(input.phone) : null,
+      p_email: input.email?.trim() || null,
+      p_university_id: input.university_id,
+      p_program_of_study: input.program_of_study,
+      p_date_of_birth: input.date_of_birth,
+      p_father_of_confession: input.father_of_confession,
+      p_home_address: input.home_address,
+      p_gender: input.gender,
+      p_move_requested: moveRequested,
     })
     .single();
-
   if (error) return { error: error.message, attendanceRecorded: false };
   const row = data as { attendance_recorded: boolean; newly_created: boolean } | null;
   return { error: null, attendanceRecorded: row?.attendance_recorded ?? false };

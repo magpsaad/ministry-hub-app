@@ -25,28 +25,35 @@ export async function getCheckInFlow(token: string): Promise<CheckInFlow | "swit
   return { isServant: row.is_servant, flowType: row.flow_type, label: row.label, ministryId: row.ministry_id };
 }
 
+/** `full_name` is the SHORT name the database gives out (migration 0074):
+ * first name + last initial ("Mina H."), or the full last name when two
+ * results would look the same. The public page never receives full names. */
 export type CheckInPerson = { id: string; full_name: string; kind: "member" | "servant" | "pending" };
 
-export async function listCheckInMembers(token: string): Promise<CheckInPerson[]> {
+/** Migration 0074 -- whether names can be searched and attendance taken
+ * right now (the service day, between the ministry's check-in times), and
+ * the times to show when it's closed. */
+export type CheckInWindow = { isOpen: boolean; serviceWeekday: number; opensAt: string; closesAt: string };
+
+export async function getCheckInWindow(token: string): Promise<CheckInWindow | null> {
   const supabase = await createClient();
-  const { data } = await supabase.rpc("checkin_list_members", { p_token: token });
-  return ((data ?? []) as { member_id: string; full_name: string }[]).map((r) => ({
-    id: r.member_id,
-    full_name: r.full_name,
-    kind: "member" as const,
-  }));
+  const { data } = await supabase.rpc("checkin_window", { p_token: token }).maybeSingle();
+  if (!data) return null;
+  const row = data as { is_open: boolean; service_weekday: number; opens_at: string; closes_at: string };
+  return { isOpen: row.is_open, serviceWeekday: row.service_weekday, opensAt: row.opens_at, closesAt: row.closes_at };
 }
 
-/** Combined list of already-registered servants and not-yet-approved
- * pending self-registrations (0014_servant_self_registration.sql), so
- * someone who registered last week finds their own name instead of
- * submitting a duplicate. */
-export async function listCheckInServants(token: string): Promise<CheckInPerson[]> {
+/** The person this device remembers (by the id in its "Remember me" cookie),
+ * as a short name -- null when check-in is closed or they're not on this
+ * code's list. */
+export async function getRememberedCheckInPerson(
+  token: string,
+  isServant: boolean,
+  remembered: { id: string; kind: CheckInPerson["kind"] },
+): Promise<CheckInPerson | null> {
   const supabase = await createClient();
-  const { data } = await supabase.rpc("checkin_list_servants", { p_token: token });
-  return ((data ?? []) as { id: string; full_name: string; kind: "servant" | "pending" }[]).map((r) => ({
-    id: r.id,
-    full_name: r.full_name,
-    kind: r.kind,
-  }));
+  const { data } = isServant
+    ? await supabase.rpc("checkin_get_servant", { p_token: token, p_id: remembered.id, p_kind: remembered.kind })
+    : await supabase.rpc("checkin_get_member", { p_token: token, p_member_id: remembered.id });
+  return typeof data === "string" && data ? { id: remembered.id, full_name: data, kind: remembered.kind } : null;
 }

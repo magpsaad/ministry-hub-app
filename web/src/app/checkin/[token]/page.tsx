@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getCheckInFlow, listCheckInMembers, listCheckInServants } from "@/lib/checkin";
+import { getCheckInFlow, getCheckInWindow, getRememberedCheckInPerson } from "@/lib/checkin";
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
 import { getActiveMinistry } from "@/lib/ministry-context";
@@ -54,18 +54,18 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
     );
   }
 
-  const people = await (flow.isServant
-    ? listCheckInServants(token)
-    : flow.flowType === "check_in_and_intake"
-      ? listCheckInMembers(token)
-      : Promise.resolve([]));
+  // Migration 0074: no list of names is sent to the page -- names are
+  // searched as they're typed, and only during check-in hours.
   const universities = flow.isServant ? [] : allUniversities;
-
+  const checkInWindow = flow.flowType === "check_in_and_intake" ? await getCheckInWindow(token) : null;
+  const isOpen = checkInWindow?.isOpen ?? false;
   const rememberCookieName = flow.isServant ? SERVANT_CHECKIN_COOKIE : MEMBER_CHECKIN_COOKIE;
-  const rememberedPersonId =
-    flow.flowType === "check_in_and_intake"
-      ? (parseRememberedCheckinPerson((await cookies()).get(rememberCookieName)?.value)?.id ?? null)
+  const remembered =
+    flow.flowType === "check_in_and_intake" && isOpen
+      ? parseRememberedCheckinPerson((await cookies()).get(rememberCookieName)?.value)
       : null;
+  const rememberedPerson = remembered ? await getRememberedCheckInPerson(token, flow.isServant, remembered) : null;
+  const openingText = checkInWindow ? describeCheckInHours(checkInWindow) : "";
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -99,7 +99,8 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
           token={token}
           isServant={flow.isServant}
           flowType={flow.flowType}
-          initialPeople={people}
+          isOpen={isOpen}
+          openingText={openingText}
           universities={universities}
           universityLabel={settings.university_label}
           programLabel={settings.program_label}
@@ -107,9 +108,21 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
           memberLabel={settings.member_label}
           groupName={flow.label}
           serviceDayName={weekdayName(settings.service_weekday)}
-          rememberedPersonId={rememberedPersonId}
+          rememberedPerson={rememberedPerson}
         />
       </main>
     </div>
   );
+}
+
+/** "Check-in opens on Fridays." or "... on Fridays from 7:00 PM to 11:00 PM." */
+function describeCheckInHours(w: { serviceWeekday: number; opensAt: string; closesAt: string }): string {
+  const day = weekdayName(w.serviceWeekday);
+  const wholeDay = w.opensAt.slice(0, 5) === "00:00" && w.closesAt.slice(0, 5) === "23:59";
+  if (wholeDay) return `Check-in opens on ${day}s.`;
+  const fmt = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+  };
+  return `Check-in opens on ${day}s from ${fmt(w.opensAt)} to ${fmt(w.closesAt)}.`;
 }

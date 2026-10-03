@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CheckInPerson } from "@/lib/checkin";
 import type { University } from "@/lib/universities";
 import {
+  searchCheckInPeopleAction,
   markMemberAttendanceAction,
   markServantAttendanceAction,
   undoMemberAttendanceAction,
@@ -28,12 +29,20 @@ type View = "list" | "member-intake" | "servant-intake" | "success";
 /** REQUIREMENTS.md §6.11/§6.12 -- the public no-login check-in page. One
  * component drives both flows (member group QR, and the "Servants" QR
  * added in Phase C) since they're structurally identical: search, tap your
- * name, done -- or "don't see your name?" into an intake form. */
+ * name, done -- or "don't see your name?" into an intake form.
+ *
+ * Migration 0074 (owner-requested, after a congregation member's complaint):
+ * the page no longer receives a list of names. Typing 3+ letters searches
+ * the database, which returns at most 10 short names ("Mina H."); and it
+ * only does so during check-in hours (the service day, between the
+ * ministry's check-in times) -- outside them the page says when it opens,
+ * and registering is still possible. */
 export function CheckInFlow({
   token,
   isServant,
   flowType,
-  initialPeople,
+  isOpen,
+  openingText,
   universities,
   universityLabel,
   programLabel,
@@ -41,12 +50,15 @@ export function CheckInFlow({
   memberLabel,
   groupName,
   serviceDayName,
-  rememberedPersonId,
+  rememberedPerson,
 }: {
   token: string;
   isServant: boolean;
   flowType: "check_in_and_intake" | "intake_only";
-  initialPeople: CheckInPerson[];
+  /** Migration 0074 -- whether names can be searched and attendance taken now. */
+  isOpen: boolean;
+  /** e.g. "Check-in opens on Fridays from 7:00 PM to 11:00 PM." */
+  openingText: string;
   universities: University[];
   universityLabel: string;
   programLabel: string;
@@ -61,10 +73,10 @@ export function CheckInFlow({
   serviceDayName: string;
   /** Owner-requested: whoever this device last checked in (as a servant or
    * a member/youth) with "Remember me" checked (see
-   * checkin-remember-cookie.ts) -- read server-side so the match is
-   * already known on first paint, no flash. Always null for an
-   * intake-only flow (no list to pre-highlight in). */
-  rememberedPersonId: string | null;
+   * checkin-remember-cookie.ts), as a short name, read server-side -- shown
+   * as a one-tap "Check in as ..." button. Null when closed, for an
+   * intake-only flow, or when this device remembers nobody here. */
+  rememberedPerson: CheckInPerson | null;
 }) {
   const [view, setView] = useState<View>(
     flowType === "intake_only" ? (isServant ? "servant-intake" : "member-intake") : "list",
@@ -114,17 +126,29 @@ export function CheckInFlow({
     null,
   );
 
-  const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    const base = needle ? initialPeople.filter((p) => p.full_name.toLowerCase().includes(needle)) : initialPeople;
-    if (!rememberedPersonId) return base;
-    const idx = base.findIndex((p) => p.id === rememberedPersonId);
-    if (idx <= 0) return base;
-    const reordered = [...base];
-    const [remembered] = reordered.splice(idx, 1);
-    reordered.unshift(remembered);
-    return reordered;
-  }, [q, initialPeople, rememberedPersonId]);
+  // Migration 0074: the database is searched as she types (3+ letters,
+  // short names, at most 10) -- the page never holds the whole list.
+  const [results, setResults] = useState<CheckInPerson[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [closed, setClosed] = useState(!isOpen);
+  const letters = q.replace(/[^\p{L}]/gu, "").length;
+  useEffect(() => {
+    if (closed || letters < 3) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      const res = await searchCheckInPeopleAction(token, q, isServant);
+      if (cancelled) return;
+      setSearching(false);
+      setResults(res.people);
+      if (res.closed) setClosed(true);
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [q, letters, closed, token, isServant]);
+  const shown = letters >= 3 ? results : [];
 
   async function handleSelect(person: CheckInPerson) {
     setPending(true);
@@ -263,8 +287,39 @@ export function CheckInFlow({
     );
   }
 
+  const registerButton = (
+    <button
+      type="button"
+      onClick={() => setView(isServant ? "servant-intake" : "member-intake")}
+      className="mt-3 w-full rounded-md bg-[#f0f0f0] px-4 py-3 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+    >
+      {closed ? "New here? Register here" : "Don’t see your name? Register here"}
+    </button>
+  );
+
+  if (closed) {
+    return (
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center">
+        <p className="text-3xl">🕑</p>
+        <h2 className="mt-2 text-lg font-bold text-brand">Check-in is closed right now</h2>
+        <p className="mt-1 text-sm text-[#666]">{openingText}</p>
+        {registerButton}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+      {rememberedPerson && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => handleSelect(rememberedPerson)}
+          className="mb-3 w-full rounded-md border-l-4 border-brand bg-[#eef4fa] px-3 py-3 text-left font-semibold text-brand disabled:opacity-50"
+        >
+          Check in as {rememberedPerson.full_name}
+        </button>
+      )}
       <label className="flex items-center gap-2 text-xs text-[#666]">
         <input
           type="checkbox"
@@ -275,42 +330,32 @@ export function CheckInFlow({
         Remember me on this device
       </label>
       <input
-        autoFocus
+        autoFocus={!rememberedPerson}
         type="text"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search your name…"
+        placeholder={rememberedPerson ? "Not you? Type your name…" : "Type your first or last name…"}
         className="mt-2 w-full rounded-md border border-[#ddd] px-3 py-3 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
       />
       {error && <p className="mt-2 text-sm text-[#dc3545]">{error}</p>}
       <div className="mt-3 max-h-[50vh] overflow-y-auto divide-y divide-[#f0f0f0]">
-        {filtered.map((p) => {
-          const isRemembered = p.id === rememberedPersonId;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              disabled={pending}
-              onClick={() => handleSelect(p)}
-              className={`w-full text-left px-2 py-3 disabled:opacity-50 ${
-                isRemembered
-                  ? "border-l-4 border-brand bg-[#eef4fa] font-semibold text-brand"
-                  : "text-[#333] hover:bg-[#f5f5f5]"
-              }`}
-            >
-              {p.full_name}
-            </button>
-          );
-        })}
-        {filtered.length === 0 && <p className="px-2 py-3 text-sm text-[#666]">No match.</p>}
+        {shown.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            disabled={pending}
+            onClick={() => handleSelect(p)}
+            className="w-full text-left px-2 py-3 text-[#333] hover:bg-[#f5f5f5] disabled:opacity-50"
+          >
+            {p.full_name}
+          </button>
+        ))}
+        {letters < 3 && <p className="px-2 py-3 text-sm text-[#666]">Type at least 3 letters of your name.</p>}
+        {letters >= 3 && !searching && shown.length === 0 && (
+          <p className="px-2 py-3 text-sm text-[#666]">No match. Check the spelling, or register below.</p>
+        )}
       </div>
-      <button
-        type="button"
-        onClick={() => setView(isServant ? "servant-intake" : "member-intake")}
-        className="mt-3 w-full rounded-md bg-[#f0f0f0] px-4 py-3 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-      >
-        Don&rsquo;t see your name? Register here
-      </button>
+      {registerButton}
     </div>
   );
 }

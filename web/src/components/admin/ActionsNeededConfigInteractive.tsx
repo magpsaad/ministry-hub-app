@@ -267,6 +267,24 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
         <label className="text-xs text-[#666]">
+          Check-in opens
+          <input
+            type="time"
+            value={appSettings.checkin_opens_at.slice(0, 5)}
+            onChange={(e) => updateAppField("checkin_opens_at", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Check-in closes
+          <input
+            type="time"
+            value={appSettings.checkin_closes_at.slice(0, 5)}
+            onChange={(e) => updateAppField("checkin_closes_at", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
           Timezone (IANA name)
           <input
             value={appSettings.timezone}
@@ -279,8 +297,9 @@ export function ActionsNeededConfigInteractive({
       <p className="text-xs text-[#666] mb-3">
         Service Day drives self-check-in gating and which dates count toward average attendance %. The Cutoff Time
         and Timezone together control when &ldquo;Today&rdquo; becomes available in the Attendance tab — it opens as
-        soon as either someone has checked in, or the cutoff time passes, whichever comes first. All three take
-        effect immediately, everywhere.
+        soon as either someone has checked in, or the cutoff time passes, whichever comes first. The QR check-in
+        page only lets people find their name and check in on the Service Day, between Check-in opens and Check-in
+        closes (00:00 to 23:59 = the whole day). All of these take effect immediately, everywhere.
       </p>
       <div className="flex items-center gap-3">
         <button

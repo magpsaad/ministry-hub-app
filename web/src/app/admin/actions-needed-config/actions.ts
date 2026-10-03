@@ -301,6 +301,13 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   if (!Number.isInteger(input.level_number_offset) || input.level_number_offset < 0 || input.level_number_offset > 50) {
     return { error: "The first level number must be a whole number between 1 and 51." };
   }
+  const TIME = /^\d{2}:\d{2}(:\d{2})?$/;
+  if (!TIME.test(input.checkin_opens_at) || !TIME.test(input.checkin_closes_at)) {
+    return { error: "Choose both check-in times." };
+  }
+  if (input.checkin_opens_at.slice(0, 5) >= input.checkin_closes_at.slice(0, 5)) {
+    return { error: "Check-in must open before it closes." };
+  }
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: input.timezone });
   } catch {
@@ -323,6 +330,9 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     birthday_window_days_after: input.birthday_window_days_after,
     service_weekday: input.service_weekday,
     same_day_cutoff_time: input.same_day_cutoff_time,
+    checkin_opens_at: input.checkin_opens_at,
+    // "23:59" from the form means through the end of that minute.
+    checkin_closes_at: input.checkin_closes_at.length === 5 && input.checkin_closes_at === "23:59" ? "23:59:59" : input.checkin_closes_at,
     timezone: input.timezone,
     university_label: input.university_label,
     program_label: input.program_label,
