@@ -48,7 +48,7 @@ export function ConsoleShell({
           ))}
         </nav>
         {/* Owner-requested (3 Oct 2026); pb-6 below lg keeps the links above it. */}
-        <HeaderWordmark />
+        <HeaderWordmark corner="bottom" />
       </header>
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-6 space-y-4">{children}</main>
     </div>

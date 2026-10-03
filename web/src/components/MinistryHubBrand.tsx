@@ -12,16 +12,22 @@ import Image from "next/image";
  *   ministryhub-icon-*.png      the emblem on white, for tab/home-screen icons */
 export const MINISTRY_HUB_NAME = "Ministry Hub";
 
-/** The name in the bottom-right corner of a coloured page header (the
- * header must be `relative`). */
-export function HeaderWordmark() {
+/** The name in a coloured page header (the header must be `relative`).
+ * Owner-requested (3 Oct 2026): on the right, level with the "Back" button
+ * on the left (top-2.5 + the 32px Menu/Refresh row + gap-1 = the Back row,
+ * centred at 62px), so it never meets the verse along the bottom edge. The
+ * console, which has no Back button and has Sign out on the right, keeps
+ * it in the bottom-right corner. */
+export function HeaderWordmark({ corner = "back-row" }: { corner?: "back-row" | "bottom" }) {
   return (
     <Image
       src="/brand/ministryhub-name-light.png"
       alt={MINISTRY_HUB_NAME}
       width={444}
       height={80}
-      className="pointer-events-none absolute bottom-1.5 right-3 h-3.5 w-auto opacity-90"
+      className={`pointer-events-none absolute h-3.5 w-auto opacity-90 ${
+        corner === "bottom" ? "bottom-1.5 right-3" : "top-[55px] right-4"
+      }`}
     />
   );
 }

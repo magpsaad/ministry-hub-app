@@ -66,7 +66,7 @@ export default async function RegisterPage() {
         <div className="absolute top-2.5 right-4">
           <SignOutButton className="text-white/70 hover:text-white transition-colors" />
         </div>
-        <HeaderWordmark />
+        <HeaderWordmark corner="bottom" />
       </header>
       <main className="flex-1 max-w-md w-full mx-auto px-4 py-6 space-y-4">
         {awaitingApproval ? (
