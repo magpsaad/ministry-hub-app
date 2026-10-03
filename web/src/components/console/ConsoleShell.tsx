@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SignOutButton } from "@/components/SignOutButton";
-import { MinistryHubLogo } from "@/components/MinistryHubBrand";
+import { HeaderWordmark, MinistryHubLogo } from "@/components/MinistryHubBrand";
 
 const NAV = [
   { href: "/console", label: "Ministries" },
@@ -26,7 +26,7 @@ export function ConsoleShell({
 }) {
   return (
     <div className="min-h-full flex flex-col bg-[#f5f5f5]">
-      <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 pt-5 pb-3 shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
+      <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 pt-5 pb-6 lg:pb-3 shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
           <SignOutButton className="text-white/70 hover:text-white transition-colors" />
           {email && <span className="text-[10px] text-white/60">{email}</span>}
@@ -47,6 +47,8 @@ export function ConsoleShell({
             </Link>
           ))}
         </nav>
+        {/* Owner-requested (3 Oct 2026); pb-6 below lg keeps the links above it. */}
+        <HeaderWordmark />
       </header>
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-6 space-y-4">{children}</main>
     </div>
