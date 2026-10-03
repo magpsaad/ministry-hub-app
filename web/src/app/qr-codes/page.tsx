@@ -8,6 +8,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { QrCodesInteractive } from "@/components/qrcodes/QrCodesInteractive";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §6.15/§6.1 -- "QR Codes" is Servant Corner, visible to
  * everyone with app access, not admin-restricted. */
@@ -32,6 +33,7 @@ export default async function QrCodesPage() {
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">QR Codes</p>
+        <HeaderWordmark />
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
         <QrCodesInteractive qrCodes={qrCodes} />

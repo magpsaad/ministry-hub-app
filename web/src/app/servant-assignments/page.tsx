@@ -10,6 +10,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { ServantAssignmentsInteractive } from "@/components/ServantAssignmentsInteractive";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §6.1/§6.13 -- Coordinator Corner, General/Sub-Coordinators
  * and Admins. Cohort assignment only -- profile viewing/editing lives on the
@@ -49,6 +50,7 @@ export default async function ServantAssignmentsPage() {
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">Servant Assignments</p>
+        <HeaderWordmark />
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
         <ServantAssignmentsInteractive

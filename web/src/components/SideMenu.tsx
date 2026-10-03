@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { logGroupSelectedAction } from "@/app/actions";
 import { ChevronDownIcon, CloseIcon, GearIcon, SpinnerIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
+import { MinistryHubLogo, MinistryHubName } from "@/components/MinistryHubBrand";
 import { LAST_GROUP_COOKIE } from "@/lib/allCohorts";
 import type { MenuData } from "@/lib/menu-types";
 
@@ -186,8 +187,16 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
               </Section>
             )}
 
-            <div className="mt-auto border-t border-[#eee] px-5 py-3 flex items-center justify-between">
-              <span className="text-[11px] text-[#888]">Version {data.appVersion}</span>
+            {/* Owner-requested (3 Oct 2026): the app's own name and logo, in a
+                footer that stays put at the bottom while the menu scrolls. */}
+            <div className="sticky bottom-0 mt-auto border-t border-[#eee] bg-white px-5 py-3 flex items-center justify-between shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
+              <span className="flex items-center gap-2">
+                <MinistryHubLogo size={28} />
+                <span className="flex flex-col gap-0.5">
+                  <MinistryHubName className="h-3" />
+                  <span className="text-[11px] text-[#888]">Version {data.appVersion}</span>
+                </span>
+              </span>
               <SignOutButton className="text-[#666] hover:text-brand transition-colors" />
             </div>
           </>

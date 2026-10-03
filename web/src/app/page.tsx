@@ -11,6 +11,7 @@ import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /**
  * SIDE_MENU_PLAN.md §3.1 -- there is no landing page any more: `/` sends
@@ -68,6 +69,7 @@ export default async function LandingPage() {
           <MenuButton />
           <BackButton />
         </div>
+        <HeaderWordmark />
       </header>
 
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-16 text-center">

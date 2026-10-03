@@ -10,6 +10,7 @@ import { RefreshButton } from "@/components/RefreshButton";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { CohortFilterBar } from "@/components/CohortFilter";
 import type { CohortFilterOption } from "@/lib/group-names";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 const TABS = (memberLabel: string) => [
   { slug: "dashboard", label: "Dashboard" },
@@ -87,7 +88,8 @@ export function GroupNavShell({
               onClick={() => setVerseExpanded((v) => !v)}
               aria-expanded={verseExpanded}
               title={verseExpanded ? "Show less" : "Show the whole verse"}
-              className={`mt-1.5 -mb-2 block w-full max-w-2xl mx-auto text-[11px] italic text-[#ffd54f] hover:text-[#ffe082] ${
+              // px-16 below lg: room for the Ministry Hub name in the corner.
+              className={`mt-1.5 -mb-2 block w-full max-w-2xl mx-auto px-16 lg:px-0 text-[11px] italic text-[#ffd54f] hover:text-[#ffe082] ${
                 verseExpanded ? "whitespace-normal" : "truncate"
               }`}
             >
@@ -103,6 +105,7 @@ export function GroupNavShell({
             <MenuButton />
             <BackButton />
           </div>
+          <HeaderWordmark />
         </header>
 
         <nav className="flex bg-white border-b-2 border-[#ddd] overflow-x-auto">

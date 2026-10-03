@@ -53,5 +53,5 @@ export const getBranding = cache(async (): Promise<Branding> => {
       app_version: (await getLatestReleaseVersion()) ?? "",
     };
   }
-  return { ...NEUTRAL, app_title_long: "Ministry App", app_title_short: "Ministry App", app_subtitle: "", app_version: "" };
+  return { ...NEUTRAL, app_title_long: "Ministry Hub", app_title_short: "Ministry Hub", app_subtitle: "", app_version: "" };
 });

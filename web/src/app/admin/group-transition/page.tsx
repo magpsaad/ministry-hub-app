@@ -9,6 +9,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { GroupTransitionInteractive } from "@/components/admin/GroupTransitionInteractive";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §5/§6.10/§6.1 -- Admin Corner, Admins only. */
 export default async function GroupTransitionPage() {
@@ -42,6 +43,7 @@ export default async function GroupTransitionPage() {
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">Group Transition</p>
+        <HeaderWordmark />
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
         <GroupTransitionInteractive

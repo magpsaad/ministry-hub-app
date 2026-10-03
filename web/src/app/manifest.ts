@@ -20,7 +20,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const settings = await getBranding();
   const isProd = process.env.NEXT_PUBLIC_APP_ENV === "prod";
   const useLogo = isProd && !!settings.logo_url;
-  // The console's own icon, the church's Coptic cross (see layout.tsx).
+  // The console's own icon, the Ministry Hub logo (see layout.tsx).
   const consoleIcon = isProd && (await getAddressContext()).kind === "console";
 
   return {
@@ -32,8 +32,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     theme_color: settings.theme_color,
     icons: consoleIcon
       ? [
-          { src: "/console-icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/console-icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "/brand/ministryhub-icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/brand/ministryhub-icon-512.png", sizes: "512x512", type: "image/png" },
         ]
       : useLogo
       ? [

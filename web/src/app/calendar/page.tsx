@@ -8,6 +8,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { ServiceCalendar } from "@/components/calendar/ServiceCalendar";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §6.8 -- the Service Calendar, one ministry-wide calendar
  * (no group). Owner-requested: an ordinary page reached from the side
@@ -34,6 +35,7 @@ export default async function ServiceCalendarPage() {
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">Service Calendar</p>
+        <HeaderWordmark />
       </header>
       <ServiceCalendar
         events={events}

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
 import { RegisterInteractive } from "@/components/RegisterInteractive";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §6.1 addendum -- the "exceptional workflow" landing
  * screen: where the proxy gate (src/proxy.ts) sends anyone signed in
@@ -65,6 +66,7 @@ export default async function RegisterPage() {
         <div className="absolute top-2.5 right-4">
           <SignOutButton className="text-white/70 hover:text-white transition-colors" />
         </div>
+        <HeaderWordmark />
       </header>
       <main className="flex-1 max-w-md w-full mx-auto px-4 py-6 space-y-4">
         {awaitingApproval ? (

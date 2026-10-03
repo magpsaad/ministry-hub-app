@@ -9,6 +9,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { ServantsDirectoryInteractive } from "@/components/ServantsDirectoryInteractive";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §6.1/§6.13 -- Servant Corner, visible to everyone with app access. */
 export default async function ServantsDirectoryPage() {
@@ -45,6 +46,7 @@ export default async function ServantsDirectoryPage() {
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">Servant Directory</p>
+        <HeaderWordmark />
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
         <ServantsDirectoryInteractive

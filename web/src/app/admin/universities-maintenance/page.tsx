@@ -9,6 +9,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { UniversitiesMaintenanceInteractive } from "@/components/admin/UniversitiesMaintenanceInteractive";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §6.14/§6.1 -- Admin Corner, Admins only. */
 export default async function UniversitiesMaintenancePage() {
@@ -41,6 +42,7 @@ export default async function UniversitiesMaintenancePage() {
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">{settings.university_label} Maintenance</p>
+        <HeaderWordmark />
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
         <UniversitiesMaintenanceInteractive

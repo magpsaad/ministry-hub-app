@@ -9,6 +9,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { ExportListsInteractive } from "@/components/ExportListsInteractive";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** Owner-requested: Coordinator Corner, General/Sub-Coordinators and Admins
  * -- export or print a names-only list, either one cohort's roster (never
@@ -54,6 +55,7 @@ export default async function ExportListsPage() {
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">Print/Export Lists</p>
+        <HeaderWordmark />
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
         <ExportListsInteractive groups={selectableGroups} memberLabel={settings.member_label} appTitle={settings.app_title_short} />

@@ -21,10 +21,13 @@ export async function generateMetadata(): Promise<Metadata> {
   // identical check.
   const isProd = process.env.NEXT_PUBLIC_APP_ENV === "prod";
   const useLogo = isProd && !!settings.logo_url;
-  // Owner-requested (1 Oct 2026): the console (no ministry, so no App
-  // Settings logo) gets the church's Coptic cross, on an opaque white
-  // square since iOS fills transparency with black. Same prod-only rule.
-  const consoleIcon = isProd && (await getAddressContext()).kind === "console";
+  // Owner-requested: the console (no ministry, so no Ministry Settings
+  // logo) gets the app's own logo, Ministry Hub (3 Oct 2026; it replaced
+  // the Coptic cross), as its browser-tab icon in QA and production, and as
+  // its home-screen icon in production only (same prod-only rule), on an
+  // opaque white square since iOS fills transparency with black.
+  const isConsole = (await getAddressContext()).kind === "console";
+  const consoleIcon = isProd && isConsole;
   return {
     title: {
       default: settings.app_title_long,
@@ -37,7 +40,12 @@ export async function generateMetadata(): Promise<Metadata> {
       statusBarStyle: "default",
       title: settings.app_title_short,
     },
-    icons: consoleIcon ? { apple: "/console-icon-180.png" } : useLogo ? { apple: settings.logo_url! } : undefined,
+    // The tab icon is set here, not by app/favicon.ico, so the console can
+    // have its own (a file-based favicon would be added to every page).
+    icons: {
+      icon: isConsole ? "/brand/ministryhub-icon-192.png" : "/favicon.ico",
+      ...(consoleIcon ? { apple: "/brand/ministryhub-icon-180.png" } : useLogo ? { apple: settings.logo_url! } : {}),
+    },
   };
 }
 

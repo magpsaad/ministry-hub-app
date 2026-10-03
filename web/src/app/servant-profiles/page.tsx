@@ -10,6 +10,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { ServantProfilesInteractive } from "@/components/ServantProfilesInteractive";
+import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §6.1/§6.13 -- Coordinator Corner, General/Sub-Coordinators
  * and Admins. Profile viewing/editing only -- cohort assignment lives on the
@@ -46,6 +47,7 @@ export default async function ServantProfilesPage() {
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">Servant Profiles</p>
+        <HeaderWordmark />
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
         <ServantProfilesInteractive servants={servants} canManageServants={access.isAdmin || access.isGeneralCoordinator} />
