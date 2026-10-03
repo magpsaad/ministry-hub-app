@@ -65,7 +65,8 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
       ? parseRememberedCheckinPerson((await cookies()).get(rememberCookieName)?.value)
       : null;
   const rememberedPerson = remembered ? await getRememberedCheckInPerson(token, flow.isServant, remembered) : null;
-  const openingText = checkInWindow ? describeCheckInHours(checkInWindow) : "";
+  // Owner-requested (3 Oct 2026): a general message, no day or times.
+  const openingText = "Check-in opens during service hours.";
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -113,16 +114,4 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
       </main>
     </div>
   );
-}
-
-/** "Check-in opens on Fridays." or "... on Fridays from 7:00 PM to 11:00 PM." */
-function describeCheckInHours(w: { serviceWeekday: number; opensAt: string; closesAt: string }): string {
-  const day = weekdayName(w.serviceWeekday);
-  const wholeDay = w.opensAt.slice(0, 5) === "00:00" && w.closesAt.slice(0, 5) === "23:59";
-  if (wholeDay) return `Check-in opens on ${day}s.`;
-  const fmt = (t: string) => {
-    const [h, m] = t.split(":").map(Number);
-    return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
-  };
-  return `Check-in opens on ${day}s from ${fmt(w.opensAt)} to ${fmt(w.closesAt)}.`;
 }
