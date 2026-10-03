@@ -138,6 +138,7 @@ Write policies (0065, a separate QA file and production file, so neither ever to
 |---|---|---|
 | `groups` | `kind group_kind not null` | `pre_entry` (level 0; one active per ministry, `uq_groups_one_pre_entry`), `regular` (levels 1…N, several may share a level), `terminal` (the hidden hand-over group, stored at level N+1; one or more). Check: `(kind = 'pre_entry') = (ladder_position = 0)`. |
 | `groups` | `name_pattern text` | Yearly name pattern re-applied at each transition (`{cohort_year}`, `{level}`, `{label}`, old spelling `{position_label}`, and since 0073 `{gender}`, `{patron_saint}`); null = the name never changes. |
+| storage | `<env>-photos` bucket private (0075) | Read only through `storage_photo_read_allowed(name)`: a signed-in person who could see that youth/servant in the app; the app shows photos via `/api/photo` (hour-long signed links). Branding stays public. |
 | `app_settings` | `checkin_opens_at time`, `checkin_closes_at time` | 0074: public check-in hours on the service day (default 00:00-23:59:59). |
 | `groups` | `gender_label text`, `patron_saint text` | 0073: fill `{gender}` and `{patron_saint}`; set by Admins with `set_group_gender_saint()`. |
 | `groups` | `qr_active boolean not null default true` | D5 switch; only `pre_entry`/`terminal` rows can be false (check `groups_regular_qr_active_check`). |
