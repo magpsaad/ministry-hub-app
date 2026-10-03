@@ -72,7 +72,7 @@ export function MemberGrid({
               <div className="h-[50px] w-[50px] shrink-0 rounded-full bg-brand text-white font-bold flex items-center justify-center overflow-hidden">
                 {photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photoUrl} alt={m.full_name} className="h-full w-full object-cover" />
+                  <img loading="lazy" src={photoUrl} alt={m.full_name} className="h-full w-full object-cover" />
                 ) : (
                   m.full_name
                     .split(" ")

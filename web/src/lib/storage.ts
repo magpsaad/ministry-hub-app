@@ -14,9 +14,11 @@ export function ministryFilePath(ministryId: string, folder: StorageFolder, file
   return `${ministryId}/${folder}/${fileName}`;
 }
 
-/** Public URL for a stored photo path -- predictable for public buckets, no
- * API round-trip needed. Works in both server and client code since
- * NEXT_PUBLIC_* vars are inlined at build time either way.
+/** The address the app shows a stored photo at. Owner-requested (3 Oct
+ * 2026): photos are private (migration 0075), so this is the app's own
+ * /api/photo address, which checks the signed-in person may see it and then
+ * hands the browser an hour-long storage link -- never a public storage
+ * address. Works in both server and client code.
  *
  * A path that is already a full web address (a Google profile picture,
  * saved at first sign-in by lib/supabase/ensure-profile.ts) is returned
@@ -29,7 +31,7 @@ export function isExternalPhotoUrl(path: string): boolean {
 export function memberPhotoUrl(path: string | null): string | null {
   if (!path) return null;
   if (isExternalPhotoUrl(path)) return path;
-  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${PHOTOS_BUCKET}/${path}`;
+  return `/api/photo?p=${encodeURIComponent(path)}`;
 }
 
 export function photosBucket(): string {

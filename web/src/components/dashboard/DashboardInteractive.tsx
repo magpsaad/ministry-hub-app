@@ -77,7 +77,7 @@ function windowPhrase(days: number) {
 function Avatar({ photoUrl, fullName }: { photoUrl: string | null; fullName: string }) {
   return photoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={photoUrl} alt={fullName} className="h-10 w-10 rounded-full object-cover shrink-0" />
+    <img loading="lazy" src={photoUrl} alt={fullName} className="h-10 w-10 rounded-full object-cover shrink-0" />
   ) : (
     <div className="h-10 w-10 shrink-0 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">
       {fullName.split(" ").map((w) => w[0]).slice(0, 2).join("")}

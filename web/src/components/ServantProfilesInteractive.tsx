@@ -188,7 +188,7 @@ function ServantRows({
             <div className="h-10 w-10 shrink-0 rounded-full bg-brand text-white text-sm font-bold flex items-center justify-center overflow-hidden">
               {photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={photoUrl} alt={s.full_name} className="h-full w-full object-cover" />
+                <img loading="lazy" src={photoUrl} alt={s.full_name} className="h-full w-full object-cover" />
               ) : (
                 initials(s.full_name)
               )}

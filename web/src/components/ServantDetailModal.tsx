@@ -140,7 +140,7 @@ export function ServantDetailModal({
         <div className="flex flex-col items-center mb-4">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoUrl} alt={servant.full_name} className="h-[100px] w-[100px] rounded-full object-cover" />
+            <img loading="lazy" src={photoUrl} alt={servant.full_name} className="h-[100px] w-[100px] rounded-full object-cover" />
           ) : (
             <div className="h-[100px] w-[100px] rounded-full bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white text-2xl font-bold">
               {servant.full_name
