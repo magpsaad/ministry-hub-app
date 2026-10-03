@@ -1,0 +1,3 @@
+-- 0076_down_remove_pending_servant_grants.sql -- undoes 0076 by re-applying
+-- 0072 (pre-approvals can carry class and role again):
+--     begin; set local search_path to qa; \i 0072_pending_servant_grants.sql; commit;
