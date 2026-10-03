@@ -33,7 +33,7 @@ export function ConsoleShell({
         </div>
         <p className="text-center text-xs uppercase tracking-widest opacity-80">Church Admin Console</p>
         <div className="mt-1 flex items-center justify-center gap-2">
-          <MinistryHubLogo size={40} className="rounded-lg shadow-[0_2px_10px_rgba(0,0,0,0.2)]" />
+          <MinistryHubLogo size={40} onDark />
           <h1 className="text-2xl font-bold">{title}</h1>
         </div>
         <nav className="mt-3 flex flex-wrap justify-center gap-1">

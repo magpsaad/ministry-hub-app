@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getReleases } from "@/lib/releases";
-import { MinistryHubLogo, MINISTRY_HUB_NAME } from "@/components/MinistryHubBrand";
+import { MinistryHubLogo, MinistryHubName } from "@/components/MinistryHubBrand";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -30,8 +30,10 @@ export default async function VersionControlPage() {
         <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           {/* Owner-requested (3 Oct 2026): the release notes are about the
               app itself, so its own logo and name head this page. */}
-          <MinistryHubLogo size={32} className="rounded-md" />
-          <h1 className="text-2xl font-bold">{MINISTRY_HUB_NAME}</h1>
+          <MinistryHubLogo size={38} onDark />
+          <h1>
+            <MinistryHubName light className="h-6" />
+          </h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">Release History</p>
       </header>

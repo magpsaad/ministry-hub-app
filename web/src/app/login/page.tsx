@@ -4,7 +4,7 @@ import { getBranding } from "@/lib/branding";
 import { createClient } from "@/lib/supabase/server";
 import { AppLogo } from "@/components/AppLogo";
 import { ClearMenuCache } from "@/components/ClearMenuCache";
-import { MinistryHubLogo } from "@/components/MinistryHubBrand";
+import { MinistryHubLogo, MinistryHubName } from "@/components/MinistryHubBrand";
 import { signInWithGoogle, signInWithPassword, signUpWithPassword, requestPasswordReset } from "./actions";
 
 export default async function LoginPage({
@@ -172,10 +172,11 @@ export default async function LoginPage({
           )}
         </div>
 
-        {/* Owner-requested (3 Oct 2026): the app's own logo, under the
-            sign-in box; the ministry's logo stays at the top. */}
-        <div className="mt-6 flex justify-center">
-          <MinistryHubLogo size={56} className="opacity-95" />
+        {/* Owner-requested (3 Oct 2026): the app's own emblem and name,
+            under the sign-in box; the ministry's logo stays at the top. */}
+        <div className="mt-6 flex items-center justify-center gap-2.5">
+          <MinistryHubLogo size={44} />
+          <MinistryHubName className="h-6" />
         </div>
       </div>
     </div>

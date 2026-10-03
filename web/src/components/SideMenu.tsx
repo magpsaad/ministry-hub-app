@@ -191,7 +191,7 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
                 footer that stays put at the bottom while the menu scrolls. */}
             <div className="sticky bottom-0 mt-auto border-t border-[#eee] bg-white px-5 py-3 flex items-center justify-between shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
               <span className="flex items-center gap-2">
-                <MinistryHubLogo size={28} />
+                <MinistryHubLogo size={30} />
                 <span className="flex flex-col gap-0.5">
                   <MinistryHubName className="h-3" />
                   <span className="text-[11px] text-[#888]">Version {data.appVersion}</span>
