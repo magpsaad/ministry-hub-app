@@ -260,7 +260,24 @@ export function AttendanceInteractive({
               return (
                 <tr key={m.id}>
                   <td className="px-4 py-2.5">
-                    <span className="font-medium text-[#333]">{m.full_name}</span>
+                    {/* Owner-requested: the name opens the youth's details, as on the Dashboard. */}
+                    <MemberDetailLink
+                      memberId={m.id}
+                      groupId={groupId}
+                      groups={memberRecord.groups}
+                      groupLabel={memberRecord.groupLabel}
+                      universities={memberRecord.universities}
+                      universityLabel={memberRecord.universityLabel}
+                      programLabel={memberRecord.programLabel}
+                      servants={memberRecord.servants}
+                      memberLabel={memberLabel}
+                      canDelete={memberRecord.canDelete}
+                      canEdit={memberRecord.canEditAll || memberRecord.editableGroupIds.includes(m.group_id)}
+                      currentUserName={memberRecord.currentUserName}
+                      className="font-medium text-brand hover:underline text-left"
+                    >
+                      {m.full_name}
+                    </MemberDetailLink>
                     {m.is_visitor && (
                       <span className="ml-2 rounded-full bg-[#ffe5cc] text-[#b35900] text-[10px] font-semibold px-2 py-0.5 align-middle">
                         Visitor
