@@ -2,7 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOutEverywhere } from "@/app/login/actions";
-import { SecurityShell } from "./Shell";
+import { MinistryHubLogo, MinistryHubName } from "@/components/MinistryHubBrand";
+import { MenuButton } from "@/components/MenuButton";
+import { BackButton } from "@/components/BackButton";
+import { RefreshButton } from "@/components/RefreshButton";
 import { CARD, PRIMARY_BUTTON } from "./shared";
 import { RemoveAuthenticatorButton } from "./RemoveAuthenticatorButton";
 
@@ -24,8 +27,28 @@ export default async function AccountSecurityPage() {
   const authenticators = (factors?.totp ?? []).filter((f) => f.status === "verified");
 
   return (
-    <SecurityShell title="Account Security">
-      <div className="space-y-4">
+    <div className="min-h-full bg-[#f5f5f5]">
+      {/* Owner-requested (4 Oct 2026): the same header as Release History --
+          Menu, Back and Refresh, under the app's own logo and name. (The
+          setup, verify and agreement screens keep the plain SecurityShell:
+          they show before sign-in is complete.) */}
+      <header className="bg-gradient-to-br from-brand to-brand-light text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
+        <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
+          <MenuButton />
+          <BackButton />
+        </div>
+        <div className="absolute top-2.5 right-4">
+          <RefreshButton />
+        </div>
+        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+          <MinistryHubLogo size={38} onDark />
+          <h1>
+            <MinistryHubName light className="h-6" />
+          </h1>
+        </Link>
+        <p className="mt-1 text-sm opacity-90">Account Security</p>
+      </header>
+      <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         <div className={CARD}>
           <h2 className="text-base font-bold text-[#333]">Authenticator app</h2>
           <p className="mt-1 text-sm text-[#555]">
@@ -71,13 +94,7 @@ export default async function AccountSecurityPage() {
             </button>
           </form>
         </div>
-
-        <p className="text-center text-sm">
-          <Link href="/" className="font-semibold text-brand hover:underline">
-            &larr; Back to the app
-          </Link>
-        </p>
-      </div>
-    </SecurityShell>
+      </main>
+    </div>
   );
 }
