@@ -11,6 +11,7 @@ import {
   type FollowUpDueEntry,
 } from "@/lib/outreach";
 import { logAudit } from "@/lib/audit";
+import { getAppSettings } from "@/lib/app-settings";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 export async function getMemberOutreachAction(memberId: string): Promise<OutreachEntry[]> {
@@ -23,6 +24,24 @@ export async function getOutreachEntriesAction(groupId: string): Promise<Outreac
 
 export async function getFollowUpsDueAction(groupId: string): Promise<FollowUpDueEntry[]> {
   return getFollowUpsDue(groupId);
+}
+
+/** Owner-requested (4 Oct 2026): what the outreach form's Text / WhatsApp /
+ * Visit buttons need for one youth -- their home address (Visit) and the
+ * ministry's short name (the greeting). Read as the signed-in servant, so the
+ * usual access rules decide whether the address comes back. */
+export async function getOutreachContactAction(
+  memberId: string,
+): Promise<{ address: string | null; ministryName: string | null }> {
+  const supabase = await createClient();
+  const [{ data: member }, settings] = await Promise.all([
+    supabase.from("members").select("home_address").eq("id", memberId).maybeSingle(),
+    getAppSettings(),
+  ]);
+  return {
+    address: (member?.home_address as string | null | undefined)?.trim() || null,
+    ministryName: settings.app_title_short || null,
+  };
 }
 
 export type AddOutreachInput = {

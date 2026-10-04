@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { addOutreachEntryAction } from "@/app/g/[groupId]/outreach/actions";
-import { PhoneIcon, MessageIcon } from "@/components/icons";
+import { OutreachQuickActions } from "./OutreachQuickActions";
 
 function nowLocalDatetime() {
   const d = new Date();
@@ -13,7 +13,8 @@ function nowLocalDatetime() {
 /** REQUIREMENTS.md §6.3/§6.6 -- the simple, single-member "quick outreach"
  * modal opened from Dashboard quick-links (Birthdays, Actions Needed, etc.),
  * as opposed to AddOutreachEntryModal's fuller Outreach-tab form with a
- * member picker. Same Call/Text quick-action pattern as that form. */
+ * member picker. Same Call / Text / WhatsApp / Visit quick actions as that
+ * form (OutreachQuickActions). */
 export function AddOutreachModal({
   memberId,
   memberName,
@@ -39,17 +40,6 @@ export function AddOutreachModal({
   const [followUpDue, setFollowUpDue] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-
-  function handleQuickAction(kind: "Call" | "Text") {
-    setType(kind);
-    if (!memberPhone) {
-      setError(`No phone number on file for this ${memberLabel.toLowerCase()}.`);
-      return;
-    }
-    setError(null);
-    const digits = memberPhone.replace(/[^\d+]/g, "");
-    window.location.href = kind === "Call" ? `tel:${digits}` : `sms:${digits}`;
-  }
 
   function handleSave() {
     setError(null);
@@ -101,30 +91,21 @@ export function AddOutreachModal({
               className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-brand focus:outline-none"
             />
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickAction("Call")}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-[#f0f0f0] px-3 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-            >
-              <PhoneIcon className="h-3.5 w-3.5" />
-              Call
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickAction("Text")}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-[#f0f0f0] px-3 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-            >
-              <MessageIcon className="h-3.5 w-3.5" />
-              Text
-            </button>
-          </div>
+          <OutreachQuickActions
+            memberId={memberId}
+            memberName={memberName}
+            memberPhone={memberPhone}
+            memberLabel={memberLabel}
+            servantName={currentUserName}
+            onType={setType}
+            onError={setError}
+          />
           <div>
             <label className="block font-semibold mb-1">Type</label>
             <input
               value={type}
               onChange={(e) => setType(e.target.value)}
-              placeholder="Call, Visit, Text, Email, etc."
+              placeholder="Call, Text, WhatsApp, Visit, Email, etc."
               className="w-full rounded-md border border-[#ddd] px-3 py-2 focus:border-brand focus:outline-none"
             />
           </div>
