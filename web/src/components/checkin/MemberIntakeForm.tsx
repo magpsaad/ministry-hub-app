@@ -1,5 +1,6 @@
 "use client";
 
+import { checkinPersonProblem } from "@/lib/checkin-validation";
 import { useState } from "react";
 import type { University } from "@/lib/universities";
 import {
@@ -15,7 +16,6 @@ import { PossibleDuplicateMemberModal } from "./PossibleDuplicateMemberModal";
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const EMPTY_FORM: NewMemberInput = {
   full_name: "",
@@ -33,20 +33,7 @@ const EMPTY_FORM: NewMemberInput = {
 /** Client-side mirror of the server-side checks in app/checkin/actions.ts --
  * gives instant feedback, but the server never trusts this alone. */
 function validate(form: NewMemberInput): string | null {
-  if (!form.full_name.trim() || form.full_name.trim().split(/\s+/).length < 2) {
-    return "Please enter your first and last name.";
-  }
-  const digits = (form.phone ?? "").replace(/\D/g, "");
-  if (digits.length < 10 || digits.length > 11) {
-    return "Please enter a valid phone number.";
-  }
-  if (!form.email || !EMAIL_RE.test(form.email.trim())) {
-    return "Please enter a valid email address.";
-  }
-  if (!form.gender) {
-    return "Please select a gender.";
-  }
-  return null;
+  return checkinPersonProblem(form);
 }
 
 /** REQUIREMENTS.md §6.11 -- "Don't see your name?" intake, same fields as
@@ -132,6 +119,10 @@ export function MemberIntakeForm({
           void createNewRecord();
         }}
         onResolved={(attendanceRecorded) => onSubmitted(form.full_name, attendanceRecorded, true)}
+        onEdit={(message) => {
+          setDuplicateMatch(null);
+          setError(message);
+        }}
       />
     );
   }

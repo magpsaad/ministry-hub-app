@@ -1,12 +1,12 @@
 "use client";
 
+import { checkinPersonProblem } from "@/lib/checkin-validation";
 import { useState } from "react";
 import { submitNewServantAction, type NewServantInput } from "@/app/checkin/actions";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const EMPTY_FORM: NewServantInput = {
   full_name: "",
@@ -18,20 +18,7 @@ const EMPTY_FORM: NewServantInput = {
 };
 
 function validate(form: NewServantInput): string | null {
-  if (!form.full_name.trim() || form.full_name.trim().split(/\s+/).length < 2) {
-    return "Please enter your first and last name.";
-  }
-  const digits = (form.phone ?? "").replace(/\D/g, "");
-  if (digits.length < 10 || digits.length > 11) {
-    return "Please enter a valid phone number.";
-  }
-  if (!form.email || !EMAIL_RE.test(form.email.trim())) {
-    return "Please enter a valid email address.";
-  }
-  if (!form.gender) {
-    return "Please select a gender.";
-  }
-  return null;
+  return checkinPersonProblem(form);
 }
 
 /** New servant self-registration (0014_servant_self_registration.sql) --

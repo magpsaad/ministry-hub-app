@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createCheckinClient } from "@/lib/supabase/checkin-client";
 import { grantCheckinPass, hasCheckinPass } from "@/lib/checkin-session";
+import { checkinPersonProblem, type CheckinPersonFields } from "@/lib/checkin-validation";
 import type { CheckInPerson } from "@/lib/checkin";
 import {
   SERVANT_CHECKIN_COOKIE,
@@ -63,24 +64,10 @@ export async function startCheckinPassAction(token: string, turnstileToken: stri
   return { ok: await grantCheckinPass(token, turnstileToken) };
 }
 
-/** Server-side backstop for the client-side checks in the intake forms --
- * mandatory Name/Phone/Email/Gender, Name >=2 words, valid phone digit
- * count, valid email shape. Everything else stays free-form. */
-function validateIntake(input: { full_name: string; phone: string | null; email: string | null; gender: string | null }): string | null {
-  if (!input.full_name.trim() || input.full_name.trim().split(/\s+/).length < 2) {
-    return "Please enter your first and last name.";
-  }
-  const digits = (input.phone ?? "").replace(/\D/g, "");
-  if (digits.length < 10 || digits.length > 11) {
-    return "Please enter a valid phone number.";
-  }
-  if (!input.email || !EMAIL_RE.test(input.email.trim())) {
-    return "Please enter a valid email address.";
-  }
-  if (!input.gender) {
-    return "Please select a gender.";
-  }
-  return null;
+/** Server-side backstop for the forms' own checks (lib/checkin-validation.ts,
+ * the same rules as the database's checkin_check_person). */
+function validateIntake(input: CheckinPersonFields): string | null {
+  return checkinPersonProblem(input);
 }
 
 export type MissingMemberFields = {
@@ -268,6 +255,7 @@ export type DuplicateMatch = { sameGroup: boolean };
 
 export async function checkPossibleDuplicateMemberAction(token: string, input: NewMemberInput): Promise<DuplicateMatch | null> {
   if (!(await hasCheckinPass(token))) return null;
+  if (validateIntake(input)) return null;
   const supabase = await createCheckinClient();
   const { data, error } = await supabase
     .rpc("checkin_find_possible_duplicate_member", {
@@ -289,6 +277,8 @@ export async function checkPossibleDuplicateMemberAction(token: string, input: N
  * -- the public page can never overwrite or move a record. */
 export async function resolveDuplicateMemberAction(token: string, input: NewMemberInput, moveRequested: boolean) {
   if (!(await hasCheckinPass(token))) return { error: NO_PASS, attendanceRecorded: false };
+  const validationError = validateIntake(input);
+  if (validationError) return { error: validationError, attendanceRecorded: false };
   const supabase = await createCheckinClient();
   const { data, error } = await supabase
     .rpc("checkin_resolve_duplicate_member", {

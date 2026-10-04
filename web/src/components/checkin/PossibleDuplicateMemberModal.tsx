@@ -21,6 +21,7 @@ export function PossibleDuplicateMemberModal({
   currentGroupName,
   onNotMe,
   onResolved,
+  onEdit,
 }: {
   token: string;
   match: DuplicateMatch;
@@ -29,6 +30,9 @@ export function PossibleDuplicateMemberModal({
   currentGroupName: string;
   onNotMe: () => void;
   onResolved: (attendanceRecorded: boolean) => void;
+  /** Back to the form with the details as typed (owner-reported: an error
+   * here used to leave no way to fix them). */
+  onEdit: (message: string | null) => void;
 }) {
   const [step, setStep] = useState<"confirm" | "resolve">("confirm");
   const [moveRequested, setMoveRequested] = useState(false);
@@ -81,7 +85,18 @@ export function PossibleDuplicateMemberModal({
         Anything you entered that&rsquo;s missing from your record will be added. If anything you entered is different
         from what we have, your servants will review it and update your record.
       </p>
-      {error && <p className="text-sm text-[#dc3545]">{error}</p>}
+      {error && (
+        <div className="space-y-2">
+          <p className="text-sm text-[#dc3545]">{error}</p>
+          <button
+            type="button"
+            onClick={() => onEdit(error)}
+            className="w-full rounded-md border border-brand bg-white px-4 py-2.5 text-sm font-semibold text-brand hover:bg-[#f0f4f8]"
+          >
+            Edit my details
+          </button>
+        </div>
+      )}
       {!match.sameGroup && (
         <label className="flex items-start gap-2 text-sm text-[#333]">
           <input
