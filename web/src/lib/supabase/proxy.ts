@@ -176,7 +176,9 @@ export async function updateSession(request: NextRequest) {
     // The Church Admin carries on through the normal gate below.
   }
 
-  if (!userId && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
+  // Account Security is exempt from the registration gate below, but not
+  // from this one.
+  if (!userId && (!matchesPrefix(pathname, GATE_EXEMPT_PREFIXES) || matchesPrefix(pathname, [SECURITY_PREFIX]))) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
