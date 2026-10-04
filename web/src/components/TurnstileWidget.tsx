@@ -14,6 +14,12 @@ declare global {
 }
 
 const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+
+/** The "Ministry Hub" Turnstile widget's site key (Cloudflare, owner's
+ * account, 4 Oct 2026). Public by design -- it's in every visitor's page;
+ * the matching SECRET key lives only in Supabase's CAPTCHA settings.
+ * NEXT_PUBLIC_TURNSTILE_SITE_KEY in Vercel overrides it. */
+const DEFAULT_SITE_KEY = "0x4AAAAAAFNOeAHZpTettkme";
 let scriptLoading: Promise<void> | null = null;
 
 function loadScript(): Promise<void> {
@@ -39,11 +45,10 @@ function loadScript(): Promise<void> {
  * Supabase, which verifies it once CAPTCHA protection is switched on in its
  * Auth settings. Real people almost never see anything. Rendered by hand
  * (not Cloudflare's scan-on-load) so it also appears after moving between
- * sign-in steps without a page reload. Renders nothing until
- * NEXT_PUBLIC_TURNSTILE_SITE_KEY is set, so forms keep working before the
- * Cloudflare side is set up. */
+ * sign-in steps without a page reload. Until CAPTCHA protection is
+ * switched on in Supabase, its answer is simply ignored. */
 export function TurnstileWidget() {
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || DEFAULT_SITE_KEY;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
