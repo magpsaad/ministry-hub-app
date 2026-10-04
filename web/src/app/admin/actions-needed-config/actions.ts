@@ -342,6 +342,7 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     ladder_position_label: input.ladder_position_label,
     level_number_offset: input.level_number_offset,
     sub_coordinator_auto_servant: input.sub_coordinator_auto_servant,
+    show_parent_contacts: input.show_parent_contacts,
   };
   // Saved by this ministry's code (the settings table has one row per
   // ministry now, MULTI_TENANT_PLAN.md §2.5 #1); the security rule would

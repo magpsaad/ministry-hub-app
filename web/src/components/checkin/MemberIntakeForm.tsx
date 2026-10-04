@@ -1,6 +1,7 @@
 "use client";
 
-import { checkinPersonProblem } from "@/lib/checkin-validation";
+import { checkinPersonProblem, parentsProblem } from "@/lib/checkin-validation";
+import { PARENT_FIELDS } from "@/lib/parent-contacts";
 import { useState } from "react";
 import type { University } from "@/lib/universities";
 import {
@@ -32,8 +33,8 @@ const EMPTY_FORM: NewMemberInput = {
 
 /** Client-side mirror of the server-side checks in app/checkin/actions.ts --
  * gives instant feedback, but the server never trusts this alone. */
-function validate(form: NewMemberInput): string | null {
-  return checkinPersonProblem(form);
+function validate(form: NewMemberInput, showParents: boolean): string | null {
+  return checkinPersonProblem(form) ?? (showParents ? parentsProblem(form) : null);
 }
 
 /** REQUIREMENTS.md §6.11 -- "Don't see your name?" intake, same fields as
@@ -48,6 +49,7 @@ export function MemberIntakeForm({
   groupLabel,
   memberLabel,
   currentGroupName,
+  showParents,
   onBack,
   onSubmitted,
 }: {
@@ -58,6 +60,8 @@ export function MemberIntakeForm({
   groupLabel: string;
   memberLabel: string;
   currentGroupName: string;
+  /** Migration 0087 -- this ministry keeps parents' contact details. */
+  showParents: boolean;
   onBack?: () => void;
   onSubmitted: (name: string, attendanceRecorded: boolean, wasResolvedDuplicate?: boolean) => void;
 }) {
@@ -90,7 +94,7 @@ export function MemberIntakeForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const validationError = validate(form);
+    const validationError = validate(form, showParents);
     if (validationError) {
       setError(validationError);
       return;
@@ -212,6 +216,18 @@ export function MemberIntakeForm({
           className={inputClass}
         />
       </Field>
+      {showParents &&
+        PARENT_FIELDS.map(({ key, label, kind, maxLength }) => (
+          <Field key={key} label={label}>
+            <input
+              type={kind === "phone" ? "tel" : kind === "email" ? "email" : "text"}
+              value={form[key] ?? ""}
+              onChange={(e) => field(key, e.target.value || null)}
+              maxLength={maxLength}
+              className={inputClass}
+            />
+          </Field>
+        ))}
       <Field label="Comments">
         <textarea
           value={form.comments ?? ""}

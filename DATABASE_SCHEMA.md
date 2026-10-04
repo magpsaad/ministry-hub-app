@@ -147,6 +147,13 @@ Functions (security definer, pinned `search_path`, signed-in users only):
 
 0086 gave everyone with a SAY role at that moment 14 days of grace; everyone else must sign before using the app. Publishing new wording = inserting version N+1 (everyone signs again).
 
+## P. Parents' contact details (migration 0087)
+
+- `members` gains six optional text columns: `parent1_name`, `parent1_phone`, `parent1_email`, `parent2_name`, `parent2_phone`, `parent2_email` (check `members_parent_contacts_length`: names ≤ 80, phones ≤ 30, emails ≤ 254 characters). Signed-in users may update them (added to the 0084 column grants); reading follows the existing `members` rules.
+- `app_settings.show_parent_contacts boolean not null default false` — per ministry, set in Ministry Settings. While false the app neither shows nor sends the fields, and the check-in functions ignore them.
+- `parent_contacts_on(ministry_id)` and `checkin_check_parents(...)` (security definer, internal only): the switch, and the check-in rules for the six fields (letters-only names 2–80, phones with 7–15 digits, valid emails).
+- The check-in functions take the six fields as extra, defaulted arguments: `checkin_submit_new_member` saves them; `checkin_resolve_duplicate_member` fills only blank ones and notes differences in `registration_comments`; `checkin_fill_missing_member_fields` fills only blank ones; `checkin_mark_attendance` also returns `missing_parent1_name` … `missing_parent2_email` (false while the switch is off).
+
 ## L. Group ladder (migrations 0069–0070)
 
 `GROUP_LADDER_PLAN.md` v1.3. **Authoritative over §2, the `groups_select` policy in §7, §13's `flow_type` note and §15.**
@@ -322,6 +329,8 @@ create index idx_members_assigned_servant on members (assigned_servant_id);
 create index idx_members_legacy_ref on members (legacy_source_ref);
 create unique index uq_members_legacy_ref on members (legacy_source_ref) where legacy_source_ref is not null;
 ```
+
+Migration 0087 added the six optional parents' contact columns (§P).
 
 `universities` must be declared before `members` in actual execution order, or the FK added after both tables exist — shown here in logical reading order.
 

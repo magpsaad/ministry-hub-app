@@ -22,6 +22,14 @@ const NO_MISSING_FIELDS: MissingMemberFields = {
   program: false,
   dob: false,
   fatherOfConfession: false,
+  parents: {
+    parent1_name: false,
+    parent1_phone: false,
+    parent1_email: false,
+    parent2_name: false,
+    parent2_phone: false,
+    parent2_email: false,
+  },
 };
 
 type View = "list" | "member-intake" | "servant-intake" | "success";
@@ -51,6 +59,7 @@ export function CheckInFlow({
   groupName,
   serviceDayName,
   rememberedPerson,
+  showParents,
 }: {
   token: string;
   isServant: boolean;
@@ -77,6 +86,8 @@ export function CheckInFlow({
    * as a one-tap "Check in as ..." button. Null when closed, for an
    * intake-only flow, or when this device remembers nobody here. */
   rememberedPerson: CheckInPerson | null;
+  /** Migration 0087 -- this ministry keeps parents' contact details. */
+  showParents: boolean;
 }) {
   const [view, setView] = useState<View>(
     flowType === "intake_only" ? (isServant ? "servant-intake" : "member-intake") : "list",
@@ -271,6 +282,7 @@ export function CheckInFlow({
         groupLabel={groupLabel}
         memberLabel={memberLabel}
         currentGroupName={groupName}
+        showParents={showParents}
         onBack={flowType === "check_in_and_intake" ? () => setView("list") : undefined}
         onSubmitted={handleIntakeSubmitted}
       />

@@ -5,6 +5,7 @@ import type { University } from "@/lib/universities";
 import { fillMissingMemberFieldsAction, type MissingFieldsInput, type MissingMemberFields } from "@/app/checkin/actions";
 import { todayInZone } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { PARENT_FIELDS } from "@/lib/parent-contacts";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
@@ -51,11 +52,14 @@ export function MissingFieldsForm({
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  const hasAnyMissing = missing.phone || missing.email || missing.university || missing.program || missing.dob || missing.fatherOfConfession;
+  const missingParents = PARENT_FIELDS.filter(({ key }) => missing.parents[key]);
+  const hasAnyMissing =
+    missing.phone || missing.email || missing.university || missing.program || missing.dob || missing.fatherOfConfession || missingParents.length > 0;
   if (!hasAnyMissing) return null;
 
   const hasAnyInput =
-    !!form.phone?.trim() || !!form.email?.trim() || !!form.university_id || !!form.program_of_study?.trim() || !!form.date_of_birth || !!form.father_of_confession?.trim();
+    !!form.phone?.trim() || !!form.email?.trim() || !!form.university_id || !!form.program_of_study?.trim() || !!form.date_of_birth || !!form.father_of_confession?.trim() ||
+    missingParents.some(({ key }) => !!form[key]?.trim());
 
   async function handleSave() {
     setPending(true);
@@ -120,6 +124,17 @@ export function MissingFieldsForm({
             <input value={form.father_of_confession ?? ""} onChange={(e) => field("father_of_confession", e.target.value || null)} className={inputClass} />
           </Field>
         )}
+        {missingParents.map(({ key, label, kind, maxLength }) => (
+          <Field key={key} label={label}>
+            <input
+              type={kind === "phone" ? "tel" : kind === "email" ? "email" : "text"}
+              value={form[key] ?? ""}
+              onChange={(e) => field(key, e.target.value || null)}
+              maxLength={maxLength}
+              className={inputClass}
+            />
+          </Field>
+        ))}
       </div>
       <div className="mt-4 flex gap-2">
         <button

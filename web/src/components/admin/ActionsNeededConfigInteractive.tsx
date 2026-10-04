@@ -421,6 +421,38 @@ export function ActionsNeededConfigInteractive({
       </div>
     </div>
 
+    {/* Owner-requested (4 Oct 2026, migration 0087): for ministries that
+        keep parents' details, e.g. High School and Sunday School. */}
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+      <h2 className="text-lg font-bold text-brand mb-1">Parents&rsquo; Contact Details</h2>
+      <p className="text-sm text-[#666] mb-3">
+        When on, each {appSettings.member_label.toLowerCase()}&rsquo;s details include Parent 1 and Parent 2 (name,
+        phone and email), all optional. Servants see and edit them like the other details, the check-in
+        page&rsquo;s registration form asks for them, and after checking in a {appSettings.member_label.toLowerCase()}{" "}
+        is offered to fill in any that are blank. Turning it off hides them everywhere; anything already entered is
+        kept.
+      </p>
+      <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
+        <input
+          type="checkbox"
+          checked={appSettings.show_parent_contacts}
+          onChange={(e) => updateAppField("show_parent_contacts", e.target.checked)}
+        />
+        Keep parents&rsquo; contact details
+      </label>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
+
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-brand mb-1">Current Birthdays Window</h2>
       <p className="text-sm text-[#666] mb-4">

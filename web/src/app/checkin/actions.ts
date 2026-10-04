@@ -3,7 +3,8 @@
 import { cookies } from "next/headers";
 import { createCheckinClient } from "@/lib/supabase/checkin-client";
 import { grantCheckinPass, hasCheckinPass } from "@/lib/checkin-session";
-import { checkinPersonProblem, type CheckinPersonFields } from "@/lib/checkin-validation";
+import { checkinPersonProblem, parentsProblem, type CheckinPersonFields } from "@/lib/checkin-validation";
+import { PARENT_FIELDS, pickParents, type ParentContacts, type ParentField } from "@/lib/parent-contacts";
 import type { CheckInPerson } from "@/lib/checkin";
 import {
   SERVANT_CHECKIN_COOKIE,
@@ -71,8 +72,23 @@ export async function startCheckinPassAction(token: string, turnstileToken: stri
 
 /** Server-side backstop for the forms' own checks (lib/checkin-validation.ts,
  * the same rules as the database's checkin_check_person). */
-function validateIntake(input: CheckinPersonFields): string | null {
-  return checkinPersonProblem(input);
+function validateIntake(input: CheckinPersonFields & Partial<ParentContacts>): string | null {
+  return checkinPersonProblem(input) ?? parentsProblem(input);
+}
+
+/** Migration 0087 -- the parents' details as the check-in functions take
+ * them (phones in the same format as the youth's own). The database only
+ * keeps them for ministries that switched them on. */
+function parentArgs(input: Partial<ParentContacts>) {
+  const p = pickParents(input);
+  return {
+    p_parent1_name: p.parent1_name,
+    p_parent1_phone: p.parent1_phone ? formatPhone(p.parent1_phone) : null,
+    p_parent1_email: p.parent1_email,
+    p_parent2_name: p.parent2_name,
+    p_parent2_phone: p.parent2_phone ? formatPhone(p.parent2_phone) : null,
+    p_parent2_email: p.parent2_email,
+  };
 }
 
 export type MissingMemberFields = {
@@ -82,6 +98,18 @@ export type MissingMemberFields = {
   program: boolean;
   dob: boolean;
   fatherOfConfession: boolean;
+  /** Migration 0087 -- always false unless this ministry keeps parents'
+   * contact details. */
+  parents: Record<ParentField, boolean>;
+};
+
+const NO_MISSING_PARENTS: Record<ParentField, boolean> = {
+  parent1_name: false,
+  parent1_phone: false,
+  parent1_email: false,
+  parent2_name: false,
+  parent2_phone: false,
+  parent2_email: false,
 };
 
 /** `newlyCreated` distinguishes "this tap actually created today's
@@ -101,7 +129,7 @@ export type MissingMemberFields = {
  * rationale, identical here for the member/youth flow. */
 export async function markMemberAttendanceAction(token: string, memberId: string, remember: boolean) {
   if (!(await hasCheckinPass(token))) {
-    return { error: NO_PASS, attendanceRecorded: false, newlyCreated: false, missingFields: { phone: false, email: false, university: false, program: false, dob: false, fatherOfConfession: false }, rememberedCookieWritten: false, previousRemembered: null };
+    return { error: NO_PASS, attendanceRecorded: false, newlyCreated: false, missingFields: { phone: false, email: false, university: false, program: false, dob: false, fatherOfConfession: false, parents: NO_MISSING_PARENTS }, rememberedCookieWritten: false, previousRemembered: null };
   }
   const supabase = await createCheckinClient();
   const { data, error } = await supabase.rpc("checkin_mark_attendance", { p_token: token, p_member_id: memberId }).single();
@@ -114,7 +142,7 @@ export async function markMemberAttendanceAction(token: string, memberId: string
     missing_program: boolean;
     missing_dob: boolean;
     missing_father_of_confession: boolean;
-  } | null;
+  } & Partial<Record<`missing_${ParentField}`, boolean>> | null;
   const missingFields: MissingMemberFields = {
     phone: row?.missing_phone ?? false,
     email: row?.missing_email ?? false,
@@ -122,6 +150,9 @@ export async function markMemberAttendanceAction(token: string, memberId: string
     program: row?.missing_program ?? false,
     dob: row?.missing_dob ?? false,
     fatherOfConfession: row?.missing_father_of_confession ?? false,
+    parents: Object.fromEntries(
+      PARENT_FIELDS.map(({ key }) => [key, row?.[`missing_${key}`] ?? false]),
+    ) as Record<ParentField, boolean>,
   };
 
   let rememberedCookieWritten = false;
@@ -148,7 +179,7 @@ export type MissingFieldsInput = {
   program_of_study: string | null;
   date_of_birth: string | null;
   father_of_confession: string | null;
-};
+} & Partial<ParentContacts>;
 
 /** Owner-requested: lets a youth fill in whichever of their own record's
  * blank fields are shown to them, right from the check-in success screen.
@@ -166,6 +197,8 @@ export async function fillMissingMemberFieldsAction(token: string, memberId: str
   if (input.email && !EMAIL_RE.test(input.email.trim())) {
     return { error: "Please enter a valid email address." };
   }
+  const parentError = parentsProblem(input);
+  if (parentError) return { error: parentError };
 
   const supabase = await createCheckinClient();
   const { error } = await supabase.rpc("checkin_fill_missing_member_fields", {
@@ -177,6 +210,7 @@ export async function fillMissingMemberFieldsAction(token: string, memberId: str
     p_program_of_study: input.program_of_study?.trim() || null,
     p_date_of_birth: input.date_of_birth || null,
     p_father_of_confession: input.father_of_confession?.trim() || null,
+    ...parentArgs(input),
   });
   return { error: error?.message ?? null };
 }
@@ -213,7 +247,7 @@ export type NewMemberInput = {
   home_address: string | null;
   gender: string | null;
   comments: string | null;
-};
+} & Partial<ParentContacts>;
 
 /** Migration 0074 -- the check-in page's name search: nothing until 3
  * letters are typed, then at most 10 matches as short names ("Mina H.").
@@ -298,6 +332,7 @@ export async function resolveDuplicateMemberAction(token: string, input: NewMemb
       p_home_address: input.home_address,
       p_gender: input.gender,
       p_move_requested: moveRequested,
+      ...parentArgs(input),
     })
     .single();
   if (error) return { error: error.message, attendanceRecorded: false };
@@ -324,6 +359,7 @@ export async function submitNewMemberAction(token: string, input: NewMemberInput
       p_home_address: input.home_address,
       p_gender: input.gender,
       p_comments: input.comments,
+      ...parentArgs(input),
     })
     .single();
 

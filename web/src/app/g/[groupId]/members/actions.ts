@@ -7,6 +7,8 @@ import { getActiveMinistry } from "@/lib/ministry-context";
 import { logAudit } from "@/lib/audit";
 import { checkUpload, isUuid } from "@/lib/upload-check";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
+import { getAppSettings } from "@/lib/app-settings";
+import { pickParents, type ParentContacts } from "@/lib/parent-contacts";
 
 export type UpdateMemberInput = {
   phone: string | null;
@@ -19,6 +21,9 @@ export type UpdateMemberInput = {
   gender: string | null;
   servant_comments: string | null;
   is_visitor: boolean;
+  /** Migration 0087 -- only sent (and only saved) while this ministry keeps
+   * parents' contact details. */
+  parents?: ParentContacts | null;
 };
 
 /** Full Name and Registration Comments are always read-only (REQUIREMENTS.md §6.4) -- never accepted here.
@@ -48,6 +53,7 @@ export async function updateMemberAction(memberId: string, groupId: string, inpu
     gender: input.gender,
     servant_comments: input.servant_comments,
     is_visitor: input.is_visitor,
+    ...(input.parents && (await getAppSettings()).show_parent_contacts ? pickParents(input.parents) : {}),
   };
   const { data, error } = await supabase.from("members").update(fields).eq("id", memberId).select("id");
   if (error) return { error: error.message };
