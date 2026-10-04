@@ -1,3 +1,5 @@
+import { PARENT_FIELDS, type ParentContacts } from "@/lib/parent-contacts";
+
 /** The check-in forms' rules, shared by the forms (instant feedback, before
  * anything is sent -- owner-reported 4 Oct 2026: a bad name used to be
  * caught only at the "Is this you?" confirm step, after the form was gone)
@@ -38,6 +40,27 @@ export function checkinPersonProblem(f: CheckinPersonFields): string | null {
   if (f.date_of_birth) {
     const today = new Date().toISOString().slice(0, 10);
     if (f.date_of_birth < "1940-01-01" || f.date_of_birth > today) return "Please enter a valid date of birth.";
+  }
+  return null;
+}
+
+/** Migration 0087 -- the parents' details on the check-in forms (all
+ * optional; same rules as the youth's own, and as the database's
+ * checkin_check_parents). */
+export function parentsProblem(p: Partial<ParentContacts>): string | null {
+  for (const { key, kind } of PARENT_FIELDS) {
+    const value = (p[key] ?? "").trim();
+    if (!value) continue;
+    if (kind === "name" && (value.length < 2 || value.length > 80 || !NAME_RE.test(value))) {
+      return "Please enter the parent's name using letters only (2 to 80 characters).";
+    }
+    if (kind === "phone") {
+      const digits = value.replace(/\D/g, "");
+      if (digits.length < 10 || digits.length > 11) return "Please enter a valid phone number for the parent.";
+    }
+    if (kind === "email" && (value.length > 254 || !EMAIL_RE.test(value))) {
+      return "Please enter a valid email address for the parent.";
+    }
   }
   return null;
 }

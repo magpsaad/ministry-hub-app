@@ -23,6 +23,7 @@ import { PrevOutreachModal } from "@/components/outreach/PrevOutreachModal";
 import { PhotoCropperModal } from "@/components/PhotoCropperModal";
 import { ErrorModal } from "@/components/ErrorModal";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
+import { PARENT_FIELDS, type ParentField } from "@/lib/parent-contacts";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -88,6 +89,7 @@ export function MemberDetailModal({
     gender: member.gender,
     servant_comments: member.servant_comments,
     is_visitor: member.is_visitor,
+    parents: member.parents,
   });
   const [assignedServantId, setAssignedServantId] = useState(member.assigned_servant_id);
   const [memberGroupId, setMemberGroupId] = useState(member.group_id);
@@ -115,6 +117,10 @@ export function MemberDetailModal({
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function parentField(key: ParentField, value: string) {
+    setForm((f) => (f.parents ? { ...f, parents: { ...f.parents, [key]: value } } : f));
+  }
+
   function resetForm() {
     setForm({
       phone: member.phone,
@@ -127,6 +133,7 @@ export function MemberDetailModal({
       gender: member.gender,
       servant_comments: member.servant_comments,
       is_visitor: member.is_visitor,
+      parents: member.parents,
     });
     setAssignedServantId(member.assigned_servant_id);
     setMemberGroupId(member.group_id);
@@ -402,6 +409,21 @@ export function MemberDetailModal({
               className={inputClass(editing)}
             />
           </FieldRow>
+          {/* Migration 0087 -- only for ministries that keep parents'
+              contact details (Ministry Settings). */}
+          {form.parents &&
+            PARENT_FIELDS.map(({ key, label, kind, maxLength }) => (
+              <FieldRow key={key} label={label}>
+                <input
+                  type={kind === "phone" ? "tel" : kind === "email" ? "email" : "text"}
+                  value={form.parents?.[key] ?? ""}
+                  onChange={(e) => parentField(key, e.target.value)}
+                  maxLength={maxLength}
+                  readOnly={!editing}
+                  className={inputClass(editing)}
+                />
+              </FieldRow>
+            ))}
           <FieldRow label="Registration Comments">
             <textarea value={member.registration_comments ?? ""} readOnly className={inputClass(false)} rows={2} />
           </FieldRow>

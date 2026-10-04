@@ -120,6 +120,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
             groupName={flow.label}
             serviceDayName={weekdayName(settings.service_weekday)}
             rememberedPerson={rememberedPerson}
+            showParents={settings.show_parent_contacts}
           />
         )}
       </main>

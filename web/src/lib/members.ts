@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
 import { fetchAllRows } from "@/lib/pagination";
+import { getAppSettings } from "@/lib/app-settings";
+import { PARENT_COLUMNS, pickParents, type ParentContacts } from "@/lib/parent-contacts";
 
 export type MemberListItem = {
   id: string;
@@ -28,6 +30,9 @@ export type MemberDetail = MemberListItem & {
   home_address: string | null;
   registration_comments: string | null;
   servant_comments: string | null;
+  /** Migration 0087 -- null when this ministry doesn't keep parents'
+   * contact details (Ministry Settings), so nothing about them shows. */
+  parents: ParentContacts | null;
 };
 
 export type GroupMembersResult = {
@@ -176,15 +181,19 @@ export async function getGroupMembersLite(groupId: string | string[]): Promise<M
 }
 
 export async function getMember(memberId: string): Promise<MemberDetail | null> {
-  const supabase = await createClient();
+  const [supabase, settings] = await Promise.all([createClient(), getAppSettings()]);
+  const withParents = settings.show_parent_contacts;
   const { data } = await supabase
     .from("members")
     .select(
-      `${LIST_SELECT}, email, university_id, father_of_confession, home_address, registration_comments, servant_comments`,
+      `${LIST_SELECT}, email, university_id, father_of_confession, home_address, registration_comments, servant_comments${
+        withParents ? `, ${PARENT_COLUMNS}` : ""
+      }`,
     )
     .eq("id", memberId)
     .maybeSingle();
 
   if (!data) return null;
-  return { ...(data as unknown as MemberDetail), avgAttendancePercent: null };
+  const row = data as unknown as MemberDetail & Partial<ParentContacts>;
+  return { ...row, parents: withParents ? pickParents(row) : null, avgAttendancePercent: null };
 }
