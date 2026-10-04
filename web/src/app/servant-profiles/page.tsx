@@ -11,6 +11,16 @@ import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { ServantProfilesInteractive } from "@/components/ServantProfilesInteractive";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
+import { createClient } from "@/lib/supabase/server";
+import type { AgreementStatus } from "@/lib/agreement";
+
+/** Migration 0086: each person's confidentiality agreement status, for
+ * Admins and General Coordinators (the database checks that too). */
+async function getAgreementStatuses(): Promise<Record<string, AgreementStatus>> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("agreement_status_here");
+  return Object.fromEntries(((data ?? []) as AgreementStatus[]).map((row) => [row.user_id, row]));
+}
 
 /** REQUIREMENTS.md §6.1/§6.13 -- Coordinator Corner, General/Sub-Coordinators
  * and Admins. Profile viewing/editing only -- cohort assignment lives on the
@@ -28,7 +38,12 @@ export default async function ServantProfilesPage() {
     );
   }
 
-  const [settings, servants] = await Promise.all([getAppSettings(), getServantDirectory()]);
+  const canManageServants = access.isAdmin || access.isGeneralCoordinator;
+  const [settings, servants, agreements] = await Promise.all([
+    getAppSettings(),
+    getServantDirectory(),
+    canManageServants ? getAgreementStatuses() : Promise.resolve(null),
+  ]);
 
   await logAudit(user.id, "SERVANT_PROFILES_VIEWED");
 
@@ -50,7 +65,7 @@ export default async function ServantProfilesPage() {
         <HeaderWordmark />
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
-        <ServantProfilesInteractive servants={servants} canManageServants={access.isAdmin || access.isGeneralCoordinator} />
+        <ServantProfilesInteractive servants={servants} canManageServants={canManageServants} agreements={agreements} />
       </main>
     </div>
   );

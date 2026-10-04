@@ -7,6 +7,11 @@ import { PhoneLink } from "@/components/PhoneLink";
 import { servantPhotoUrl } from "@/lib/storage";
 import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import { ServantDetailModal } from "@/components/ServantDetailModal";
+import type { AgreementStatus } from "@/lib/agreement";
+
+/** Migration 0086: who still needs to sign the confidentiality agreement
+ * (Admins and General Coordinators only; null for everyone else). */
+type Agreements = Record<string, AgreementStatus> | null;
 
 function initials(name: string): string {
   return name
@@ -24,9 +29,11 @@ function initials(name: string): string {
 export function ServantProfilesInteractive({
   servants,
   canManageServants,
+  agreements,
 }: {
   servants: ServantDirectoryEntry[];
   canManageServants: boolean;
+  agreements: Agreements;
 }) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
@@ -75,6 +82,7 @@ export function ServantProfilesInteractive({
   }, [filtered]);
 
   const alphabetical = useMemo(() => [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name)), [filtered]);
+  const signedCount = agreements ? servants.filter((s) => agreements[s.id]?.is_current).length : 0;
 
   return (
     <div className="space-y-4">
@@ -104,20 +112,26 @@ export function ServantProfilesInteractive({
         </div>
       </div>
 
+      {agreements && (
+        <p className="text-sm text-[#555]">
+          Confidentiality agreement: <strong>{signedCount}</strong> of {servants.length} servants have signed.
+        </p>
+      )}
+
       {viewMode === "categorical"
         ? categorical.map((bucket) => (
             <div key={bucket.label} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <h3 className="text-sm font-bold text-brand mb-3">{bucket.label}</h3>
               {bucket.isCohort ? (
-                <GenderGroupedRows entries={bucket.entries} onSelect={setSelected} />
+                <GenderGroupedRows entries={bucket.entries} onSelect={setSelected} agreements={agreements} />
               ) : (
-                <ServantRows entries={bucket.entries} onSelect={setSelected} />
+                <ServantRows entries={bucket.entries} onSelect={setSelected} agreements={agreements} />
               )}
             </div>
           ))
         : (
             <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-              <ServantRows entries={alphabetical} onSelect={setSelected} />
+              <ServantRows entries={alphabetical} onSelect={setSelected} agreements={agreements} />
             </div>
           )}
 
@@ -127,6 +141,7 @@ export function ServantProfilesInteractive({
         <ServantDetailModal
           servant={selected}
           canManageServants={canManageServants}
+          agreement={agreements ? (agreements[selected.id] ?? null) : undefined}
           onClose={() => setSelected(null)}
           onSaved={() => router.refresh()}
         />
@@ -141,9 +156,11 @@ export function ServantProfilesInteractive({
 function GenderGroupedRows({
   entries,
   onSelect,
+  agreements,
 }: {
   entries: ServantDirectoryEntry[];
   onSelect: (s: ServantDirectoryEntry) => void;
+  agreements: Agreements;
 }) {
   const { female, male, other } = groupByGender(entries, (e) => e.gender);
   return (
@@ -159,7 +176,7 @@ function GenderGroupedRows({
           rows.length > 0 && (
             <div key={kind}>
               <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">{genderSubheading(kind, rows.length)}</h4>
-              <ServantRows entries={rows} onSelect={onSelect} />
+              <ServantRows entries={rows} onSelect={onSelect} agreements={agreements} />
             </div>
           ),
       )}
@@ -170,9 +187,11 @@ function GenderGroupedRows({
 function ServantRows({
   entries,
   onSelect,
+  agreements,
 }: {
   entries: ServantDirectoryEntry[];
   onSelect: (s: ServantDirectoryEntry) => void;
+  agreements: Agreements;
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -196,6 +215,9 @@ function ServantRows({
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-[#333] truncate">{s.full_name}</p>
               <PhoneLink phone={s.phone} className="text-xs" />
+              {agreements && !agreements[s.id]?.is_current && (
+                <p className="text-[11px] font-semibold text-[#b45309]">Agreement not signed</p>
+              )}
             </div>
           </button>
         );

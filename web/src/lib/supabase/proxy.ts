@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveAddress, ministryHeaders } from "@/lib/ministry-context";
+import { AGREEMENT_LATER_COOKIE, AGREEMENT_PATH, firstGateRow } from "@/lib/agreement";
 
 /** REQUIREMENTS.md §6.1 addendum -- paths a signed-in-but-not-yet-
  * registered person must still be able to reach: signing in/out, the
@@ -14,6 +15,10 @@ const GATE_EXEMPT_PREFIXES = ["/login", "/checkin", "/auth", "/register", "/secu
  * public check-in, and the Account Security pages themselves. */
 const SECURITY_PREFIX = "/security";
 const TWO_STEP_EXEMPT_PREFIXES = ["/login", "/auth", "/checkin", SECURITY_PREFIX];
+
+/** The confidentiality agreement (migration 0086) lives under Account
+ * Security, so the same pages stay reachable before it's signed. */
+const AGREEMENT_EXEMPT_PREFIXES = ["/login", "/auth", "/checkin", SECURITY_PREFIX];
 
 /** Fetched without a session (a browser checking for an installable PWA, or
  * an app-store-style crawler) -- must never be redirected regardless of
@@ -51,7 +56,8 @@ function matchesPrefix(pathname: string, prefixes: string[]): boolean {
  *    ministry's address never serves the console.
  * 2. Inactive ministry -> "This ministry isn't active" for everyone except
  *    the Church Admin (who can still sign in and work there).
- * 3. The signed-out gate, then the registration gate: a signed-in user with
+ * 3. The signed-out gate, the authenticator step, the confidentiality
+ *    agreement (0086), then the registration gate: a signed-in user with
  *    no role IN THIS MINISTRY, or missing phone/gender on THIS MINISTRY's
  *    profile, goes to this ministry's /register. The Church Admin passes
  *    (they act as an Admin of whichever ministry's address they're on,
@@ -184,6 +190,24 @@ export async function updateSession(request: NextRequest) {
 
   const twoStep = await twoStepRedirect(false);
   if (twoStep) return twoStep;
+
+  // The confidentiality agreement (migration 0086), before registering:
+  // anyone who hasn't signed the current version goes to it -- every time
+  // once it's required, or (existing SAY servants, during their grace
+  // period) as a page-load reminder at most once a day.
+  if (userId && !matchesPrefix(pathname, AGREEMENT_EXEMPT_PREFIXES)) {
+    const { data } = await supabase.rpc("agreement_gate");
+    const gate = firstGateRow(data);
+    const remind =
+      gate?.needs_signature &&
+      request.method === "GET" &&
+      !pathname.startsWith("/api/") &&
+      !request.cookies.has(AGREEMENT_LATER_COOKIE);
+    if (gate?.must_sign || remind) {
+      const next = encodeURIComponent(`${pathname}${request.nextUrl.search}`);
+      return NextResponse.redirect(new URL(`${AGREEMENT_PATH}?next=${next}`, request.url));
+    }
+  }
 
   if (userId && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
     const [{ data: profile }, { count: roleCount }, churchAdmin] = await Promise.all([

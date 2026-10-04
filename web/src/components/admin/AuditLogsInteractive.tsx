@@ -8,9 +8,9 @@ import { formatDateTimeInZone } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
 
 /** Migration 0080: written by the database for every check-in poster
- * sign-up and sign-up surge, whatever the switch says -- shown ticked and
- * locked. */
-const ALWAYS_RECORDED = new Set(["CHECKIN_REGISTRATION", "CHECKIN_SIGNUP_ALERT"]);
+ * sign-up and sign-up surge, and (0086) for every confidentiality agreement
+ * signature, whatever the switch says -- shown ticked and locked. */
+const ALWAYS_RECORDED = new Set(["CHECKIN_REGISTRATION", "CHECKIN_SIGNUP_ALERT", "AGREEMENT_SIGNED"]);
 
 function formatWhen(iso: string, timeZone: string): string {
   return formatDateTimeInZone(iso, timeZone, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });

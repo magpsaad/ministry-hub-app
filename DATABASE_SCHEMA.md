@@ -128,6 +128,25 @@ Buckets per environment (`qa-photos`, `qa-calendar`, `qa-branding` and the `prod
 
 Write policies (0065, a separate QA file and production file, so neither ever touches the other environment's rules) call `storage_write_allowed(name, admin_only)`. When the path's first folder is a ministry code, it allows the write only if the caller is an approved user of **that** ministry (for branding, its Admin) or the Church Admin; the folder decides, not the request header. Paths with no folder fall back to the pre-v6 rule for the current ministry; that branch existed for the transition, and the app now writes only folder paths. Any other shape is refused. Reading is unchanged: the buckets are public.
 
+## A. Confidentiality agreement (migrations 0086a, 0086)
+
+Church-wide (no `ministry_id`): one agreement, signed once by every app user whichever ministries they serve in.
+
+| Table | Columns | Who can read |
+| --- | --- | --- |
+| `agreement_versions` | `id`, `version` (unique), `title`, `body` (headings `## `, bullets `- `, numbered `1. `, paragraphs), `published_at`, `resign_after_months` (null = never), `created_at` | Any signed-in user, published versions only |
+| `agreement_signatures` | `id`, `user_id`, `version_id`, `typed_name`, `email` (from `auth.users`), `signed_at` (database clock), `ministry_id` (where signed) | The signer; an Admin/GC (past the authenticator step) of a ministry where the signer has a profile; the Church Admin. Nobody can insert, change or delete rows directly |
+| `agreement_grace` | `user_id`, `grace_until` | No one through the API (functions only) |
+
+The version in force is the latest `published_at <= now()`. A signature counts if it is for that version and, when `resign_after_months` is set, newer than that many months.
+
+Functions (security definer, pinned `search_path`, signed-in users only):
+- `agreement_gate()` → `must_sign`, `needs_signature`, `grace_until` for the caller; no row when nothing is published. The app's front door sends `must_sign` people to `/security/agreement` on every request, and reminds people in grace on page loads (at most daily, `agreement_later` cookie).
+- `sign_agreement(version_id, typed_name)` → signature id. Refuses a version that isn't current and names outside 2–120 characters; returns the existing signature if already signed; writes an `AGREEMENT_SIGNED` audit entry under the signer (always recorded).
+- `agreement_status_here()` → every profile in this ministry with its latest signature, `is_current` and `grace_until`; empty unless the caller is an Admin/GC here or the Church Admin.
+
+0086 gave everyone with a SAY role at that moment 14 days of grace; everyone else must sign before using the app. Publishing new wording = inserting version N+1 (everyone signs again).
+
 ## L. Group ladder (migrations 0069–0070)
 
 `GROUP_LADDER_PLAN.md` v1.3. **Authoritative over §2, the `groups_select` policy in §7, §13's `flow_type` note and §15.**

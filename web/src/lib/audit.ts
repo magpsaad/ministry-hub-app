@@ -26,7 +26,8 @@ export type AuditActionType =
   | "CALENDAR_EVENT_DELETED"
   | "MEMBER_ARCHIVED"
   | "MEMBER_DELETED"
-  | "GROUP_TRANSITION_RUN";
+  | "GROUP_TRANSITION_RUN"
+  | "AGREEMENT_SIGNED";
 
 /**
  * REQUIREMENTS.md §3.11/§6.14 -- writes one audit_log row for the given

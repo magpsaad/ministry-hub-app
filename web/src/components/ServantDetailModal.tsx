@@ -13,6 +13,9 @@ import {
 import { CameraIcon, TrashIcon } from "@/components/icons";
 import { PhotoCropperModal } from "@/components/PhotoCropperModal";
 import { ErrorModal } from "@/components/ErrorModal";
+import { useTimezone } from "@/components/TimezoneProvider";
+import { formatDateTimeInZone } from "@/lib/timezone";
+import type { AgreementStatus } from "@/lib/agreement";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -29,11 +32,15 @@ const inputClass = (editing: boolean) =>
 export function ServantDetailModal({
   servant,
   canManageServants,
+  agreement,
   onClose,
   onSaved,
 }: {
   servant: ServantDirectoryEntry;
   canManageServants: boolean;
+  /** Migration 0086: undefined = not shown (only Admins and General
+   * Coordinators see it); null = nothing signed. */
+  agreement?: AgreementStatus | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -219,6 +226,7 @@ export function ServantDetailModal({
           <FieldRow label="Join Date">
             <input value={servant.join_date ?? "Not yet attended"} readOnly className={inputClass(false)} />
           </FieldRow>
+          {agreement !== undefined && <AgreementRow agreement={agreement} />}
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2 justify-between items-center border-t border-[#f0f0f0] pt-4">
@@ -280,6 +288,41 @@ export function ServantDetailModal({
       {error && <ErrorModal message={error} onDismiss={() => setError(null)} />}
     </div>,
     document.body,
+  );
+}
+
+/** Migration 0086: the confidentiality agreement -- signed (with a link to
+ * the signed copy), or not yet, and by when during the grace period. */
+function AgreementRow({ agreement }: { agreement: AgreementStatus | null }) {
+  const timeZone = useTimezone();
+  const day = (iso: string) => formatDateTimeInZone(iso, timeZone, { year: "numeric", month: "short", day: "numeric" });
+  const graceOpen = agreement?.grace_until && new Date(agreement.grace_until) > new Date();
+  let text: string;
+  if (agreement?.is_current && agreement.signed_at) {
+    text = `Signed ${day(agreement.signed_at)} (version ${agreement.version})`;
+  } else if (agreement?.signed_at) {
+    text = `Needs to sign again (last signed ${day(agreement.signed_at)}, version ${agreement.version})`;
+  } else {
+    text = "Not signed yet";
+  }
+  if (!agreement?.is_current && graceOpen) text += ` — due by ${day(agreement!.grace_until!)}`;
+
+  return (
+    <FieldRow label="Confidentiality Agreement">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#ddd] bg-[#f5f5f5] px-3 py-2 text-sm">
+        <span className={agreement?.is_current ? "text-[#155724]" : "font-semibold text-[#b45309]"}>{text}</span>
+        {agreement?.signature_id && (
+          <a
+            href={`/security/agreement/${agreement.signature_id}`}
+            target="_blank"
+            rel="noopener"
+            className="text-xs font-semibold text-brand hover:underline"
+          >
+            View signed copy
+          </a>
+        )}
+      </div>
+    </FieldRow>
   );
 }
 
