@@ -337,7 +337,7 @@ create table profiles (
 );
 ```
 
-**Deactivated (0077, owner-requested 3 Oct 2026):** `deactivated_at timestamptz` / `deactivated_by uuid`. Set by `set_person_deactivated(person, on/off)` (Admins only), which also removes every role the person holds in that ministry. While set, a guard on `user_roles` refuses any new role by any path until an Admin reactivates them; only an Admin may change the flag. History (attendance, outreach, assignments, audit) is kept.
+**Deactivated (0077, owner-requested 3 Oct 2026):** `deactivated_at timestamptz` / `deactivated_by uuid`. Set by `set_person_deactivated(person, on/off)` (Admins only), which also removes every role the person holds in that ministry and unassigns the youths assigned to them (`assigned_servant_id`/`is_new_assignment` cleared, as `remove_servant` does). While set, a guard on `user_roles` refuses any new role by any path until an Admin reactivates them; only an Admin may change the flag. History (attendance, outreach, assignments, audit) is kept.
 
 ---
 

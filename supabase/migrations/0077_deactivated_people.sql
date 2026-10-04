@@ -9,8 +9,10 @@
 -- * profiles.deactivated_at / deactivated_by: set = deactivated in that
 --   ministry. Their history (attendance, outreach, assignments, audit) stays.
 -- * set_person_deactivated(person, on/off) -- Admins only. Deactivating also
---   removes every role the person holds in this ministry; reactivating gives
---   none back (an Admin grants roles afterwards, as for anyone).
+--   removes every role the person holds in this ministry and unassigns the
+--   youths assigned to them (so a Coordinator assigns them to an active
+--   servant); their attendance and outreach stay. Reactivating gives no role
+--   or youth back (an Admin grants roles afterwards, as for anyone).
 -- * A deactivated person can't be given a role by any path (Access
 --   Maintenance, Servant Assignments, an approval at sign-in): a guard on
 --   user_roles refuses it until they're reactivated.
@@ -84,6 +86,10 @@ begin
   end if;
 
   if p_deactivated then
+    -- Owner: their youths become Unassigned so a Coordinator sees they need
+    -- an active servant (same as remove_servant); attendance/outreach stay.
+    update members set assigned_servant_id = null, is_new_assignment = false
+    where ministry_id = v_m and assigned_servant_id = p_profile_id;
     delete from user_roles where ministry_id = v_m and user_id = p_profile_id;
     update profiles set deactivated_at = coalesce(deactivated_at, now()),
                         deactivated_by = coalesce(deactivated_by, auth.uid())
