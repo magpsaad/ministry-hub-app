@@ -13,6 +13,7 @@ import {
 } from "@/app/admin/group-transition/actions";
 import { levelText } from "@/lib/group-names";
 import { ServantAssignmentsInteractive } from "@/components/ServantAssignmentsInteractive";
+import { csvCell } from "@/lib/csv";
 
 type Stage = "preview" | "confirming" | "done";
 
@@ -106,7 +107,7 @@ export function GroupTransitionInteractive({
 
   function downloadOccupants() {
     const rows = [["Name", "Group"], ...(preview.occupants ?? []).map((o) => [o.name, o.group])];
-    const csv = rows.map((r) => r.map((c) => `"${c.replaceAll('"', '""')}"`).join(",")).join("\r\n");
+    const csv = rows.map((r) => r.map((c) => csvCell(c)).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;

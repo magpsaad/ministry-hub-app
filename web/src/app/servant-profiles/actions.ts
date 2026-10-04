@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { photosBucket, isExternalPhotoUrl, ministryFilePath } from "@/lib/storage";
 import { getActiveMinistry } from "@/lib/ministry-context";
 import { logAudit } from "@/lib/audit";
+import { checkUpload, isUuid } from "@/lib/upload-check";
 
 export type UpdateServantProfileInput = {
   phone: string | null;
@@ -34,7 +35,10 @@ export async function updateServantProfileAction(servantId: string, input: Updat
 
 export async function uploadServantPhotoAction(servantId: string, formData: FormData) {
   const file = formData.get("photo") as File | null;
-  if (!file || file.size === 0) return { error: "No file selected" };
+  // Security audit #6: a real JPG/PNG/WebP under 10 MB, for a real id.
+  const checked = await checkUpload(file, "photo");
+  if ("error" in checked) return { error: checked.error };
+  if (!isUuid(servantId)) return { error: "Unknown person." };
 
   const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
   const {
@@ -42,12 +46,11 @@ export async function uploadServantPhotoAction(servantId: string, formData: Form
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
 
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = ministryFilePath(ministryId, "profiles", `servant-${servantId}-${Date.now()}.${ext}`);
+  const path = ministryFilePath(ministryId, "profiles", `servant-${servantId}-${Date.now()}.${checked.ext}`);
 
   const { data: existing } = await supabase.from("profiles").select("photo_path").eq("id", servantId).maybeSingle();
 
-  const { error: uploadError } = await supabase.storage.from(photosBucket()).upload(path, file, { contentType: file.type });
+  const { error: uploadError } = await supabase.storage.from(photosBucket()).upload(path, file!, { contentType: checked.contentType });
   if (uploadError) return { error: uploadError.message };
 
   const { error: updateError } = await supabase.from("profiles").update({ photo_path: path }).eq("id", servantId);

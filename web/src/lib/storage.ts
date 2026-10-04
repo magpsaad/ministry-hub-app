@@ -45,9 +45,12 @@ export function servantPhotoUrl(path: string | null): string | null {
   return memberPhotoUrl(path);
 }
 
+/** Calendar attachments are private (migration 0085): the app's own
+ * /api/attachment address checks the person is signed in to this ministry
+ * and hands out an hour-long link -- never a public storage address. */
 export function calendarAttachmentUrl(path: string | null): string | null {
   if (!path) return null;
-  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${CALENDAR_BUCKET}/${path}`;
+  return `/api/attachment?p=${encodeURIComponent(path)}`;
 }
 
 export function calendarBucket(): string {

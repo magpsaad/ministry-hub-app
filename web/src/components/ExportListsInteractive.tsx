@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { GroupSummary } from "@/lib/groups";
 import { getGroupMemberNamesAction, getServantNamesAction } from "@/app/export-lists/actions";
+import { csvCell } from "@/lib/csv";
 
 const SERVANTS_KEY = "servants";
 
@@ -54,7 +55,7 @@ export function ExportListsInteractive({
   }
 
   function handleDownloadCsv() {
-    const csv = [`"${listTitle.replace(/"/g, '""')}"`, ...names.map((n) => `"${n.replace(/"/g, '""')}"`)].join("\r\n");
+    const csv = [csvCell(listTitle), ...names.map((n) => csvCell(n))].join("\r\n");
     downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8;" }), `${listTitle}.csv`);
   }
 

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { CalendarEventType } from "@/lib/calendar";
 import { calendarBucket, ministryFilePath } from "@/lib/storage";
 import { getActiveMinistry } from "@/lib/ministry-context";
+import { checkUpload, isUuid } from "@/lib/upload-check";
 
 export type EventInput = {
   title: string;
@@ -79,14 +80,17 @@ export async function deleteEventAction(eventId: string) {
 
 export async function uploadEventAttachmentAction(eventId: string, formData: FormData) {
   const file = formData.get("attachment") as File | null;
-  if (!file || file.size === 0) return { error: "No file selected", path: null };
+  // Security audit #6: a real PDF / image / Office file under 10 MB, for a
+  // real event.
+  const checked = await checkUpload(file, "attachment");
+  if ("error" in checked) return { error: checked.error, path: null };
+  if (!isUuid(eventId)) return { error: "Unknown event.", path: null };
 
   const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
-  const ext = file.name.split(".").pop() || "bin";
-  const path = ministryFilePath(ministryId, "calendar", `${eventId}-${Date.now()}.${ext}`);
+  const path = ministryFilePath(ministryId, "calendar", `${eventId}-${Date.now()}.${checked.ext}`);
 
-  const { error: uploadError } = await supabase.storage.from(calendarBucket()).upload(path, file, {
-    contentType: file.type,
+  const { error: uploadError } = await supabase.storage.from(calendarBucket()).upload(path, file!, {
+    contentType: checked.contentType,
   });
   if (uploadError) return { error: uploadError.message, path: null };
 

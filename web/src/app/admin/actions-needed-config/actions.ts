@@ -1,5 +1,6 @@
 "use server";
 
+import { checkUpload } from "@/lib/upload-check";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveMinistry } from "@/lib/ministry-context";
@@ -355,9 +356,6 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   return { error: null };
 }
 
-const LOGO_TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
-const LOGO_MAX_BYTES = 2 * 1024 * 1024;
-
 /** Upload a new logo for THIS ministry and make it the logo straight away
  * (only logo_url is written, so unsaved edits elsewhere on the form are
  * untouched). The file goes into the ministry's own branding folder
@@ -370,17 +368,16 @@ const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 export async function uploadLogoAction(formData: FormData) {
   const file = formData.get("logo") as File | null;
   if (!file || file.size === 0) return { error: "Choose an image first.", logoUrl: null };
-  const ext = LOGO_TYPES[file.type];
-  if (!ext) return { error: "Use a PNG, JPG or WebP image.", logoUrl: null };
-  if (file.size > LOGO_MAX_BYTES) {
-    return { error: "That image is over 2 MB. A square image about 512 × 512 pixels is plenty.", logoUrl: null };
-  }
+  // Security audit #6: also checks the file really is that image type.
+  const checked = await checkUpload(file, "logo");
+  if ("error" in checked) return { error: checked.error, logoUrl: null };
+  const ext = checked.ext;
 
   const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
   const path = ministryFilePath(ministryId, "branding", `logo-${Date.now()}.${ext}`);
   const { error: uploadError } = await supabase.storage
     .from(brandingBucket())
-    .upload(path, file, { contentType: file.type });
+    .upload(path, file, { contentType: checked.contentType });
   if (uploadError) {
     return {
       error: /row-level security|unauthorized|403/i.test(uploadError.message)

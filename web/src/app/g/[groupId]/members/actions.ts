@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { photosBucket, ministryFilePath } from "@/lib/storage";
 import { getActiveMinistry } from "@/lib/ministry-context";
 import { logAudit } from "@/lib/audit";
+import { checkUpload, isUuid } from "@/lib/upload-check";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 export type UpdateMemberInput = {
@@ -201,20 +202,22 @@ export async function dismissNewAssignmentAction(memberId: string, groupId: stri
  * like a no-op. The old file is removed after the new one is confirmed live. */
 export async function uploadMemberPhotoAction(memberId: string, groupId: string, formData: FormData) {
   const file = formData.get("photo") as File | null;
-  if (!file || file.size === 0) return { error: "No file selected" };
+  // Security audit #6: a real JPG/PNG/WebP under 10 MB, for a real id.
+  const checked = await checkUpload(file, "photo");
+  if ("error" in checked) return { error: checked.error };
+  if (!isUuid(memberId)) return { error: "Unknown person." };
 
   const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = ministryFilePath(ministryId, "members", `${memberId}-${Date.now()}.${ext}`);
+  const path = ministryFilePath(ministryId, "members", `${memberId}-${Date.now()}.${checked.ext}`);
 
   const { data: existing } = await supabase.from("members").select("photo_path").eq("id", memberId).maybeSingle();
 
   const { error: uploadError } = await supabase.storage
     .from(photosBucket())
-    .upload(path, file, { contentType: file.type });
+    .upload(path, file!, { contentType: checked.contentType });
   if (uploadError) return { error: uploadError.message };
 
   let updateOk: boolean;

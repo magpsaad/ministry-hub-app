@@ -21,7 +21,7 @@ export type RememberedCheckinPerson = { id: string; kind: "member" | "servant" |
 export function parseRememberedCheckinPerson(raw: string | null | undefined): RememberedCheckinPerson | null {
   if (!raw) return null;
   const [id, kind] = raw.split(":");
-  if (!id || (kind !== "member" && kind !== "servant" && kind !== "pending")) return null;
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id) || (kind !== "member" && kind !== "servant" && kind !== "pending")) return null;
   return { id, kind };
 }
 

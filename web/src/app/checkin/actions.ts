@@ -10,7 +10,18 @@ import {
   MEMBER_CHECKIN_COOKIE,
   CHECKIN_REMEMBER_COOKIE_MAX_AGE,
   serializeRememberedCheckinPerson,
+  parseRememberedCheckinPerson,
 } from "@/lib/checkin-remember-cookie";
+
+/** Security audit #10: only this server reads these cookies, so page scripts
+ * can't (httpOnly), and they only travel over HTTPS. */
+const REMEMBER_COOKIE_OPTIONS = {
+  maxAge: CHECKIN_REMEMBER_COOKIE_MAX_AGE,
+  path: "/",
+  sameSite: "lax" as const,
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+};
 
 /** Shared by mark*AttendanceAction for both the member and servant flows --
  * writes `id`/`kind` into the given cookie and returns whatever it
@@ -18,11 +29,7 @@ import {
 async function writeRememberCookie(cookieName: string, id: string, kind: "member" | "servant" | "pending") {
   const cookieStore = await cookies();
   const previousRemembered = cookieStore.get(cookieName)?.value ?? null;
-  cookieStore.set(cookieName, serializeRememberedCheckinPerson({ id, kind }), {
-    maxAge: CHECKIN_REMEMBER_COOKIE_MAX_AGE,
-    path: "/",
-    sameSite: "lax",
-  });
+  cookieStore.set(cookieName, serializeRememberedCheckinPerson({ id, kind }), REMEMBER_COOKIE_OPTIONS);
   return previousRemembered;
 }
 
@@ -30,12 +37,10 @@ async function writeRememberCookie(cookieName: string, id: string, kind: "member
  * writeRememberCookie captured before the mis-tap being undone. */
 async function restoreRememberCookie(cookieName: string, previousRemembered: string | null) {
   const cookieStore = await cookies();
-  if (previousRemembered) {
-    cookieStore.set(cookieName, previousRemembered, {
-      maxAge: CHECKIN_REMEMBER_COOKIE_MAX_AGE,
-      path: "/",
-      sameSite: "lax",
-    });
+  // The value comes back from the browser: only a well-formed one is restored.
+  const previous = parseRememberedCheckinPerson(previousRemembered);
+  if (previous) {
+    cookieStore.set(cookieName, serializeRememberedCheckinPerson(previous), REMEMBER_COOKIE_OPTIONS);
   } else {
     cookieStore.delete(cookieName);
   }
