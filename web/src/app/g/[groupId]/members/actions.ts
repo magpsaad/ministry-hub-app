@@ -34,7 +34,21 @@ export async function updateMemberAction(memberId: string, groupId: string, inpu
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data, error } = await supabase.from("members").update(input).eq("id", memberId).select("id");
+  // Security audit #5: send only the edit form's fields, whatever else the
+  // browser put in `input` (the database also refuses other fields, 0084).
+  const fields = {
+    phone: input.phone,
+    email: input.email,
+    university_id: input.university_id,
+    program_of_study: input.program_of_study,
+    date_of_birth: input.date_of_birth,
+    father_of_confession: input.father_of_confession,
+    home_address: input.home_address,
+    gender: input.gender,
+    servant_comments: input.servant_comments,
+    is_visitor: input.is_visitor,
+  };
+  const { data, error } = await supabase.from("members").update(fields).eq("id", memberId).select("id");
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "You don't have permission to edit this record." };
 

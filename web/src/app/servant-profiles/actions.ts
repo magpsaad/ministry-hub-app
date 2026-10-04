@@ -22,7 +22,9 @@ export async function updateServantProfileAction(servantId: string, input: Updat
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
 
-  const { error } = await supabase.from("profiles").update(input).eq("id", servantId);
+  // Security audit #5: only these fields, whatever else was sent (0084).
+  const fields = { phone: input.phone, father_of_confession: input.father_of_confession, gender: input.gender };
+  const { error } = await supabase.from("profiles").update(fields).eq("id", servantId);
   if (error) return { error: error.message };
 
   await logAudit(user.id, "SERVANT_EDITED", { details: { servantId } });

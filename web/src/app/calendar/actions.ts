@@ -23,6 +23,22 @@ export type EventInput = {
  * (migration 0082: except people whose only role is Read-Only). The
  * database itself writes the audit entry for every add/edit/delete and
  * keeps deleted events in a 30-day recycle bin, so these actions don't log. */
+/** Security audit #5: only the event's own fields, whatever else was sent
+ * (the database also refuses other fields and sets "created by", 0084). */
+function eventFields(input: EventInput): EventInput {
+  return {
+    title: input.title,
+    description: input.description,
+    event_type: input.event_type,
+    start_date: input.start_date,
+    end_date: input.end_date,
+    all_day: input.all_day,
+    start_time: input.start_time,
+    end_time: input.end_time,
+    location: input.location,
+  };
+}
+
 export async function createEventAction(input: EventInput) {
   const supabase = await createClient();
   const {
@@ -32,7 +48,7 @@ export async function createEventAction(input: EventInput) {
 
   const { data, error } = await supabase
     .from("service_calendar_events")
-    .insert({ ...input, created_by: user.id })
+    .insert({ ...eventFields(input), created_by: user.id })
     .select("id")
     .single();
   if (error) return { error: error.message, id: null };
@@ -43,7 +59,7 @@ export async function createEventAction(input: EventInput) {
 
 export async function updateEventAction(eventId: string, input: EventInput) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("service_calendar_events").update(input).eq("id", eventId).select("id");
+  const { data, error } = await supabase.from("service_calendar_events").update(eventFields(input)).eq("id", eventId).select("id");
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "You don't have permission to change this event." };
 
