@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createCheckinClient } from "@/lib/supabase/checkin-client";
 
 export type CheckInFlow = {
   isServant: boolean;
@@ -17,7 +17,7 @@ export type CheckInFlow = {
 /** null = not a check-in code; "switched_off" = a pre-entry or hand-over
  * code whose "QR code active" switch is off (GROUP_LADDER_PLAN.md D5). */
 export async function getCheckInFlow(token: string): Promise<CheckInFlow | "switched_off" | null> {
-  const supabase = await createClient();
+  const supabase = await createCheckinClient();
   const { data, error } = await supabase.rpc("checkin_get_flow", { p_token: token }).single();
   if (error?.message.includes("isn't active")) return "switched_off";
   if (error || !data) return null;
@@ -36,7 +36,7 @@ export type CheckInPerson = { id: string; full_name: string; kind: "member" | "s
 export type CheckInWindow = { isOpen: boolean; serviceWeekday: number; opensAt: string; closesAt: string };
 
 export async function getCheckInWindow(token: string): Promise<CheckInWindow | null> {
-  const supabase = await createClient();
+  const supabase = await createCheckinClient();
   const { data } = await supabase.rpc("checkin_window", { p_token: token }).maybeSingle();
   if (!data) return null;
   const row = data as { is_open: boolean; service_weekday: number; opens_at: string; closes_at: string };
@@ -51,7 +51,7 @@ export async function getRememberedCheckInPerson(
   isServant: boolean,
   remembered: { id: string; kind: CheckInPerson["kind"] },
 ): Promise<CheckInPerson | null> {
-  const supabase = await createClient();
+  const supabase = await createCheckinClient();
   const { data } = isServant
     ? await supabase.rpc("checkin_get_servant", { p_token: token, p_id: remembered.id, p_kind: remembered.kind })
     : await supabase.rpc("checkin_get_member", { p_token: token, p_member_id: remembered.id });

@@ -204,7 +204,15 @@ export function AuditLogsInteractive({
                 <td className="px-4 py-2 font-mono text-xs text-[#333]">{log.action_type}</td>
                 <td className="px-4 py-2 text-[#333]">
                   {log.user_name ?? (
-                    log.details?.unmatched_email ? (
+                    log.details?.source === "checkin_poster" ? (
+                      // Migration 0080: sign-ups through a check-in poster have
+                      // no signed-in user -- show who signed up and where.
+                      <span className="italic text-[#555]">
+                        Check-in poster
+                        {log.details.name ? ` · ${String(log.details.name)}` : ""}
+                        {log.details.poster ? ` (${String(log.details.poster)})` : ""}
+                      </span>
+                    ) : log.details?.unmatched_email ? (
                       <span className="italic text-[#856404]" title="No matching account -- this email wasn't found in the migrated servant roster">
                         {String(log.details.unmatched_email)} (unmatched)
                       </span>

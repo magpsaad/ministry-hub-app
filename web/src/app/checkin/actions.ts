@@ -1,7 +1,8 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { createCheckinClient } from "@/lib/supabase/checkin-client";
+import { grantCheckinPass, hasCheckinPass } from "@/lib/checkin-session";
 import type { CheckInPerson } from "@/lib/checkin";
 import {
   SERVANT_CHECKIN_COOKIE,
@@ -51,6 +52,17 @@ function formatPhone(raw: string): string {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Security audit #2 (owner-approved, 4 Oct 2026): every action below
+ * needs this browser's bot-check pass for this poster (CheckinGate grants
+ * it once; lib/checkin-session.ts). */
+const NO_PASS = "Please reload the page and try again.";
+
+/** The check-in page's one-time bot check: Cloudflare's answer, checked on
+ * this server, becomes a pass for this poster. */
+export async function startCheckinPassAction(token: string, turnstileToken: string): Promise<{ ok: boolean }> {
+  return { ok: await grantCheckinPass(token, turnstileToken) };
+}
+
 /** Server-side backstop for the client-side checks in the intake forms --
  * mandatory Name/Phone/Email/Gender, Name >=2 words, valid phone digit
  * count, valid email shape. Everything else stays free-form. */
@@ -96,7 +108,10 @@ export type MissingMemberFields = {
  * (default checked) -- see markServantAttendanceAction for the full
  * rationale, identical here for the member/youth flow. */
 export async function markMemberAttendanceAction(token: string, memberId: string, remember: boolean) {
-  const supabase = await createClient();
+  if (!(await hasCheckinPass(token))) {
+    return { error: NO_PASS, attendanceRecorded: false, newlyCreated: false, missingFields: { phone: false, email: false, university: false, program: false, dob: false, fatherOfConfession: false }, rememberedCookieWritten: false, previousRemembered: null };
+  }
+  const supabase = await createCheckinClient();
   const { data, error } = await supabase.rpc("checkin_mark_attendance", { p_token: token, p_member_id: memberId }).single();
   const row = data as {
     attendance_recorded: boolean;
@@ -151,6 +166,7 @@ export type MissingFieldsInput = {
  * shown. The RPC itself is the real backstop: it only ever writes into a
  * field that's still genuinely blank, regardless of what's sent. */
 export async function fillMissingMemberFieldsAction(token: string, memberId: string, input: MissingFieldsInput) {
+  if (!(await hasCheckinPass(token))) return { error: NO_PASS };
   const phoneDigits = (input.phone ?? "").replace(/\D/g, "");
   if (input.phone && (phoneDigits.length < 10 || phoneDigits.length > 11)) {
     return { error: "Please enter a valid phone number." };
@@ -159,7 +175,7 @@ export async function fillMissingMemberFieldsAction(token: string, memberId: str
     return { error: "Please enter a valid email address." };
   }
 
-  const supabase = await createClient();
+  const supabase = await createCheckinClient();
   const { error } = await supabase.rpc("checkin_fill_missing_member_fields", {
     p_token: token,
     p_member_id: memberId,
@@ -183,7 +199,8 @@ export async function undoMemberAttendanceAction(
   memberId: string,
   restoreCookie?: { rememberedCookieWritten: boolean; previousRemembered: string | null },
 ) {
-  const supabase = await createClient();
+  if (!(await hasCheckinPass(token))) return { error: NO_PASS };
+  const supabase = await createCheckinClient();
   const { error } = await supabase.rpc("checkin_undo_attendance", { p_token: token, p_member_id: memberId });
 
   if (!error && restoreCookie?.rememberedCookieWritten) {
@@ -214,7 +231,8 @@ export async function searchCheckInPeopleAction(
   query: string,
   isServant: boolean,
 ): Promise<{ people: CheckInPerson[]; closed: boolean }> {
-  const supabase = await createClient();
+  if (!(await hasCheckinPass(token))) return { people: [], closed: false };
+  const supabase = await createCheckinClient();
   if (isServant) {
     const { data, error } = await supabase.rpc("checkin_search_servants", { p_token: token, p_query: query });
     if (error) return { people: [], closed: error.message.includes("closed") };
@@ -249,7 +267,8 @@ export async function searchCheckInPeopleAction(
 export type DuplicateMatch = { sameGroup: boolean };
 
 export async function checkPossibleDuplicateMemberAction(token: string, input: NewMemberInput): Promise<DuplicateMatch | null> {
-  const supabase = await createClient();
+  if (!(await hasCheckinPass(token))) return null;
+  const supabase = await createCheckinClient();
   const { data, error } = await supabase
     .rpc("checkin_find_possible_duplicate_member", {
       p_token: token,
@@ -269,7 +288,8 @@ export async function checkPossibleDuplicateMemberAction(token: string, input: N
  * scanned, becomes a dated note on the record for the servants to review
  * -- the public page can never overwrite or move a record. */
 export async function resolveDuplicateMemberAction(token: string, input: NewMemberInput, moveRequested: boolean) {
-  const supabase = await createClient();
+  if (!(await hasCheckinPass(token))) return { error: NO_PASS, attendanceRecorded: false };
+  const supabase = await createCheckinClient();
   const { data, error } = await supabase
     .rpc("checkin_resolve_duplicate_member", {
       p_token: token,
@@ -291,10 +311,11 @@ export async function resolveDuplicateMemberAction(token: string, input: NewMemb
 }
 
 export async function submitNewMemberAction(token: string, input: NewMemberInput) {
+  if (!(await hasCheckinPass(token))) return { error: NO_PASS, attendanceRecorded: false };
   const validationError = validateIntake(input);
   if (validationError) return { error: validationError, attendanceRecorded: false };
 
-  const supabase = await createClient();
+  const supabase = await createCheckinClient();
   const { data, error } = await supabase
     .rpc("checkin_submit_new_member", {
       p_token: token,
@@ -327,7 +348,10 @@ export async function submitNewMemberAction(token: string, input: NewMemberInput
  * deliberately checking in a person other than themselves), the cookie
  * is left untouched entirely. */
 export async function markServantAttendanceAction(token: string, id: string, kind: "servant" | "pending", remember: boolean) {
-  const supabase = await createClient();
+  if (!(await hasCheckinPass(token))) {
+    return { error: NO_PASS, attendanceRecorded: false, newlyCreated: false, rememberedCookieWritten: false, previousRemembered: null };
+  }
+  const supabase = await createCheckinClient();
   const { data, error } =
     kind === "servant"
       ? await supabase.rpc("checkin_mark_servant_attendance", { p_token: token, p_servant_id: id }).single()
@@ -361,7 +385,8 @@ export async function undoServantAttendanceAction(
   kind: "servant" | "pending",
   restoreCookie?: { rememberedCookieWritten: boolean; previousRemembered: string | null },
 ) {
-  const supabase = await createClient();
+  if (!(await hasCheckinPass(token))) return { error: NO_PASS };
+  const supabase = await createCheckinClient();
   const { error } =
     kind === "servant"
       ? await supabase.rpc("checkin_undo_servant_attendance", { p_token: token, p_servant_id: id })
@@ -384,10 +409,11 @@ export type NewServantInput = {
 };
 
 export async function submitNewServantAction(token: string, input: NewServantInput) {
+  if (!(await hasCheckinPass(token))) return { error: NO_PASS, attendanceRecorded: false };
   const validationError = validateIntake(input);
   if (validationError) return { error: validationError, attendanceRecorded: false };
 
-  const supabase = await createClient();
+  const supabase = await createCheckinClient();
   const { data, error } = await supabase
     .rpc("checkin_submit_new_servant", {
       p_token: token,

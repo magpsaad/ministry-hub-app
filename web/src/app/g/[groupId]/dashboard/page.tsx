@@ -10,6 +10,7 @@ import { getCombinedDashboardData } from "@/lib/dashboard-combined";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { DashboardInteractive } from "@/components/dashboard/DashboardInteractive";
+import { CheckinAlertBanner } from "@/components/dashboard/CheckinAlertBanner";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 export default async function DashboardPage({ params }: { params: Promise<{ groupId: string }> }) {
@@ -42,33 +43,36 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
     const editableGroupIds = ids.filter((id) => (access ? canEditGroup(access, id) : false));
 
     return (
-      <DashboardInteractive
-        groupId={groupId}
-        combinedGroupIds={ids}
-        canEditAll={canEditAll}
-        editableGroupIds={editableGroupIds}
-        statsData={data.statsData}
-        birthdays={data.birthdays}
-        birthdayWindowDays={{ before: settings.birthday_window_days_before, after: settings.birthday_window_days_after }}
-        unassigned={data.unassigned}
-        actionsNeeded={data.actionsNeeded}
-        actionsNeededConfig={
-          settings.proximity_enabled ? actionsNeededConfig : actionsNeededConfig.filter((c) => c.proximity === "Local")
-        }
-        actionsNeededLookbackMonths={settings.actions_needed_lookback_months}
-        proximityEnabled={settings.proximity_enabled}
-        universityLabel={settings.university_label}
-        programLabel={settings.program_label}
-        newlyAssigned={data.newlyAssigned}
-        followUpsDue={data.followUpsDue}
-        servants={servants}
-        universities={universities}
-        memberLabel={settings.member_label}
-        canDelete={canEditAll}
-        canEdit={editableGroupIds.length > 0}
-        currentUserId={user?.id ?? ""}
-        currentUserName={profile?.full_name ?? user?.email ?? "Unknown"}
-      />
+      <>
+        {access?.isAdmin && <CheckinAlertBanner />}
+        <DashboardInteractive
+          groupId={groupId}
+          combinedGroupIds={ids}
+          canEditAll={canEditAll}
+          editableGroupIds={editableGroupIds}
+          statsData={data.statsData}
+          birthdays={data.birthdays}
+          birthdayWindowDays={{ before: settings.birthday_window_days_before, after: settings.birthday_window_days_after }}
+          unassigned={data.unassigned}
+          actionsNeeded={data.actionsNeeded}
+          actionsNeededConfig={
+            settings.proximity_enabled ? actionsNeededConfig : actionsNeededConfig.filter((c) => c.proximity === "Local")
+          }
+          actionsNeededLookbackMonths={settings.actions_needed_lookback_months}
+          proximityEnabled={settings.proximity_enabled}
+          universityLabel={settings.university_label}
+          programLabel={settings.program_label}
+          newlyAssigned={data.newlyAssigned}
+          followUpsDue={data.followUpsDue}
+          servants={servants}
+          universities={universities}
+          memberLabel={settings.member_label}
+          canDelete={canEditAll}
+          canEdit={editableGroupIds.length > 0}
+          currentUserId={user?.id ?? ""}
+          currentUserName={profile?.full_name ?? user?.email ?? "Unknown"}
+        />
+      </>
     );
   }
 
@@ -108,29 +112,32 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
   const currentUserName = profile?.full_name ?? user?.email ?? "Unknown";
 
   return (
-    <DashboardInteractive
-      groupId={groupId}
-      statsData={statsData}
-      birthdays={birthdays}
-      birthdayWindowDays={{ before: settings.birthday_window_days_before, after: settings.birthday_window_days_after }}
-      unassigned={unassigned}
-      actionsNeeded={actionsNeeded}
-      actionsNeededConfig={
-        settings.proximity_enabled ? actionsNeededConfig : actionsNeededConfig.filter((c) => c.proximity === "Local")
-      }
-      actionsNeededLookbackMonths={settings.actions_needed_lookback_months}
-      proximityEnabled={settings.proximity_enabled}
-      universityLabel={settings.university_label}
-      programLabel={settings.program_label}
-      newlyAssigned={newlyAssigned}
-      followUpsDue={followUpsDue}
-      servants={servants}
-      universities={universities}
-      memberLabel={memberLabel}
-      canDelete={canDelete}
-      canEdit={canEdit}
-      currentUserId={user?.id ?? ""}
-      currentUserName={currentUserName}
-    />
+    <>
+      {access?.isAdmin && <CheckinAlertBanner />}
+      <DashboardInteractive
+        groupId={groupId}
+        statsData={statsData}
+        birthdays={birthdays}
+        birthdayWindowDays={{ before: settings.birthday_window_days_before, after: settings.birthday_window_days_after }}
+        unassigned={unassigned}
+        actionsNeeded={actionsNeeded}
+        actionsNeededConfig={
+          settings.proximity_enabled ? actionsNeededConfig : actionsNeededConfig.filter((c) => c.proximity === "Local")
+        }
+        actionsNeededLookbackMonths={settings.actions_needed_lookback_months}
+        proximityEnabled={settings.proximity_enabled}
+        universityLabel={settings.university_label}
+        programLabel={settings.program_label}
+        newlyAssigned={newlyAssigned}
+        followUpsDue={followUpsDue}
+        servants={servants}
+        universities={universities}
+        memberLabel={memberLabel}
+        canDelete={canDelete}
+        canEdit={canEdit}
+        currentUserId={user?.id ?? ""}
+        currentUserName={currentUserName}
+      />
+    </>
   );
 }

@@ -1,45 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
-type Turnstile = {
-  render: (el: HTMLElement, opts: Record<string, unknown>) => string;
-  remove: (id: string) => void;
-  reset: (id: string) => void;
-  getResponse: (id: string) => string | undefined;
-};
-
-declare global {
-  interface Window {
-    turnstile?: Turnstile;
-  }
-}
-
-const SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-
-/** The "Ministry Hub" Turnstile widget's site key (Cloudflare, owner's
- * account, 4 Oct 2026). Public by design -- it's in every visitor's page;
- * the matching SECRET key lives only in Supabase's CAPTCHA settings.
- * NEXT_PUBLIC_TURNSTILE_SITE_KEY in Vercel overrides it. */
-const DEFAULT_SITE_KEY = "0x4AAAAAAFNOeAHZpTettkme";
-
-let scriptLoading: Promise<void> | null = null;
-
-function loadScript(): Promise<void> {
-  if (window.turnstile) return Promise.resolve();
-  scriptLoading ??= new Promise<void>((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = SCRIPT_SRC;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => {
-      scriptLoading = null;
-      reject(new Error("Turnstile failed to load"));
-    };
-    document.head.appendChild(s);
-  });
-  return scriptLoading;
-}
+import { loadTurnstile, TURNSTILE_SITE_KEY } from "./turnstile-loader";
 
 /** Owner-approved sign-in change C (3 Oct 2026): Cloudflare Turnstile, the
  * "invisible bot check". Placed inside a form, it quietly checks the
@@ -55,7 +17,7 @@ function loadScript(): Promise<void> {
  * every submit. Rendered by hand (not Cloudflare's scan-on-load) so it
  * also appears after moving between sign-in steps without a page reload. */
 export function TurnstileWidget() {
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || DEFAULT_SITE_KEY;
+  const siteKey = TURNSTILE_SITE_KEY;
   const ref = useRef<HTMLDivElement>(null);
   const [waiting, setWaiting] = useState(false);
 
@@ -87,7 +49,7 @@ export function TurnstileWidget() {
     };
     form.addEventListener("submit", onSubmit);
 
-    loadScript()
+    loadTurnstile()
       .then(() => {
         if (cancelled || !window.turnstile) return;
         widgetId = window.turnstile.render(el, {

@@ -438,6 +438,8 @@ Admin-only (`/admin/group-transition`). A preview screen (each group's current n
 
 ### 6.11 New Member intake form (revised — see redesigned pipeline below)
 
+**Poster protection (security audit #2, owner-approved 4 Oct 2026; migration 0080):** sign-ups through any poster stay open at any time. Every visitor first passes a one-time Cloudflare bot check (a pass for that poster, good for 12 hours); every check-in request then goes only through the app's server, which carries a private key the database requires (`CHECKIN_SERVER_KEY`) -- nobody can call the check-in functions directly. Fields are checked (name of letters 2-80 characters, real phone and email, length limits, believable date of birth) and speed-limited per poster and per ministry. Every poster sign-up is recorded in the audit log (CHECKIN_REGISTRATION); more than 10 within an hour in a ministry records an alert (CHECKIN_SIGNUP_ALERT) and shows Admins a banner on the Dashboard until one of them marks it reviewed.
+
 **Full redesigned process, replacing the current QR-scan → Google Form → overnight batch-copy pipeline:**
 
 Each group (and a separate one for Servants) has a QR code linking to a **public, no-login check-in page** scoped to that group — reachable at a stable, unguessable URL per group (`check_in_url` in `qr_codes`, §3.12). This is what gets printed and posted at the meeting, replacing the current Google Form link.

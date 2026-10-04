@@ -11,6 +11,8 @@ import { BackButton } from "@/components/BackButton";
 import { MenuButton } from "@/components/MenuButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { CheckInFlow } from "@/components/checkin/CheckInFlow";
+import { CheckinGate } from "@/components/checkin/CheckinGate";
+import { hasCheckinPass } from "@/lib/checkin-session";
 
 /** REQUIREMENTS.md §6.11/§6.12 -- public, no-login check-in/intake page.
  * One route serves every group's QR code and the "Servants" QR alike; the
@@ -54,14 +56,19 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
     );
   }
 
+  // Security audit #2 (owner-approved, 4 Oct 2026): the one-time bot check
+  // comes first; until this browser has a pass for this poster, nothing
+  // else of the check-in loads.
+  const hasPass = await hasCheckinPass(token);
+
   // Migration 0074: no list of names is sent to the page -- names are
   // searched as they're typed, and only during check-in hours.
   const universities = flow.isServant ? [] : allUniversities;
-  const checkInWindow = flow.flowType === "check_in_and_intake" ? await getCheckInWindow(token) : null;
+  const checkInWindow = hasPass && flow.flowType === "check_in_and_intake" ? await getCheckInWindow(token) : null;
   const isOpen = checkInWindow?.isOpen ?? false;
   const rememberCookieName = flow.isServant ? SERVANT_CHECKIN_COOKIE : MEMBER_CHECKIN_COOKIE;
   const remembered =
-    flow.flowType === "check_in_and_intake" && isOpen
+    hasPass && flow.flowType === "check_in_and_intake" && isOpen
       ? parseRememberedCheckinPerson((await cookies()).get(rememberCookieName)?.value)
       : null;
   const rememberedPerson = remembered ? await getRememberedCheckInPerson(token, flow.isServant, remembered) : null;
@@ -96,21 +103,25 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
         <p className="mt-1 text-sm opacity-90">{flow.label}</p>
       </header>
       <main className="max-w-md mx-auto px-4 py-6">
-        <CheckInFlow
-          token={token}
-          isServant={flow.isServant}
-          flowType={flow.flowType}
-          isOpen={isOpen}
-          openingText={openingText}
-          universities={universities}
-          universityLabel={settings.university_label}
-          programLabel={settings.program_label}
-          groupLabel={settings.group_label}
-          memberLabel={settings.member_label}
-          groupName={flow.label}
-          serviceDayName={weekdayName(settings.service_weekday)}
-          rememberedPerson={rememberedPerson}
-        />
+        {!hasPass ? (
+          <CheckinGate token={token} />
+        ) : (
+          <CheckInFlow
+            token={token}
+            isServant={flow.isServant}
+            flowType={flow.flowType}
+            isOpen={isOpen}
+            openingText={openingText}
+            universities={universities}
+            universityLabel={settings.university_label}
+            programLabel={settings.program_label}
+            groupLabel={settings.group_label}
+            memberLabel={settings.member_label}
+            groupName={flow.label}
+            serviceDayName={weekdayName(settings.service_weekday)}
+            rememberedPerson={rememberedPerson}
+          />
+        )}
       </main>
     </div>
   );
