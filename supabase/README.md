@@ -69,6 +69,7 @@ For a brand-new environment, first `create schema if not exists qa;` (or `prod`)
 | `0079` | **Two-step sign-in** (owner-approved, 3 Oct 2026): `aal2_ok()`/`factor_ok()`; Church Admin, Admin and GC powers need the authenticator step (aal2); everything else needs it only for people who turned it on. `gate_info()` for the app's front door; `reset_person_authenticator()` (Admins/Church Admin) for a lost phone. Undo: `0079_down`. |
 | `0080a` | Audit types `CHECKIN_REGISTRATION` and `CHECKIN_SIGNUP_ALERT` (run and commit before 0080). |
 | `0080` | **Check-in poster protection** (security audit #2, owner-approved 4 Oct 2026): sign-ups stay open any time; field checks on every poster form; speed limits (600 requests per poster per 10 min, 300 searches per poster per 10 min, 25 sign-ups per poster per hour, 50 per ministry per hour); every poster sign-up is an audit entry, and more than 10 in an hour raises a `checkin_alerts` row + audit entry shown to Admins on the Dashboard; **server-only**: once `checkin_guard` holds the fingerprint of `CHECKIN_SERVER_KEY`, check-in functions refuse requests without that key. Undo: `0080_down`. |
+| `0081` | The two check-in audit types in each ministry's audit settings, so Audit Logs lists and filters them (always recorded; shown ticked and locked). Undo: `0081_down`. |
 
 **Refresh QA from production (0068) between 0069 in QA and 0069 in production:** it refuses (the new `groups.kind` column has no value in production yet) and changes nothing. It works again once production has 0069.
 

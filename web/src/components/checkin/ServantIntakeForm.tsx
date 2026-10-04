@@ -67,7 +67,6 @@ export function ServantIntakeForm({
       <p className="text-xs text-[#666]">
         Your info will be recorded. A coordinator will follow up to give you app access.
       </p>
-      {error && <p className="text-sm text-[#dc3545]">{error}</p>}
       <Field label="Full Name *">
         <input
           required
@@ -121,6 +120,13 @@ export function ServantIntakeForm({
           rows={2}
         />
       </Field>
+      {/* Next to Submit, where the person is (owner-reported: at the top of
+          a long form it went unseen). */}
+      {error && (
+        <p role="alert" className="rounded-md bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]">
+          {error}
+        </p>
+      )}
       <div className="flex gap-2 pt-2">
         {onBack && (
           <button

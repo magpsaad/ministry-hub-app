@@ -7,6 +7,11 @@ import { DateFilterModal } from "@/components/outreach/DateFilterModal";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
 
+/** Migration 0080: written by the database for every check-in poster
+ * sign-up and sign-up surge, whatever the switch says -- shown ticked and
+ * locked. */
+const ALWAYS_RECORDED = new Set(["CHECKIN_REGISTRATION", "CHECKIN_SIGNUP_ALERT"]);
+
 function formatWhen(iso: string, timeZone: string): string {
   return formatDateTimeInZone(iso, timeZone, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
@@ -16,16 +21,19 @@ export function AuditLogsInteractive({
   actionTypes,
   users,
   initialConfig,
+  initialActionType = "",
 }: {
   initialLogs: AuditLogRow[];
   actionTypes: string[];
   users: AuditLogUser[];
   initialConfig: AuditConfigRow[];
+  /** Opened from the Dashboard's check-in alert: already filtered. */
+  initialActionType?: string;
 }) {
   const timeZone = useTimezone();
   const [logs, setLogs] = useState(initialLogs);
   const [config, setConfig] = useState(initialConfig);
-  const [actionType, setActionType] = useState("");
+  const [actionType, setActionType] = useState(initialActionType);
   const [userId, setUserId] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -144,7 +152,8 @@ export function AuditLogsInteractive({
               <label key={c.action_type} className="flex items-center gap-2 text-xs py-1">
                 <input
                   type="checkbox"
-                  checked={c.enabled}
+                  checked={c.enabled || ALWAYS_RECORDED.has(c.action_type)}
+                  disabled={ALWAYS_RECORDED.has(c.action_type)}
                   onChange={(e) => handleToggleConfig(c.action_type, e.target.checked)}
                 />
                 <span className="font-mono text-[#666]">{c.action_type}</span>

@@ -14,6 +14,12 @@ export function CheckinAlertList({ alerts: initial, timeZone }: { alerts: Checki
   if (alerts.length === 0) return null;
 
   function markReviewed(id: string) {
+    if (
+      !confirm(
+        "Mark this alert reviewed? Do this only after checking the new sign-ups in Audit Logs -- the alert won't come back.",
+      )
+    )
+      return;
     setError(null);
     startTransition(async () => {
       const res = await reviewCheckinAlertAction(id);
@@ -40,20 +46,27 @@ export function CheckinAlertList({ alerts: initial, timeZone }: { alerts: Checki
               minute: "2-digit",
               timeZone,
             })}
-            ). Please check the new registrations are real &mdash; each one is listed in{" "}
-            <Link href="/admin/audit-logs" className="font-semibold text-brand underline">
-              Audit Logs
-            </Link>{" "}
-            as CHECKIN_REGISTRATION.
+            ).
           </p>
-          <button
-            type="button"
-            onClick={() => markReviewed(a.id)}
-            disabled={pending}
-            className="mt-2 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
-          >
-            Mark reviewed
-          </button>
+          <p className="mt-2 text-sm font-semibold text-[#721c24]">
+            Please open Audit Logs and check that each new sign-up is a real person. Delete any that aren&rsquo;t.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/admin/audit-logs?action=CHECKIN_REGISTRATION"
+              className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+            >
+              Open Audit Logs
+            </Link>
+            <button
+              type="button"
+              onClick={() => markReviewed(a.id)}
+              disabled={pending}
+              className="rounded-md border border-[#ccc] bg-white px-4 py-2 text-sm font-semibold text-[#555] hover:bg-[#f5f5f5] disabled:opacity-60"
+            >
+              Mark reviewed
+            </button>
+          </div>
         </div>
       ))}
       {error && <p className="text-sm text-[#dc3545]">{error}</p>}

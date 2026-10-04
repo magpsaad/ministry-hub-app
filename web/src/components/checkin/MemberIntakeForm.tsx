@@ -130,7 +130,6 @@ export function MemberIntakeForm({
   return (
     <form onSubmit={handleSubmit} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4 space-y-3">
       <h2 className="text-base font-bold text-brand">New {memberLabel} Registration</h2>
-      {error && <p className="text-sm text-[#dc3545]">{error}</p>}
       <Field label="Full Name *">
         <input
           required
@@ -221,6 +220,13 @@ export function MemberIntakeForm({
           rows={2}
         />
       </Field>
+      {/* Next to Submit, where the person is (owner-reported: at the top of
+          a long form it went unseen). */}
+      {error && (
+        <p role="alert" className="rounded-md bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]">
+          {error}
+        </p>
+      )}
       <div className="flex gap-2 pt-2">
         {onBack && (
           <button

@@ -12,7 +12,7 @@ import { AuditLogsInteractive } from "@/components/admin/AuditLogsInteractive";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §6.14/§6.1/§3.11 -- Admin Corner, Admins only. */
-export default async function AuditLogsPage() {
+export default async function AuditLogsPage({ searchParams }: { searchParams: Promise<{ action?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -25,10 +25,14 @@ export default async function AuditLogsPage() {
     );
   }
 
-  const [settings, logs, config, users] = await Promise.all([
+  // Opened from the Dashboard's check-in alert (?action=CHECKIN_REGISTRATION):
+  // start on that action. Only a known action type is used.
+  const { action } = await searchParams;
+  const config = await getAuditConfigAction();
+  const initialActionType = action && config.some((c) => c.action_type === action) ? action : "";
+  const [settings, logs, users] = await Promise.all([
     getAppSettings(),
-    getAuditLogsAction({}),
-    getAuditConfigAction(),
+    getAuditLogsAction(initialActionType ? { actionType: initialActionType } : {}),
     getAuditLogUsersAction(),
   ]);
 
@@ -55,6 +59,7 @@ export default async function AuditLogsPage() {
           actionTypes={config.map((c) => c.action_type)}
           users={users}
           initialConfig={config}
+          initialActionType={initialActionType}
         />
       </main>
     </div>
