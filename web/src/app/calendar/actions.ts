@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import type { CalendarEventType } from "@/lib/calendar";
 import { calendarBucket, ministryFilePath } from "@/lib/storage";
 import { getActiveMinistry } from "@/lib/ministry-context";
-import { logAudit } from "@/lib/audit";
 
 export type EventInput = {
   title: string;
@@ -20,7 +19,10 @@ export type EventInput = {
 };
 
 /** REQUIREMENTS.md §6.8 -- event creation/editing/deletion is open to all
- * Servants (confirmed intentional, not restricted); RLS enforces this. */
+ * Servants (confirmed intentional, not restricted); RLS enforces this
+ * (migration 0082: except people whose only role is Read-Only). The
+ * database itself writes the audit entry for every add/edit/delete and
+ * keeps deleted events in a 30-day recycle bin, so these actions don't log. */
 export async function createEventAction(input: EventInput) {
   const supabase = await createClient();
   const {
@@ -35,33 +37,26 @@ export async function createEventAction(input: EventInput) {
     .single();
   if (error) return { error: error.message, id: null };
 
-  await logAudit(user.id, "CALENDAR_EVENT_CREATED", { details: { eventId: data.id } });
   revalidatePath("/calendar");
   return { error: null, id: data.id as string };
 }
 
 export async function updateEventAction(eventId: string, input: EventInput) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { error } = await supabase.from("service_calendar_events").update(input).eq("id", eventId);
+  const { data, error } = await supabase.from("service_calendar_events").update(input).eq("id", eventId).select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to change this event." };
 
-  if (user) await logAudit(user.id, "CALENDAR_EVENT_UPDATED", { details: { eventId } });
   revalidatePath("/calendar");
   return { error: null };
 }
 
 export async function deleteEventAction(eventId: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { error } = await supabase.from("service_calendar_events").delete().eq("id", eventId);
+  const { data, error } = await supabase.from("service_calendar_events").delete().eq("id", eventId).select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to delete this event." };
 
-  if (user) await logAudit(user.id, "CALENDAR_EVENT_DELETED", { details: { eventId } });
   revalidatePath("/calendar");
   return { error: null };
 }

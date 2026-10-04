@@ -8,7 +8,8 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { CalendarMaintenanceInteractive } from "@/components/admin/CalendarMaintenanceInteractive";
-import { getHolidayRulesAction } from "@/app/admin/calendar-maintenance/actions";
+import { getHolidayRulesAction, getDeletedEventsAction } from "@/app/admin/calendar-maintenance/actions";
+import { DeletedEventsBin } from "@/components/admin/DeletedEventsBin";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
 /** REQUIREMENTS.md §6.8/§6.1 -- Admin Corner, Admins only. */
@@ -25,7 +26,11 @@ export default async function CalendarMaintenancePage() {
     );
   }
 
-  const [settings, initialRules] = await Promise.all([getAppSettings(), getHolidayRulesAction()]);
+  const [settings, initialRules, deletedEvents] = await Promise.all([
+    getAppSettings(),
+    getHolidayRulesAction(),
+    getDeletedEventsAction(),
+  ]);
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -44,8 +49,9 @@ export default async function CalendarMaintenancePage() {
         <p className="mt-1 text-sm opacity-90">Calendar Maintenance</p>
         <HeaderWordmark />
       </header>
-      <main className="max-w-2xl mx-auto px-4 py-6">
+      <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         <CalendarMaintenanceInteractive defaultYear={new Date().getFullYear()} initialRules={initialRules} />
+        <DeletedEventsBin initial={deletedEvents} />
       </main>
     </div>
   );

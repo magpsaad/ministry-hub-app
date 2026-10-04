@@ -68,14 +68,18 @@ export async function removeServantPhotoAction(servantId: string, photoPath: str
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
 
-  // A Google profile picture link isn't a stored file -- nothing to delete.
-  if (!isExternalPhotoUrl(photoPath)) {
-    const { error: removeError } = await supabase.storage.from(photosBucket()).remove([photoPath]);
-    if (removeError) return { error: removeError.message };
-  }
-
-  const { error } = await supabase.from("profiles").update({ photo_path: null }).eq("id", servantId);
+  void photoPath;
+  // Security audit #3 (migration 0082): change the record first (refused
+  // for anyone who can't edit this servant), then delete the file it held.
+  const { data: before } = await supabase.from("profiles").select("photo_path").eq("id", servantId).maybeSingle();
+  const { data: updated, error } = await supabase.from("profiles").update({ photo_path: null }).eq("id", servantId).select("id");
   if (error) return { error: error.message };
+  if (!updated || updated.length === 0) return { error: "You don't have permission to make this change." };
+
+  // A Google profile picture link isn't a stored file -- nothing to delete.
+  if (before?.photo_path && !isExternalPhotoUrl(before.photo_path)) {
+    await supabase.storage.from(photosBucket()).remove([before.photo_path]);
+  }
 
   await logAudit(user.id, "SERVANT_PHOTO_UPLOADED", { details: { servantId, removed: true } });
   revalidatePath("/servant-profiles");

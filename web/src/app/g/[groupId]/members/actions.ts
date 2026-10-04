@@ -238,14 +238,23 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
   return { error: null, photoPath: path };
 }
 
+/** Security audit #3 (migration 0082): the record is changed FIRST -- the
+ * database refuses it for anyone who can't edit this youth (Read-Only
+ * included) -- and only then is the file deleted (it used to be the other
+ * way round, so a refused removal still lost the file). The path removed is
+ * the one the record held, never one sent by the browser. */
 export async function removeMemberPhotoAction(memberId: string, groupId: string, photoPath: string) {
+  void photoPath;
   const supabase = await createClient();
-  const { error: removeError } = await supabase.storage.from(photosBucket()).remove([photoPath]);
-  if (removeError) return { error: removeError.message };
+  const { data: before } = await supabase.from("members").select("photo_path").eq("id", memberId).maybeSingle();
 
   const { data, error } = await supabase.from("members").update({ photo_path: null }).eq("id", memberId).select("id");
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
+
+  if (before?.photo_path) {
+    await supabase.storage.from(photosBucket()).remove([before.photo_path]);
+  }
 
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);

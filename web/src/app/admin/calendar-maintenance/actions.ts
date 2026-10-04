@@ -118,3 +118,45 @@ export async function toggleHolidayRuleAction(id: string, isActive: boolean) {
   revalidatePath("/admin/calendar-maintenance");
   return { error: null };
 }
+
+/** Migration 0082 -- the calendar's 30-day recycle bin (Admins only; the
+ * database only shows it to them). */
+export type DeletedEvent = {
+  id: string;
+  title: string;
+  start_date: string | null;
+  deleted_at: string;
+  deleted_by_name: string | null;
+};
+
+export async function getDeletedEventsAction(): Promise<DeletedEvent[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("calendar_events_deleted")
+    .select("id, event, deleted_at, deleted_by")
+    .order("deleted_at", { ascending: false })
+    .limit(200);
+  const rows = (data ?? []) as { id: string; event: { title?: string; start_date?: string }; deleted_at: string; deleted_by: string | null }[];
+  const ids = [...new Set(rows.map((r) => r.deleted_by).filter((x): x is string => !!x))];
+  const names = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: people } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+    for (const p of (people ?? []) as { id: string; full_name: string }[]) names.set(p.id, p.full_name);
+  }
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.event?.title ?? "(untitled)",
+    start_date: r.event?.start_date ?? null,
+    deleted_at: r.deleted_at,
+    deleted_by_name: r.deleted_by ? (names.get(r.deleted_by) ?? null) : null,
+  }));
+}
+
+export async function restoreDeletedEventAction(id: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("restore_calendar_event", { p_id: id });
+  if (error) return { error: error.message };
+  revalidatePath("/calendar");
+  revalidatePath("/admin/calendar-maintenance");
+  return { error: null };
+}
