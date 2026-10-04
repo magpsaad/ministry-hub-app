@@ -9,6 +9,7 @@ import {
   revokeRoleAction,
   removeProfileCompletelyAction,
   mergeServantAccountsAction,
+  setPersonDeactivatedAction,
 } from "@/app/admin/access-maintenance/actions";
 
 const ROLE_LABELS: Record<AccessRoleRow["role"], string> = {
@@ -175,6 +176,33 @@ export function AccessMaintenanceInteractive({
     });
   }
 
+  /** Owner-requested (3 Oct 2026): someone who no longer serves is
+   * Deactivated rather than removed -- history kept, roles removed, and no
+   * role can be given until an Admin reactivates them (migration 0077). */
+  function handleSetDeactivated(deactivated: boolean) {
+    if (!selectedProfileId || !selectedProfile) return;
+    const name = selectedProfile.full_name;
+    const question = deactivated
+      ? `Deactivate ${name}? Their roles here are removed and nobody can give them access again until they're reactivated. Their history (attendance, outreach, assignments) is kept.`
+      : `Reactivate ${name}? They get no role back automatically -- grant one below if they should have access.`;
+    if (!confirm(question)) return;
+    setError(null);
+    const personId = selectedProfileId;
+    startTransition(async () => {
+      const res = await setPersonDeactivatedAction(personId, deactivated);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.id === personId ? { ...p, deactivated_at: deactivated ? (res.deactivatedAt ?? new Date().toISOString()) : null } : p,
+        ),
+      );
+      if (deactivated) setRoles((prev) => prev.filter((r) => r.user_id !== personId));
+    });
+  }
+
   /** Owner-requested: for a servant who ended up with two accounts (a
    * different email each time). The currently-selected person is "the one
    * to keep"; this picks the duplicate to merge away. Unlike Remove
@@ -275,7 +303,18 @@ export function AccessMaintenanceInteractive({
                 selectedProfileId === p.id ? "bg-brand text-white" : "hover:bg-[#f5f5f5] text-[#333]"
               }`}
             >
-              <p className="font-medium">{p.full_name}</p>
+              <p className={`font-medium ${p.deactivated_at && selectedProfileId !== p.id ? "text-[#999]" : ""}`}>
+                {p.full_name}
+                {p.deactivated_at && (
+                  <span
+                    className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                      selectedProfileId === p.id ? "bg-white/20 text-white" : "bg-[#eee] text-[#777]"
+                    }`}
+                  >
+                    Deactivated
+                  </span>
+                )}
+              </p>
               <p className={`text-xs ${selectedProfileId === p.id ? "text-white/70" : "text-[#666]"}`}>{p.email}</p>
             </button>
           ))}
@@ -304,6 +343,17 @@ export function AccessMaintenanceInteractive({
                 >
                   Merge Duplicate Into This
                 </button>
+                {!selectedProfile.deactivated_at && (
+                  <button
+                    type="button"
+                    onClick={() => handleSetDeactivated(true)}
+                    disabled={pending}
+                    title="No longer serving: remove their access but keep their history"
+                    className="text-xs font-semibold text-[#b26a00] hover:underline disabled:opacity-60"
+                  >
+                    Deactivate
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleRemoveProfile}
@@ -316,6 +366,28 @@ export function AccessMaintenanceInteractive({
               </div>
             </div>
             {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
+
+            {selectedProfile.deactivated_at && (
+              <div className="mb-4 rounded-md border border-[#e0e0e0] bg-[#f7f7f7] p-3 text-sm text-[#555]">
+                <p>
+                  <strong className="text-[#333]">Deactivated</strong> on{" "}
+                  {new Date(selectedProfile.deactivated_at).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  . Their history is kept, but they can&rsquo;t be given a role until they&rsquo;re reactivated.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleSetDeactivated(false)}
+                  disabled={pending}
+                  className="mt-2 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+                >
+                  Reactivate
+                </button>
+              </div>
+            )}
 
             {showMerge && (
               <div className="mb-4 rounded-md border border-[#ddd] p-3 bg-[#f9f9f9]">
@@ -372,6 +444,7 @@ export function AccessMaintenanceInteractive({
               {selectedRoles.length === 0 && <p className="py-2 text-sm text-[#666]">No roles granted yet.</p>}
             </div>
 
+            {!selectedProfile.deactivated_at && (
             <div className="border-t border-[#f0f0f0] pt-3 space-y-2">
               <h3 className="text-sm font-bold text-brand">Grant a Role</h3>
               <select
@@ -408,6 +481,7 @@ export function AccessMaintenanceInteractive({
                 Grant
               </button>
             </div>
+            )}
           </>
         )}
       </div>

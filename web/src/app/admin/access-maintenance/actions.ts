@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 
-export type AccessProfile = { id: string; full_name: string; email: string | null };
+export type AccessProfile = { id: string; full_name: string; email: string | null; deactivated_at: string | null };
 
 export type AccessRoleRow = {
   id: string;
@@ -16,7 +16,7 @@ export type AccessRoleRow = {
 
 export async function getAllProfilesAction(): Promise<AccessProfile[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("profiles").select("id, full_name, email").order("full_name");
+  const { data } = await supabase.from("profiles").select("id, full_name, email, deactivated_at").order("full_name");
   return data ?? [];
 }
 
@@ -53,7 +53,7 @@ export async function addPersonByEmailAction(email: string) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, email")
+    .select("id, full_name, email, deactivated_at")
     .eq("id", personId as string)
     .maybeSingle();
 
@@ -147,6 +147,33 @@ export async function removeProfileCompletelyAction(profileId: string) {
   await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { details: { action: "remove_profile", profileId } });
   revalidatePath("/admin/access-maintenance");
   return { error: null };
+}
+
+/** Owner-requested (3 Oct 2026): someone who no longer serves is marked
+ * Deactivated instead of removed -- their history stays, in case they come
+ * back. Deactivating also removes every role they hold here; while
+ * deactivated nobody can give them a role by any path (migration 0077's
+ * guard), until an Admin reactivates them. Reactivating gives no role back. */
+export async function setPersonDeactivatedAction(profileId: string, deactivated: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in", deactivatedAt: null };
+
+  const { error } = await supabase.rpc("set_person_deactivated", {
+    p_profile_id: profileId,
+    p_deactivated: deactivated,
+  });
+  if (error) return { error: error.message, deactivatedAt: null };
+
+  const { data: profile } = await supabase.from("profiles").select("deactivated_at").eq("id", profileId).maybeSingle();
+
+  await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", {
+    details: { action: deactivated ? "deactivate" : "reactivate", userId: profileId },
+  });
+  revalidatePath("/admin/access-maintenance");
+  return { error: null, deactivatedAt: (profile?.deactivated_at as string | null) ?? null };
 }
 
 /** Owner-requested: a servant with two accounts (signed in with a different
