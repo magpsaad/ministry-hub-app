@@ -10,6 +10,7 @@ import {
   removeProfileCompletelyAction,
   mergeServantAccountsAction,
   setPersonDeactivatedAction,
+  resetAuthenticatorAction,
 } from "@/app/admin/access-maintenance/actions";
 
 const ROLE_LABELS: Record<AccessRoleRow["role"], string> = {
@@ -58,6 +59,7 @@ export function AccessMaintenanceInteractive({
   const [newGroupId, setNewGroupId] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSearch, setMergeSearch] = useState("");
   const [addEmail, setAddEmail] = useState("");
@@ -203,6 +205,30 @@ export function AccessMaintenanceInteractive({
     });
   }
 
+  /** Owner-approved sign-in change B (migration 0079): for someone who lost
+   * or replaced the phone with their authenticator app. */
+  function handleResetAuthenticator() {
+    if (!selectedProfileId || !selectedProfile) return;
+    const name = selectedProfile.full_name;
+    if (
+      !confirm(
+        `Reset ${name}'s authenticator app? Only do this if you know it's really them asking (for example, a new phone). At their next sign-in they'll set it up again.`,
+      )
+    )
+      return;
+    setError(null);
+    setNotice(null);
+    const personId = selectedProfileId;
+    startTransition(async () => {
+      const res = await resetAuthenticatorAction(personId);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setNotice(res.cleared > 0 ? `${name}'s authenticator was reset.` : `${name} has no authenticator set up.`);
+    });
+  }
+
   /** Owner-requested: for a servant who ended up with two accounts (a
    * different email each time). The currently-selected person is "the one
    * to keep"; this picks the duplicate to merge away. Unlike Remove
@@ -296,6 +322,7 @@ export function AccessMaintenanceInteractive({
               onClick={() => {
                 setSelectedProfileId(p.id);
                 setError(null);
+                setNotice(null);
                 setShowMerge(false);
                 setMergeSearch("");
               }}
@@ -327,9 +354,9 @@ export function AccessMaintenanceInteractive({
           <p className="text-sm text-[#666]">Select a person to view/edit their roles.</p>
         ) : (
           <>
-            <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-brand">{selectedProfile.full_name}</h2>
-              <div className="flex shrink-0 gap-3">
+              <div className="flex flex-wrap justify-end gap-x-3 gap-y-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -342,6 +369,15 @@ export function AccessMaintenanceInteractive({
                   className="text-xs font-semibold text-brand hover:underline disabled:opacity-60"
                 >
                   Merge Duplicate Into This
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetAuthenticator}
+                  disabled={pending}
+                  title="Lost or replaced phone: clear their authenticator app so they can set it up again"
+                  className="text-xs font-semibold text-brand hover:underline disabled:opacity-60"
+                >
+                  Reset Authenticator
                 </button>
                 {!selectedProfile.deactivated_at && (
                   <button
@@ -366,6 +402,7 @@ export function AccessMaintenanceInteractive({
               </div>
             </div>
             {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
+            {notice && <p className="mb-3 text-sm text-[#155724]">{notice}</p>}
 
             {selectedProfile.deactivated_at && (
               <div className="mb-4 rounded-md border border-[#e0e0e0] bg-[#f7f7f7] p-3 text-sm text-[#555]">

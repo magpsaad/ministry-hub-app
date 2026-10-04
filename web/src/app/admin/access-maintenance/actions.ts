@@ -176,6 +176,26 @@ export async function setPersonDeactivatedAction(profileId: string, deactivated:
   return { error: null, deactivatedAt: (profile?.deactivated_at as string | null) ?? null };
 }
 
+/** Owner-approved sign-in change B (3 Oct 2026, migration 0079): someone who
+ * lost or replaced the phone with their authenticator app. Clears it; at
+ * their next sign-in they set it up again on the new phone. */
+export async function resetAuthenticatorAction(profileId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in", cleared: 0 };
+
+  const { data, error } = await supabase.rpc("reset_person_authenticator", { p_user_id: profileId });
+  if (error) return { error: error.message, cleared: 0 };
+
+  const cleared = (data as number | null) ?? 0;
+  if (cleared > 0) {
+    await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { details: { action: "reset_authenticator", userId: profileId } });
+  }
+  return { error: null, cleared };
+}
+
 /** Owner-requested: a servant with two accounts (signed in with a different
  * email) -- unlike Remove Person, both accounts may have real history, and
  * neither side's should be lost. `keepId` stays; `removeId`'s attendance,

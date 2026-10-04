@@ -26,6 +26,7 @@ custom SMTP turned on first.)
 | Reset Password | Reset your Ministry Hub password | `reset-password.html` |
 | Reauthentication | Your Ministry Hub verification code | `reauthentication.html` |
 
-Magic Link and Reauthentication show the 6-digit code (`{{ .Token }}`) for the
-sign-in-by-code work; the others use the confirmation link
-(`{{ .ConfirmationURL }}`).
+Confirm signup, Magic Link and Reauthentication show the 6-digit code
+(`{{ .Token }}`): the app signs people in with an emailed code (no passwords),
+and a brand-new person's first code arrives in the Confirm signup email. The
+others use the confirmation link (`{{ .ConfirmationURL }}`).

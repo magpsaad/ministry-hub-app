@@ -7,7 +7,13 @@ import { resolveAddress, ministryHeaders } from "@/lib/ministry-context";
  * public anonymous Checkin flow, the OAuth callback, and the registration
  * page itself (redirecting there again would loop). Everything else is
  * gated. */
-const GATE_EXEMPT_PREFIXES = ["/login", "/checkin", "/auth", "/register"];
+const GATE_EXEMPT_PREFIXES = ["/login", "/checkin", "/auth", "/register", "/security"];
+
+/** Owner-approved sign-in change B (3 Oct 2026, migration 0079): the
+ * authenticator-app step. Reachable before it's done: signing in/out, the
+ * public check-in, and the Account Security pages themselves. */
+const SECURITY_PREFIX = "/security";
+const TWO_STEP_EXEMPT_PREFIXES = ["/login", "/auth", "/checkin", SECURITY_PREFIX];
 
 /** Fetched without a session (a browser checking for an installable PWA, or
  * an app-store-style crawler) -- must never be redirected regardless of
@@ -110,18 +116,50 @@ export async function updateSession(request: NextRequest) {
   // exactly this spot.
   const { data: claimsData } = await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub ?? null;
+  const aal = (claimsData?.claims as { aal?: string } | undefined)?.aal ?? "aal1";
+
+  // What the front door needs to know about this person, read once and
+  // only when it matters (migration 0079's gate_info(): Church Admin, and
+  // whether their role here requires the authenticator step -- read
+  // regardless of that step, which is what is_church_admin() now needs).
+  let gateCheck: Promise<{ church_admin: boolean; mfa_required: boolean }> | null = null;
+  const gateInfo = () =>
+    (gateCheck ??= userId
+      ? Promise.resolve(supabase.rpc("gate_info")).then(({ data }) => {
+          const row = (data as { church_admin: boolean; mfa_required: boolean }[] | null)?.[0];
+          return { church_admin: row?.church_admin === true, mfa_required: row?.mfa_required === true };
+        })
+      : Promise.resolve({ church_admin: false, mfa_required: false }));
+
+  /** Sends someone who hasn't done the authenticator step to it: to enter
+   * a code if they have one set up, or to set one up if their role needs
+   * it (or `alwaysRequired`, the console). Null when they may carry on. */
+  const twoStepRedirect = async (alwaysRequired: boolean): Promise<NextResponse | null> => {
+    if (!userId || aal === "aal2" || matchesPrefix(pathname, TWO_STEP_EXEMPT_PREFIXES)) return null;
+    const next = encodeURIComponent(`${pathname}${request.nextUrl.search}`);
+    const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (level?.nextLevel === "aal2") {
+      return NextResponse.redirect(new URL(`${SECURITY_PREFIX}/verify?next=${next}`, request.url));
+    }
+    if (alwaysRequired || (await gateInfo()).mfa_required) {
+      return NextResponse.redirect(new URL(`${SECURITY_PREFIX}/setup?next=${next}`, request.url));
+    }
+    return null;
+  };
 
   if (address.kind === "console") {
     // Only the console and signing in/out exist on this address. Whether
     // the signed-in person is actually a Church Admin is checked by the
     // console pages themselves (and again by every console function).
-    if (!matchesPrefix(pathname, [CONSOLE_PREFIX, "/login", "/auth"])) {
+    if (!matchesPrefix(pathname, [CONSOLE_PREFIX, "/login", "/auth", SECURITY_PREFIX])) {
       return NextResponse.redirect(new URL(CONSOLE_PREFIX, request.url));
     }
-    if (!userId && matchesPrefix(pathname, [CONSOLE_PREFIX])) {
+    if (!userId && matchesPrefix(pathname, [CONSOLE_PREFIX, SECURITY_PREFIX])) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    return response;
+    // The console is Church-Admin-only, and that role always needs the
+    // authenticator step.
+    return (await twoStepRedirect(true)) ?? response;
   }
 
   // A ministry's address never serves the console.
@@ -129,12 +167,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Asked at most once per request, and only when it matters.
-  let churchAdminCheck: Promise<boolean> | null = null;
-  const isChurchAdmin = () =>
-    (churchAdminCheck ??= userId
-      ? Promise.resolve(supabase.rpc("is_church_admin")).then(({ data }) => data === true)
-      : Promise.resolve(false));
+  const isChurchAdmin = async () => (await gateInfo()).church_admin;
 
   if (!address.isActive && !matchesPrefix(pathname, INACTIVE_OPEN_PREFIXES)) {
     if (!(await isChurchAdmin())) {
@@ -146,6 +179,9 @@ export async function updateSession(request: NextRequest) {
   if (!userId && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
+
+  const twoStep = await twoStepRedirect(false);
+  if (twoStep) return twoStep;
 
   if (userId && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
     const [{ data: profile }, { count: roleCount }, churchAdmin] = await Promise.all([

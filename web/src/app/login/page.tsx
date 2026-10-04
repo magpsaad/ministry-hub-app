@@ -1,12 +1,26 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getBranding } from "@/lib/branding";
 import { createClient } from "@/lib/supabase/server";
 import { AppLogo } from "@/components/AppLogo";
 import { ClearMenuCache } from "@/components/ClearMenuCache";
 import { MinistryHubLogo, MinistryHubName } from "@/components/MinistryHubBrand";
-import { signInWithGoogle, signInWithPassword, signUpWithPassword, requestPasswordReset } from "./actions";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { signInWithGoogle, requestEmailCode, resendEmailCode, verifyEmailCode, startOver } from "./actions";
+import { CODE_EMAIL_COOKIE, loginError, loginMessage, maskEmail } from "./messages";
 
+const INPUT =
+  "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
+const PRIMARY =
+  "w-full rounded-md bg-brand py-3 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]";
+const SECONDARY =
+  "w-full rounded-md border border-brand bg-white py-3 text-sm font-semibold text-brand hover:bg-[#f0f4f8] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]";
+
+/** Owner-approved sign-in change A (3 Oct 2026): "Continue with Google" or
+ * an emailed 6-digit code -- no passwords. Three steps on one page:
+ * sign in (email), "New here?" (name + email), and the code step. Messages
+ * come only from fixed codes (./messages.ts), never from the address. */
 export default async function LoginPage({
   searchParams,
 }: {
@@ -19,9 +33,11 @@ export default async function LoginPage({
   if (user) redirect("/");
 
   const settings = await getBranding();
-  const { error, message, mode } = await searchParams;
-  const isSignUp = mode === "signup";
-  const isForgot = mode === "forgot";
+  const { error: errorCode, message: messageCode, mode } = await searchParams;
+  const error = loginError(errorCode);
+  const message = loginMessage(messageCode);
+  const codeEmail = (await cookies()).get(CODE_EMAIL_COOKIE)?.value ?? null;
+  const step = mode === "code" && codeEmail ? "code" : mode === "signup" ? "signup" : "signin";
 
   return (
     <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] px-4 py-12">
@@ -47,44 +63,51 @@ export default async function LoginPage({
             </div>
           )}
 
-          {isForgot ? (
+          {step === "code" ? (
             <>
-              <p className="mb-4 text-sm text-[#666]">
-                Enter your email and we&apos;ll send you a link to reset your password.
+              <h2 className="text-base font-bold text-[#333]">Check your email</h2>
+              <p className="mt-1 mb-4 text-sm text-[#666]">
+                If <strong className="text-[#333]">{maskEmail(codeEmail!)}</strong> has an account, we&apos;ve sent
+                it a 6-digit code from Ministry Hub. It can take a minute &mdash; check your spam folder too.
               </p>
-              <form action={requestPasswordReset} className="space-y-3">
+              <form action={verifyEmailCode} className="space-y-3">
                 <div>
-                  <label className="block text-sm font-semibold mb-1" htmlFor="email">
-                    Email
+                  <label className="block text-sm font-semibold mb-1" htmlFor="code">
+                    Code
                   </label>
                   <input
-                    id="email"
-                    name="email"
-                    type="email"
+                    id="code"
+                    name="code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9 ]{6,8}"
+                    maxLength={8}
                     required
-                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
+                    autoFocus
+                    className={`${INPUT} text-center text-lg tracking-[0.4em]`}
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="w-full rounded-md bg-brand py-3 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-                >
-                  Send reset link
+                <button type="submit" className={PRIMARY}>
+                  Sign in
                 </button>
               </form>
-              <p className="mt-4 text-center text-sm text-[#666]">
-                <Link href="/login" className="font-semibold text-brand">
-                  Back to sign in
-                </Link>
-              </p>
+              <form action={resendEmailCode} className="mt-4 space-y-2">
+                <TurnstileWidget />
+                <button type="submit" className="w-full text-sm font-semibold text-brand hover:underline">
+                  Send a new code
+                </button>
+              </form>
+              <form action={startOver} className="mt-1">
+                <button type="submit" className="w-full text-sm text-[#666] hover:underline">
+                  Use a different email
+                </button>
+              </form>
             </>
           ) : (
             <>
               <form action={signInWithGoogle}>
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-2 rounded-md bg-brand py-3 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-                >
+                <button type="submit" className={`${PRIMARY} flex items-center justify-center gap-2`}>
                   <GoogleIcon />
                   Continue with Google
                 </button>
@@ -96,63 +119,32 @@ export default async function LoginPage({
                 <div className="h-px flex-1 bg-[#eee]" />
               </div>
 
-              <form action={isSignUp ? signUpWithPassword : signInWithPassword} className="space-y-3">
-                {isSignUp && (
-                  <div>
-                    <label className="block text-sm font-semibold mb-1" htmlFor="full_name">
-                      Full name
-                    </label>
-                    <input
-                      id="full_name"
-                      name="full_name"
-                      type="text"
-                      required
-                      className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
-                    />
-                  </div>
+              <form action={requestEmailCode} className="space-y-3">
+                {step === "signup" && (
+                  <>
+                    <input type="hidden" name="create" value="1" />
+                    <div>
+                      <label className="block text-sm font-semibold mb-1" htmlFor="full_name">
+                        Full name
+                      </label>
+                      <input id="full_name" name="full_name" type="text" required maxLength={120} className={INPUT} />
+                    </div>
+                  </>
                 )}
                 <div>
                   <label className="block text-sm font-semibold mb-1" htmlFor="email">
                     Email
                   </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
-                  />
+                  <input id="email" name="email" type="email" required autoComplete="email" className={INPUT} />
                 </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-sm font-semibold" htmlFor="password">
-                      Password
-                    </label>
-                    {!isSignUp && (
-                      <Link href="/login?mode=forgot" className="text-xs font-semibold text-brand">
-                        Forgot password?
-                      </Link>
-                    )}
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    minLength={6}
-                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full rounded-md border border-brand bg-white py-3 text-sm font-semibold text-brand hover:bg-[#f0f4f8] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-                >
-                  {isSignUp ? "Create account" : "Sign in"}
+                <TurnstileWidget />
+                <button type="submit" className={SECONDARY}>
+                  {step === "signup" ? "Create account — email me a code" : "Email me a sign-in code"}
                 </button>
               </form>
 
               <p className="mt-4 text-center text-sm text-[#666]">
-                {isSignUp ? (
+                {step === "signup" ? (
                   <>
                     Already have an account?{" "}
                     <Link href="/login" className="font-semibold text-brand">

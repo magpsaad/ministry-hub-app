@@ -139,6 +139,7 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
               {link("/calendar", "Service Calendar")}
               {link("/qr-codes", "Checkin - QR Codes")}
               {link("/version-control", "Release History")}
+              {link("/security", "Account Security")}
             </Section>
 
             {data.isCoordinator && (
