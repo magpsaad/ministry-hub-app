@@ -11,6 +11,7 @@ import {
   mergeServantAccountsAction,
   setPersonDeactivatedAction,
   resetAuthenticatorAction,
+  resetUnlockDevicesAction,
 } from "@/app/admin/access-maintenance/actions";
 
 const ROLE_LABELS: Record<AccessRoleRow["role"], string> = {
@@ -229,6 +230,23 @@ export function AccessMaintenanceInteractive({
     });
   }
 
+  function handleResetUnlockDevices() {
+    if (!selectedProfileId || !selectedProfile) return;
+    const name = selectedProfile.full_name;
+    if (!confirm(`Remove Face ID / fingerprint unlock from all of ${name}'s devices (for example, a lost phone)? They can still unlock with an email code.`)) return;
+    setError(null);
+    setNotice(null);
+    const personId = selectedProfileId;
+    startTransition(async () => {
+      const res = await resetUnlockDevicesAction(personId);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setNotice(res.cleared > 0 ? `Removed Face ID unlock from ${res.cleared} of ${name}'s devices.` : `${name} has no devices set up for Face ID unlock.`);
+    });
+  }
+
   /** Owner-requested: for a servant who ended up with two accounts (a
    * different email each time). The currently-selected person is "the one
    * to keep"; this picks the duplicate to merge away. Unlike Remove
@@ -378,6 +396,15 @@ export function AccessMaintenanceInteractive({
                   className="text-xs font-semibold text-brand hover:underline disabled:opacity-60"
                 >
                   Reset Authenticator
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetUnlockDevices}
+                  disabled={pending}
+                  title="Lost or replaced phone: remove Face ID / fingerprint unlock from all their devices"
+                  className="text-xs font-semibold text-brand hover:underline disabled:opacity-60"
+                >
+                  Remove Face ID Devices
                 </button>
                 {!selectedProfile.deactivated_at && (
                   <button

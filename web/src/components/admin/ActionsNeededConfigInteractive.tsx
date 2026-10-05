@@ -13,6 +13,7 @@ import { ThemePalettePicker } from "@/components/admin/ThemePalettePicker";
 import type { AttendanceWindowSettings } from "@/lib/app-settings";
 import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive";
 import { levelText } from "@/lib/group-names";
+import { LOCK_MINUTE_CHOICES } from "@/lib/screen-lock";
 
 // ISO weekday numbering (Monday=1..Sunday=7), matching app_settings.service_weekday.
 const WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -407,6 +408,44 @@ export function ActionsNeededConfigInteractive({
           onChange={(e) => updateAppField("sub_coordinator_auto_servant", e.target.checked)}
         />
         Coordinators automatically become Servants
+      </label>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
+
+    {/* Owner-approved (5 Oct 2026, migration 0089): the screen lock. */}
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+      <h2 className="text-lg font-bold text-brand mb-1">Screen Lock</h2>
+      <p className="text-sm text-[#666] mb-3">
+        Locks the app on a servant&rsquo;s phone or computer after a few minutes without use, so nobody who picks it up can
+        see {appSettings.member_label.toLowerCase()} details. It also hides the app while it&rsquo;s in the background.
+        Servants unlock it with Face ID, a fingerprint or their device&rsquo;s PIN (once they turn that on in Account
+        Security), their authenticator code, or by signing in again. Applies to everyone, Admins and GCs included.
+      </p>
+      <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
+        Lock after
+        <select
+          value={appSettings.idle_lock_minutes ?? ""}
+          onChange={(e) => updateAppField("idle_lock_minutes", e.target.value === "" ? null : Number(e.target.value))}
+          className="rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+        >
+          <option value="">Off</option>
+          {LOCK_MINUTE_CHOICES.map((m) => (
+            <option key={m} value={m}>
+              {m} minutes
+            </option>
+          ))}
+        </select>
+        without use
       </label>
       <div className="flex items-center gap-3">
         <button

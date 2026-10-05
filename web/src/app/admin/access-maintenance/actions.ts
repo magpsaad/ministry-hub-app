@@ -196,6 +196,26 @@ export async function resetAuthenticatorAction(profileId: string) {
   return { error: null, cleared };
 }
 
+/** Screen lock (migration 0089): a lost or replaced phone -- removes every
+ * device this person turned Face ID / fingerprint unlock on for. They can
+ * still unlock with an email code, and set Face ID up again on a new phone. */
+export async function resetUnlockDevicesAction(profileId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in", cleared: 0 };
+
+  const { data, error } = await supabase.rpc("reset_person_unlock_devices", { p_user_id: profileId });
+  if (error) return { error: error.message, cleared: 0 };
+
+  const cleared = (data as number | null) ?? 0;
+  if (cleared > 0) {
+    await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { details: { action: "reset_face_id_unlock", userId: profileId } });
+  }
+  return { error: null, cleared };
+}
+
 /** Owner-requested: a servant with two accounts (signed in with a different
  * email) -- unlike Remove Person, both accounts may have real history, and
  * neither side's should be lost. `keepId` stays; `removeId`'s attendance,

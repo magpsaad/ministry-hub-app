@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveMinistry } from "@/lib/ministry-context";
 import { brandingBucket, brandingPublicUrl, ministryFilePath } from "@/lib/storage";
 import { getAttendanceWindowSettings, type AttendanceWindowSettings, type AppSettings } from "@/lib/app-settings";
+import { LOCK_MINUTE_CHOICES } from "@/lib/screen-lock";
 
 export type ActionsNeededConfigRow = {
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
@@ -309,6 +310,9 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   if (input.checkin_opens_at.slice(0, 5) >= input.checkin_closes_at.slice(0, 5)) {
     return { error: "Check-in must open before it closes." };
   }
+  if (input.idle_lock_minutes !== null && !(LOCK_MINUTE_CHOICES as readonly number[]).includes(input.idle_lock_minutes)) {
+    return { error: "Choose how many minutes before the screen locks, or Off." };
+  }
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: input.timezone });
   } catch {
@@ -343,6 +347,7 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     level_number_offset: input.level_number_offset,
     sub_coordinator_auto_servant: input.sub_coordinator_auto_servant,
     show_parent_contacts: input.show_parent_contacts,
+    idle_lock_minutes: input.idle_lock_minutes,
   };
   // Saved by this ministry's code (the settings table has one row per
   // ministry now, MULTI_TENANT_PLAN.md §2.5 #1); the security rule would

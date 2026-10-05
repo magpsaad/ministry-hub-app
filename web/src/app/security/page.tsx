@@ -11,6 +11,8 @@ import { RemoveAuthenticatorButton } from "./RemoveAuthenticatorButton";
 import { getBranding } from "@/lib/branding";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import { firstGateRow } from "@/lib/agreement";
+import { relyingParty } from "@/lib/screen-lock-server";
+import { FaceIdCard, type UnlockDeviceRow } from "./FaceIdCard";
 
 /** Account Security (owner-approved sign-in changes B and F, 3 Oct 2026):
  * the optional -- or, for Admins, General Coordinators and the Church
@@ -23,7 +25,8 @@ export default async function AccountSecurityPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: factors }, { data: gate }, { data: agreementData }, { data: mySignature }, branding] = await Promise.all([
+  const { rpID } = await relyingParty();
+  const [{ data: factors }, { data: gate }, { data: agreementData }, { data: mySignature }, branding, { data: unlockDevices }, { data: lockState }] = await Promise.all([
     supabase.auth.mfa.listFactors(),
     supabase.rpc("gate_info"),
     supabase.rpc("agreement_gate"),
@@ -35,7 +38,14 @@ export default async function AccountSecurityPage() {
       .limit(1)
       .maybeSingle(),
     getBranding(),
+    supabase
+      .from("unlock_devices")
+      .select("id, label, created_at, last_used_at")
+      .eq("rp_id", rpID)
+      .order("created_at"),
+    supabase.rpc("screen_lock_state", { p_touch: false }),
   ]);
+  const lockMinutes = (lockState as { lock_minutes: number | null }[] | null)?.[0]?.lock_minutes ?? null;
   const required = Boolean((gate as { mfa_required: boolean }[] | null)?.[0]?.mfa_required);
   const authenticators = (factors?.totp ?? []).filter((f) => f.status === "verified");
   const agreement = firstGateRow(agreementData);
@@ -94,6 +104,8 @@ export default async function AccountSecurityPage() {
             </Link>
           )}
         </div>
+
+        <FaceIdCard devices={(unlockDevices ?? []) as UnlockDeviceRow[]} lockMinutes={lockMinutes} />
 
         {agreement && (
           <div className={CARD}>

@@ -5,6 +5,7 @@ import { getBranding } from "@/lib/branding";
 import { getAddressContext } from "@/lib/ministry-context";
 import { QaEnvBanner } from "@/components/QaEnvBanner";
 import { TimezoneProvider } from "@/components/TimezoneProvider";
+import { ScreenLock } from "@/components/ScreenLock";
 import "./globals.css";
 
 const inter = Inter({
@@ -145,6 +146,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           })();`}
         </Script>
         <TimezoneProvider timeZone={settings.timezone}>{children}</TimezoneProvider>
+        {/* Screen lock (migration 0089): does nothing unless this ministry
+            turned it on and someone is signed in. */}
+        <ScreenLock />
       </body>
     </html>
   );

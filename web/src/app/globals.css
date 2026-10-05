@@ -105,3 +105,15 @@ button {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
+
+/* Screen lock (migration 0089, components/ScreenLock.tsx). While the app is
+   in the background its content is blurred, so the phone's app switcher
+   shows nothing readable; while locked, nothing behind the lock screen can
+   be scrolled. */
+html.mh-privacy body {
+  filter: blur(24px);
+}
+html.mh-locked,
+html.mh-locked body {
+  overflow: hidden;
+}

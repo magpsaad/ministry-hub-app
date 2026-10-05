@@ -149,6 +149,15 @@ Functions (security definer, pinned `search_path`, signed-in users only):
 
 0088 added `agreement_versions.accepts_earlier_signatures` (default false). A version with it set is a small addition: earlier signatures keep counting (a signature is valid when its version is at or after the latest published version that does *not* accept earlier signatures), and signed copies keep showing the version actually signed. Version 2 (5 Oct 2026, the lawyer's "Our responsibility" section after "Why this agreement") is such a version.
 
+## S. Screen lock and Face ID unlock (migration 0089)
+
+- `app_settings.idle_lock_minutes integer` (2, 5, 10, 15 or 30; null = off, the default) — Ministry Settings → Screen Lock.
+- `session_activity` (`session_id` = the Supabase session in the sign-in token, `user_id`, `last_active_at`) — no API access; functions only. A sign-in is locked when `last_active_at` is older than its ministry's minutes plus one minute's grace. Rows older than 30 days are cleared.
+- `unlock_devices` (`id`, `user_id`, `credential_id` unique, `public_key` base64url COSE, `sign_count`, `transports`, `rp_id` = the web address it was made on, `label`, `created_at`, `last_used_at`) — a person reads their own rows; nobody writes directly.
+- `screen_lock_state(p_touch)` → `lock_minutes`, `locked` for this sign-in on this address (first sight of a sign-in = unlocked); `p_touch` notes activity but never unlocks a locked sign-in. Used by the front door (`p_touch` false) and `/api/screen-lock` (true).
+- `unlock_session()`, `add_unlock_device(...)`, `use_unlock_device(...)` — only with the app server's key (`app_server_check()`, the check-in key from 0080, required even before check-in's lock is on); the server calls them after checking Face ID (WebAuthn, `@simplewebauthn/server`) or an authenticator code itself.
+- `remove_unlock_device(id)` (own), `reset_person_unlock_devices(user)` (Admins here / Church Admin; Access Maintenance → Remove Face ID Devices).
+
 ## P. Parents' contact details (migration 0087)
 
 - `members` gains six optional text columns: `parent1_name`, `parent1_phone`, `parent1_email`, `parent2_name`, `parent2_phone`, `parent2_email` (check `members_parent_contacts_length`: names ≤ 80, phones ≤ 30, emails ≤ 254 characters). Signed-in users may update them (added to the 0084 column grants); reading follows the existing `members` rules.

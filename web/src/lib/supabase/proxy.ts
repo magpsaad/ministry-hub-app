@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveAddress, ministryHeaders } from "@/lib/ministry-context";
 import { AGREEMENT_LATER_COOKIE, AGREEMENT_PATH, firstGateRow } from "@/lib/agreement";
+import { UNLOCK_PATH, isLockExempt } from "@/lib/screen-lock";
 
 /** REQUIREMENTS.md §6.1 addendum -- paths a signed-in-but-not-yet-
  * registered person must still be able to reach: signing in/out, the
@@ -186,6 +187,23 @@ export async function updateSession(request: NextRequest) {
   // from this one.
   if (!userId && (!matchesPrefix(pathname, GATE_EXEMPT_PREFIXES) || matchesPrefix(pathname, [SECURITY_PREFIX]))) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Screen lock (owner-approved 5 Oct 2026, migration 0089): a sign-in left
+  // untouched longer than this ministry's limit is locked. Opening a page
+  // goes to the unlock page; anything else (saves, data) is refused until
+  // it's unlocked. The app covers itself in the browser first; this is the
+  // part that can't be removed from the browser.
+  if (userId && !isLockExempt(pathname)) {
+    const { data } = await supabase.rpc("screen_lock_state", { p_touch: false });
+    const lock = (data as { lock_minutes: number | null; locked: boolean }[] | null)?.[0];
+    if (lock?.locked) {
+      if (request.method === "GET" && !pathname.startsWith("/api/")) {
+        const next = encodeURIComponent(`${pathname}${request.nextUrl.search}`);
+        return NextResponse.redirect(new URL(`${UNLOCK_PATH}?next=${next}`, request.url));
+      }
+      return NextResponse.json({ error: "The app is locked. Unlock it to continue." }, { status: 423 });
+    }
   }
 
   const twoStep = await twoStepRedirect(false);
