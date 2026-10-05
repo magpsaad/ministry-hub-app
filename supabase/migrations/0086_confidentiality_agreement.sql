@@ -221,7 +221,7 @@ insert into agreement_versions (version, title, body)
 values (1, 'Servant Confidentiality & Privacy Agreement', $body$
 ## Why this agreement
 
-Our youth and children, and their families, trust us with their personal information. As a servant, you can see some of that information in the Ministry Hub app so you can care for the youth or children in your class or group. This agreement covers everyone we serve, from children in Sunday school to youth in University and beyond.
+Our youth and children, and their families, trust us with their personal information. As a servant, you can see some of that information in the Ministry Hub app so you can care for the youth or children in your class or group. This agreement covers everyone we serve: children in Sunday school, and youth in High School, University and beyond.
 
 This agreement explains, in plain words, how to keep that information safe. Please read it, ask questions about anything unclear, and sign it before you use the app.
 
