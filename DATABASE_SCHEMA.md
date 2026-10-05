@@ -147,6 +147,8 @@ Functions (security definer, pinned `search_path`, signed-in users only):
 
 0086 gave everyone with a SAY role at that moment 14 days of grace; everyone else must sign before using the app. Publishing new wording = inserting version N+1 (everyone signs again).
 
+0088 added `agreement_versions.accepts_earlier_signatures` (default false). A version with it set is a small addition: earlier signatures keep counting (a signature is valid when its version is at or after the latest published version that does *not* accept earlier signatures), and signed copies keep showing the version actually signed. Version 2 (5 Oct 2026, the lawyer's "Our responsibility" section after "Why this agreement") is such a version.
+
 ## P. Parents' contact details (migration 0087)
 
 - `members` gains six optional text columns: `parent1_name`, `parent1_phone`, `parent1_email`, `parent2_name`, `parent2_phone`, `parent2_email` (check `members_parent_contacts_length`: names ≤ 80, phones ≤ 30, emails ≤ 254 characters). Signed-in users may update them (added to the 0084 column grants); reading follows the existing `members` rules.

@@ -46,7 +46,7 @@ export default async function AgreementPage({
       .maybeSingle(),
     supabase
       .from("agreement_signatures")
-      .select("id, typed_name, signed_at")
+      .select("id, typed_name, signed_at, signed_version:agreement_versions(version)")
       .eq("user_id", user.id)
       .order("signed_at", { ascending: false })
       .limit(1)
@@ -55,6 +55,9 @@ export default async function AgreementPage({
     getBranding(),
   ]);
   const gate = firstGateRow(gateData);
+  // Migration 0088: a small addition can keep earlier signatures valid, so
+  // someone may have signed an older version than the one shown below.
+  const signedVersion = (mine?.signed_version as unknown as { version: number } | null)?.version ?? null;
   const when = (iso: string, withTime = false) =>
     formatDateTimeInZone(iso, branding.timezone, {
       year: "numeric",
@@ -90,7 +93,17 @@ export default async function AgreementPage({
         ) : (
           mine && (
             <div className="rounded-xl border border-[#c3e6cb] bg-[#eaf7ee] px-4 py-3 text-sm text-[#155724]">
-              You signed this agreement on {when(mine.signed_at, true)} as <strong>{mine.typed_name}</strong>.{" "}
+              {signedVersion !== null && signedVersion !== version.version ? (
+                <>
+                  You signed version {signedVersion} of this agreement on {when(mine.signed_at, true)} as{" "}
+                  <strong>{mine.typed_name}</strong>, and it still counts. The current wording, version {version.version},
+                  is shown below.{" "}
+                </>
+              ) : (
+                <>
+                  You signed this agreement on {when(mine.signed_at, true)} as <strong>{mine.typed_name}</strong>.{" "}
+                </>
+              )}
               <Link href={`/security/agreement/${mine.id}`} className="font-semibold underline">
                 View or print your signed copy
               </Link>
