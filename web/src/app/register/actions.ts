@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { dispatchPush } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 
@@ -34,6 +36,9 @@ export async function submitOwnRegistrationAction(input: RegistrationInput) {
   if (error) return { error: error.message };
 
   await logAudit(user.id, "APP_ACCESS", { details: { action: "self_registration_submitted" } });
+  // Migration 0092: the new pending servant queued an alert for this
+  // ministry's Admins and GCs; send it once this answer is on its way.
+  after(dispatchPush);
   revalidatePath("/register");
   return { error: null };
 }

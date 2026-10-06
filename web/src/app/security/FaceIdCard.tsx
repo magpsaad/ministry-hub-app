@@ -5,20 +5,12 @@ import { useRouter } from "next/navigation";
 import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startRegistration } from "@simplewebauthn/browser";
 import { removeUnlockDevice } from "./actions";
 import { CARD, PRIMARY_BUTTON } from "./shared";
+import { deviceLabel } from "@/lib/device-label";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { formatDateTimeInZone } from "@/lib/timezone";
 
 export type UnlockDeviceRow = { id: string; label: string | null; created_at: string; last_used_at: string | null };
 
-function deviceLabel(): string {
-  const ua = navigator.userAgent;
-  if (/iPhone/.test(ua)) return "iPhone";
-  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "iPad";
-  if (/Android/.test(ua)) return "Android phone";
-  if (/Windows/.test(ua)) return "Windows computer";
-  if (/Macintosh/.test(ua)) return "Mac";
-  return "This device";
-}
 
 
 /** Account Security -> Face ID / fingerprint unlock (migration 0089): turn

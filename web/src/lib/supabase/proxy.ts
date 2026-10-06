@@ -26,7 +26,7 @@ const AGREEMENT_EXEMPT_PREFIXES = ["/login", "/auth", "/checkin", SECURITY_PREFI
  * auth state. Distinct from GATE_EXEMPT_PREFIXES above, which is about what
  * a signed-in-but-incomplete person can reach, not what an anonymous
  * request can. */
-const PUBLIC_ASSET_PATHS = ["/manifest.webmanifest"];
+const PUBLIC_ASSET_PATHS = ["/manifest.webmanifest", "/sw.js"];
 
 /** MULTI_TENANT_PLAN.md §3.2 -- the two plain status pages. Neither makes a
  * single data call. */

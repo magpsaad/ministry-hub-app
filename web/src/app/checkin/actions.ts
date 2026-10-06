@@ -1,6 +1,8 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { after } from "next/server";
+import { dispatchPush } from "@/lib/push";
 import { createCheckinClient } from "@/lib/supabase/checkin-client";
 import { grantCheckinPass, hasCheckinPass } from "@/lib/checkin-session";
 import { checkinPersonProblem, parentsProblem, type CheckinPersonFields } from "@/lib/checkin-validation";
@@ -459,5 +461,8 @@ export async function submitNewServantAction(token: string, input: NewServantInp
 
   if (error) return { error: error.message, attendanceRecorded: false };
   const row = data as { pending_id: string; attendance_recorded: boolean } | null;
+  // Migration 0092: a new pending servant queues an alert for the
+  // ministry's Admins and GCs; send it once this answer is on its way.
+  after(dispatchPush);
   return { error: null, attendanceRecorded: row?.attendance_recorded ?? false };
 }

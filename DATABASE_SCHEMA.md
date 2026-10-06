@@ -151,6 +151,13 @@ Functions (security definer, pinned `search_path`, signed-in users only):
 
 0088 added `agreement_versions.accepts_earlier_signatures` (default false). A version with it set is a small addition: earlier signatures keep counting (a signature is valid when its version is at or after the latest published version that does *not* accept earlier signatures), and signed copies keep showing the version actually signed. Version 2 (5 Oct 2026, the lawyer's "Our responsibility" section after "Why this agreement") is such a version.
 
+## N. Phone notifications (migration 0092)
+
+- `push_subscriptions` (`user_id`, `ministry_id`, `endpoint` unique, `p256dh`, `auth`, `label`, `created_at`, `last_sent_at`) — each device someone turned notifications on for, per ministry address; a person reads their own; written only by `save_push_subscription()` / `remove_push_subscription()`.
+- `notification_outbox` (`ministry_id`, `event`, `audience` = `admins_gcs` for now, `title`, `body`, `url`, `created_at`, `claimed_at`, `attempts`, `sent_at`, `last_error`) — filled by triggers, no API access.
+- `push_claim(limit)` / `push_mark_sent(...)` — server key only (`app_server_check()`): the app's server takes waiting messages (with their recipients' devices; up to 5 tries, nothing older than a day), sends them with Web Push (VAPID keys in Vercel), marks them sent and drops devices the push service says are gone.
+- Event 1, trigger `trg_notify_pending_servant` on `pending_servants` insert: "New servant waiting for approval" (short name) to the ministry's Admins and GCs, opening `/admin/pending-servants`.
+
 ## S. Screen lock and Face ID unlock (migration 0089)
 
 - `app_settings.idle_lock_minutes integer` (2, 5, 10, 15 or 30; null = off, the default) — Ministry Settings → Screen Lock.
