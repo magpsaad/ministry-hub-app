@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { savePushSubscription, removePushSubscription } from "@/app/security/actions";
+import { savePushSubscription, removePushSubscription } from "@/app/settings/notifications/actions";
 import { deviceLabel, isAppleMobile, isInstalledApp } from "@/lib/device-label";
 
 /** Phone notifications (migration 0092): what this device can do and the
  * turn on / off steps, shared by the onboarding card, the one-time prompt and
- * Account Security, so all three behave the same. */
+ * My Settings -> Notifications, so all three behave the same. */
 
 export type PushSupport = "checking" | "unsupported" | "needs-home-screen" | "ready";
 

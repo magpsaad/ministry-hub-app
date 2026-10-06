@@ -3,22 +3,23 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendTestNotification } from "./actions";
-import { CARD, PRIMARY_BUTTON } from "./shared";
+import { CARD, PRIMARY_BUTTON } from "@/app/security/shared";
 import { BusyLabel } from "@/components/PendingButton";
 import { usePushSetup } from "@/components/notifications/usePushSetup";
 
-/** Account Security -> Notifications on this device (migration 0092): turn
+/** My Settings -> Notifications -> this device (migration 0092): turn
  * phone notifications on or off for this device on this ministry's
  * address, and send a test. On an iPhone they only work from the app's
  * Home Screen icon, so that's explained first. */
 export function NotificationsCard({
   publicKey,
   savedEndpoints,
-  adminOrGc,
+  hasTypes,
 }: {
   publicKey: string | null;
   savedEndpoints: string[];
-  adminOrGc: boolean;
+  /** Whether any kind of notification can reach this person here. */
+  hasTypes: boolean;
 }) {
   const router = useRouter();
   const push = usePushSetup(publicKey);
@@ -70,9 +71,9 @@ export function NotificationsCard({
     <div className={CARD}>
       <h2 className="text-base font-bold text-[#333]">Notifications on this device</h2>
       <p className="mt-1 text-sm text-[#555]">
-        {adminOrGc
-          ? "Get an alert on your phone when something needs you — for now, when a new servant is waiting for your approval."
-          : "Get alerts on your phone from Ministry Hub. More alerts for servants are coming."}
+        {hasTypes
+          ? "Get an alert on this phone or computer when something needs you. Choose which ones below."
+          : "Get alerts on this phone or computer from Ministry Hub. More alerts for servants are coming."}
       </p>
 
       {support === "checking" && <p className="mt-3 text-sm text-[#888]">One moment&hellip;</p>}
@@ -83,7 +84,7 @@ export function NotificationsCard({
           <ol className="mt-1 list-decimal space-y-0.5 pl-5">
             <li>Tap the Share button in Safari, then &ldquo;Add to Home Screen&rdquo;.</li>
             <li>Open Ministry Hub from that new icon.</li>
-            <li>Come back to Account Security and turn notifications on.</li>
+            <li>Come back to My Settings &rarr; Notifications and turn them on.</li>
           </ol>
         </div>
       )}

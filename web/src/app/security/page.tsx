@@ -13,9 +13,6 @@ import { formatDateTimeInZone } from "@/lib/timezone";
 import { firstGateRow } from "@/lib/agreement";
 import { relyingParty } from "@/lib/screen-lock-server";
 import { FaceIdCard, type UnlockDeviceRow } from "./FaceIdCard";
-import { NotificationsCard } from "./NotificationsCard";
-import { vapidPublicKey } from "@/lib/push";
-import { getAddressContext } from "@/lib/ministry-context";
 import { LinkSpinner, SubmitButton } from "@/components/PendingButton";
 
 /** Account Security (owner-approved sign-in changes B and F, 3 Oct 2026):
@@ -29,11 +26,7 @@ export default async function AccountSecurityPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ rpID }, address] = await Promise.all([relyingParty(), getAddressContext()]);
-  const ministryId = address.kind === "ministry" ? address.ministryId : null;
-  const { data: pushRows } = ministryId
-    ? await supabase.from("push_subscriptions").select("endpoint").eq("ministry_id", ministryId)
-    : { data: [] as { endpoint: string }[] };
+  const { rpID } = await relyingParty();
   const [{ data: factors }, { data: gate }, { data: agreementData }, { data: mySignature }, branding, { data: unlockDevices }, { data: lockState }] = await Promise.all([
     supabase.auth.mfa.listFactors(),
     supabase.rpc("gate_info"),
@@ -115,14 +108,6 @@ export default async function AccountSecurityPage() {
         </div>
 
         <FaceIdCard devices={(unlockDevices ?? []) as UnlockDeviceRow[]} lockMinutes={lockMinutes} />
-
-        {ministryId && (
-          <NotificationsCard
-            publicKey={vapidPublicKey()}
-            savedEndpoints={(pushRows ?? []).map((r) => r.endpoint as string)}
-            adminOrGc={required}
-          />
-        )}
 
         {agreement && (
           <div className={CARD}>

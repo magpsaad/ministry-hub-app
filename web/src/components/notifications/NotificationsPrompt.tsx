@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { getPushPromptContext, savePushSubscription } from "@/app/security/actions";
+import { getPushPromptContext, savePushSubscription } from "@/app/settings/notifications/actions";
 import { deviceLabel, isAppleMobile, isInstalledApp } from "@/lib/device-label";
 import { claimPromptSlot, releasePromptSlot } from "@/lib/prompt-slot";
 import { NotificationsSetupPanel } from "./NotificationsSetupPanel";
@@ -11,14 +11,15 @@ import { currentSubscription, pushCapable } from "./usePushSetup";
 /** Owner-requested (6 Oct 2026): everyone already using the app is asked,
  * once per device, to turn notifications on (with the Home Screen step on
  * iPhones). "Not now" asks again in 7 days; "Don't ask again" leaves it to
- * Account Security. The answer is remembered on the device -- notifications
+ * My Settings -> Notifications. The answer is remembered on the device -- notifications
  * are per device anyway. Never on the check-in posters, sign-in, onboarding
- * or Account Security pages (they have their own), nor on the console. */
+ * Account Security or My Settings pages (they have their own), nor on the
+ * console. */
 
 const KEY = "mh_notif_prompt";
 const LATER_DAYS = 7;
 const RESAVE_KEY = "mh_notif_resaved";
-const EXCLUDED = ["/login", "/auth", "/checkin", "/security", "/register", "/console", "/address-not-set-up", "/ministry-inactive"];
+const EXCLUDED = ["/login", "/auth", "/checkin", "/security", "/settings", "/register", "/console", "/address-not-set-up", "/ministry-inactive"];
 
 type Answer = { s: "on" | "later" | "never"; until?: number };
 

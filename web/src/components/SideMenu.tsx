@@ -139,7 +139,6 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
               {link("/calendar", "Service Calendar")}
               {link("/qr-codes", "Checkin - QR Codes")}
               {link("/version-control", "Release History")}
-              {link("/security", "Account Security")}
             </Section>
 
             {data.isCoordinator && (
@@ -187,6 +186,13 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
                 {link("/admin/audit-logs", "Audit Logs")}
               </Section>
             )}
+
+            {/* Owner-requested (6 Oct 2026): each person's own settings, as
+                opposed to Ministry Settings -- for everyone. */}
+            <Section title="My Settings">
+              {link("/settings/notifications", "Notifications")}
+              {link("/security", "Account Security")}
+            </Section>
 
             {/* Owner-requested (3 Oct 2026): the app's own name and logo, in a
                 footer that stays put at the bottom while the menu scrolls. */}

@@ -76,7 +76,7 @@ export function NotificationsSetupPanel({
       ) : permission === "denied" ? (
         <p className="mt-1 text-sm text-[#5c4400]">
           Notifications are blocked for this app. Allow them in your phone or browser settings, then turn them on in
-          Account Security.
+          My Settings &rarr; Notifications.
         </p>
       ) : (
         <>
