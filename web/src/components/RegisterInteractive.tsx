@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitOwnRegistrationAction, completeOwnProfileAction, type RegistrationInput } from "@/app/register/actions";
 import { BusyLabel } from "@/components/PendingButton";
+import { NotificationsSetupPanel } from "@/components/notifications/NotificationsSetupPanel";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
@@ -25,7 +26,16 @@ function validate(form: RegistrationInput): string | null {
  *   - `hasRole: true` -- a human already granted them a role directly;
  *     submitting updates their own profile immediately, no approval needed.
  */
-export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; fullName: string }) {
+export function RegisterInteractive({
+  hasRole,
+  fullName,
+  publicKey,
+}: {
+  hasRole: boolean;
+  fullName: string;
+  /** Phone notifications (0092): offered once the registration is in. */
+  publicKey: string | null;
+}) {
   const router = useRouter();
   const [form, setForm] = useState<RegistrationInput>(EMPTY_FORM);
   const [pending, setPending] = useState(false);
@@ -82,6 +92,9 @@ export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; f
         <p className="text-sm text-[#666]">
           Your registration has been submitted. A Coordinator or System Admin will review it and give you access soon.
         </p>
+        <div className="border-t border-[#eee] pt-4 mt-3">
+          <NotificationsSetupPanel publicKey={publicKey} />
+        </div>
       </div>
     );
   }

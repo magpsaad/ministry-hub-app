@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "./shared";
-import { sendToDevices } from "@/lib/push";
+import { sendToDevices, vapidPublicKey } from "@/lib/push";
 import { getAddressContext } from "@/lib/ministry-context";
 
 /** Owner-approved sign-in change B (3 Oct 2026): an authenticator app as a
@@ -119,6 +119,16 @@ export async function removePushSubscription(endpoint: string): Promise<{ error:
   if (error) return { error: "Couldn't turn notifications off. Please try again." };
   revalidatePath("/security");
   return { error: null };
+}
+
+/** The one-time "turn on notifications" prompt: only for someone signed in
+ * on a ministry's address, once the server has its notification keys. */
+export async function getPushPromptContext(): Promise<{ ask: boolean; publicKey: string | null }> {
+  const publicKey = vapidPublicKey();
+  const [supabase, ctx] = await Promise.all([createClient(), getAddressContext()]);
+  if (!publicKey || ctx.kind !== "ministry" || !ctx.isActive) return { ask: false, publicKey: null };
+  const { data } = await supabase.auth.getUser();
+  return { ask: !!data.user, publicKey };
 }
 
 /** "Send me a test": to my own devices on this address. */

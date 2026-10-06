@@ -1,21 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { removePushSubscription, savePushSubscription, sendTestNotification } from "./actions";
+import { sendTestNotification } from "./actions";
 import { CARD, PRIMARY_BUTTON } from "./shared";
 import { BusyLabel } from "@/components/PendingButton";
-import { deviceLabel, isAppleMobile, isInstalledApp } from "@/lib/device-label";
-
-type Support = "checking" | "unsupported" | "needs-home-screen" | "ready";
-
-function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
-  const padded = (base64url + "=".repeat((4 - (base64url.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(padded);
-  const out = new Uint8Array(new ArrayBuffer(raw.length));
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
+import { usePushSetup } from "@/components/notifications/usePushSetup";
 
 /** Account Security -> Notifications on this device (migration 0092): turn
  * phone notifications on or off for this device on this ministry's
@@ -31,35 +21,12 @@ export function NotificationsCard({
   adminOrGc: boolean;
 }) {
   const router = useRouter();
-  const [support, setSupport] = useState<Support>("checking");
-  const [permission, setPermission] = useState<NotificationPermission>("default");
-  const [endpoint, setEndpoint] = useState<string | null>(null);
+  const push = usePushSetup(publicKey);
+  const { support, permission, endpoint } = push;
   const [busy, setBusy] = useState<"on" | "off" | "test" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const working = useRef(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const capable = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-      let next: Support = "ready";
-      if (!capable) next = isAppleMobile() && !isInstalledApp() ? "needs-home-screen" : "unsupported";
-      let current: string | null = null;
-      if (capable) {
-        const reg = await navigator.serviceWorker.getRegistration().catch(() => undefined);
-        const sub = await reg?.pushManager.getSubscription().catch(() => null);
-        current = sub?.endpoint ?? null;
-      }
-      if (cancelled) return;
-      setSupport(next);
-      if (capable) setPermission(Notification.permission);
-      setEndpoint(current);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const on = !!endpoint && savedEndpoints.includes(endpoint);
 
@@ -81,33 +48,14 @@ export function NotificationsCard({
 
   const turnOn = () =>
     run("on", async () => {
-      if (!publicKey) throw new Error("Notifications aren't set up on this server yet.");
-      // Asked first, straight from the tap (iPhones require that).
-      const answer = await Notification.requestPermission();
-      setPermission(answer);
-      if (answer !== "granted") throw new Error("Notifications weren't allowed for this app.");
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-      const sub =
-        (await reg.pushManager.getSubscription()) ??
-        (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) }));
-      const res = await savePushSubscription(sub.toJSON(), deviceLabel());
-      if (res.error) throw new Error(res.error);
-      setEndpoint(sub.endpoint);
+      await push.turnOn();
       setNotice("Notifications are on for this device. Tap “Send a test” to check.");
       router.refresh();
     });
 
   const turnOff = () =>
     run("off", async () => {
-      const reg = await navigator.serviceWorker.getRegistration();
-      const sub = await reg?.pushManager.getSubscription();
-      if (sub) {
-        const res = await removePushSubscription(sub.endpoint);
-        if (res.error) throw new Error(res.error);
-        await sub.unsubscribe();
-      }
-      setEndpoint(null);
+      await push.turnOff();
       router.refresh();
     });
 

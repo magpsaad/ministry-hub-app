@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { platformAuthenticatorIsAvailable } from "@simplewebauthn/browser";
 import { UnlockPanel } from "@/components/UnlockPanel";
+import { claimPromptSlot } from "@/lib/prompt-slot";
 import { ACTIVITY_PING_MS, isLockExempt, type LockStatus, type UnlockMethods } from "@/lib/screen-lock";
 
 const OFFER_KEY = "mh_faceid_offer";
@@ -98,20 +99,23 @@ export function ScreenLock() {
   useEffect(() => {
     if (exempt || minutes === null || locked || pathname.startsWith("/security")) return;
     let cancelled = false;
-    (async () => {
+    // A few seconds later, and only if the notifications prompt isn't
+    // showing: one suggestion at a time.
+    const timer = window.setTimeout(async () => {
       try {
         if (localStorage.getItem(OFFER_KEY)) return;
         if (!(await platformAuthenticatorIsAvailable())) return;
         const res = await fetch("/api/unlock/methods", { cache: "no-store" });
         if (!res.ok) return;
         const methods = (await res.json()) as UnlockMethods;
-        if (!cancelled && !methods.faceId) setOffer(true);
+        if (!cancelled && !methods.faceId && claimPromptSlot("faceid")) setOffer(true);
       } catch {
         // No local storage (private browsing) or no answer: just don't offer.
       }
-    })();
+    }, 4000);
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [exempt, minutes, locked, pathname]);
 

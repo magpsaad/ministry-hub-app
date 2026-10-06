@@ -8,6 +8,8 @@ import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
 import { RegisterInteractive } from "@/components/RegisterInteractive";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
+import { NotificationsSetupPanel } from "@/components/notifications/NotificationsSetupPanel";
+import { vapidPublicKey } from "@/lib/push";
 
 /** REQUIREMENTS.md §6.1 addendum -- the "exceptional workflow" landing
  * screen: where the proxy gate (src/proxy.ts) sends anyone signed in
@@ -76,9 +78,13 @@ export default async function RegisterPage() {
               Thanks, {fullName} — your registration is in and waiting for a Coordinator or System Admin to review it.
               There&rsquo;s nothing else to do right now; check back once they&rsquo;ve approved it.
             </p>
+            {/* Owner-requested (6 Oct 2026): notifications while they wait. */}
+            <div className="border-t border-[#eee] pt-4 mt-3">
+              <NotificationsSetupPanel publicKey={vapidPublicKey()} />
+            </div>
           </div>
         ) : (
-          <RegisterInteractive hasRole={hasRole} fullName={fullName} />
+          <RegisterInteractive hasRole={hasRole} fullName={fullName} publicKey={vapidPublicKey()} />
         )}
         <p className="text-center text-xs text-[#999]">
           Signed in as {user.email}. Wrong account?{" "}
