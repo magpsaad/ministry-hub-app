@@ -10,15 +10,15 @@ import { CARD, PRIMARY_BUTTON } from "./shared";
 import { RemoveAuthenticatorButton } from "./RemoveAuthenticatorButton";
 import { getBranding } from "@/lib/branding";
 import { formatDateTimeInZone } from "@/lib/timezone";
-import { firstGateRow } from "@/lib/agreement";
 import { relyingParty } from "@/lib/screen-lock-server";
 import { FaceIdCard, type UnlockDeviceRow } from "./FaceIdCard";
 import { LinkSpinner, SubmitButton } from "@/components/PendingButton";
 
 /** Account Security (owner-approved sign-in changes B and F, 3 Oct 2026):
  * the optional -- or, for Admins, General Coordinators and the Church
- * Admin, required -- authenticator app, the confidentiality agreement
- * (migration 0086), and "Sign out of all devices". */
+ * Admin, required -- authenticator app, Face ID unlock, and "Sign out of
+ * all devices". (The confidentiality agreement moved to My Settings ->
+ * Confidentiality Agreement, 6 Oct 2026.) */
 export default async function AccountSecurityPage() {
   const supabase = await createClient();
   const {
@@ -27,17 +27,9 @@ export default async function AccountSecurityPage() {
   if (!user) redirect("/login");
 
   const { rpID } = await relyingParty();
-  const [{ data: factors }, { data: gate }, { data: agreementData }, { data: mySignature }, branding, { data: unlockDevices }, { data: lockState }] = await Promise.all([
+  const [{ data: factors }, { data: gate }, branding, { data: unlockDevices }, { data: lockState }] = await Promise.all([
     supabase.auth.mfa.listFactors(),
     supabase.rpc("gate_info"),
-    supabase.rpc("agreement_gate"),
-    supabase
-      .from("agreement_signatures")
-      .select("id, signed_at")
-      .eq("user_id", user.id)
-      .order("signed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
     getBranding(),
     supabase
       .from("unlock_devices")
@@ -49,9 +41,6 @@ export default async function AccountSecurityPage() {
   const lockMinutes = (lockState as { lock_minutes: number | null }[] | null)?.[0]?.lock_minutes ?? null;
   const required = Boolean((gate as { mfa_required: boolean }[] | null)?.[0]?.mfa_required);
   const authenticators = (factors?.totp ?? []).filter((f) => f.status === "verified");
-  const agreement = firstGateRow(agreementData);
-  const longDate = (iso: string) =>
-    formatDateTimeInZone(iso, branding.timezone, { year: "numeric", month: "long", day: "numeric" });
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -108,23 +97,6 @@ export default async function AccountSecurityPage() {
         </div>
 
         <FaceIdCard devices={(unlockDevices ?? []) as UnlockDeviceRow[]} lockMinutes={lockMinutes} />
-
-        {agreement && (
-          <div className={CARD}>
-            <h2 className="text-base font-bold text-[#333]">Confidentiality Agreement</h2>
-            <p className="mt-1 text-sm text-[#555]">
-              {!agreement.needs_signature && mySignature
-                ? `You signed it on ${longDate(mySignature.signed_at)}. You can read it again any time.`
-                : agreement.grace_until && !agreement.must_sign
-                  ? `Please read and sign it by ${longDate(agreement.grace_until)}.`
-                  : "Please read and sign it."}
-            </p>
-            <Link href="/security/agreement?next=/security" className={`${PRIMARY_BUTTON} mt-4 block text-center`}>
-              {agreement.needs_signature ? "Read and sign" : "Read the agreement"}
-              <LinkSpinner />
-            </Link>
-          </div>
-        )}
 
         <div className={CARD}>
           <h2 className="text-base font-bold text-[#333]">Sign out of all devices</h2>

@@ -192,6 +192,7 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
             <Section title="My Settings">
               {link("/settings/notifications", "Notifications")}
               {link("/security", "Account Security")}
+              {link("/settings/agreement", "Confidentiality Agreement")}
             </Section>
 
             {/* Owner-requested (3 Oct 2026): the app's own name and logo, in a
