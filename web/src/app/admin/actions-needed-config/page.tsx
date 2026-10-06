@@ -4,7 +4,11 @@ import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings, getAttendanceWindowSettings } from "@/lib/app-settings";
 import { getActiveMinistry } from "@/lib/ministry-context";
-import { getActionsNeededConfigAction, getGroupsForAdminAction } from "@/app/admin/actions-needed-config/actions";
+import {
+  getActionsNeededConfigAction,
+  getGroupsForAdminAction,
+  getNotificationDefaultsAction,
+} from "@/app/admin/actions-needed-config/actions";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
@@ -26,12 +30,13 @@ export default async function ActionsNeededConfigPage() {
     );
   }
 
-  const [settings, config, windowSettings, groups, ministryCode] = await Promise.all([
+  const [settings, config, windowSettings, groups, ministryCode, notificationDefaults] = await Promise.all([
     getAppSettings(),
     getActionsNeededConfigAction(),
     getAttendanceWindowSettings(),
     getGroupsForAdminAction(),
     getActiveMinistry(),
+    getNotificationDefaultsAction(),
   ]);
 
   return (
@@ -62,6 +67,7 @@ export default async function ActionsNeededConfigPage() {
           initialServantsQrColor={settings.servants_qr_color}
           initialDefaultPattern={settings.group_name_template}
           initialTerminalPattern={settings.terminal_name_pattern}
+          notificationDefaults={notificationDefaults}
         />
       </main>
     </div>

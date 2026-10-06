@@ -441,3 +441,29 @@ export async function updateActionsNeededLookbackAction(months: number) {
   revalidatePath("/admin/actions-needed-config");
   return { error: null };
 }
+
+/** Notification Defaults (owner-requested 6 Oct 2026, migration 0096):
+ * the kinds of notification people can choose, with this ministry's
+ * default for each. */
+export async function getNotificationDefaultsAction() {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("ministry_notification_defaults");
+  return (data ?? []) as {
+    event: string;
+    label: string;
+    description: string;
+    roles: string[];
+    default_on: boolean;
+    church_default: boolean;
+  }[];
+}
+
+/** Whether one kind starts on or off for this ministry's people -- anyone
+ * who chose for themselves in My Settings keeps their choice. */
+export async function setMinistryNotificationDefaultAction(event: string, on: boolean): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_ministry_notification_default", { p_event: event, p_on: on });
+  if (error) return { error: "Couldn't save that. Please try again." };
+  revalidatePath("/admin/actions-needed-config");
+  return { error: null };
+}

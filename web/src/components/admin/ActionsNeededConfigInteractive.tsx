@@ -14,6 +14,7 @@ import type { AttendanceWindowSettings } from "@/lib/app-settings";
 import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive";
 import { levelText } from "@/lib/group-names";
 import { LOCK_MINUTE_CHOICES } from "@/lib/screen-lock";
+import { NotificationDefaultsCard, type NotificationDefaultRow } from "@/components/admin/NotificationDefaultsCard";
 
 // ISO weekday numbering (Monday=1..Sunday=7), matching app_settings.service_weekday.
 const WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -28,6 +29,7 @@ export function ActionsNeededConfigInteractive({
   initialServantsQrColor,
   initialDefaultPattern,
   initialTerminalPattern,
+  notificationDefaults,
 }: {
   ministryCode: string;
   initial: ActionsNeededConfigRow[];
@@ -38,6 +40,7 @@ export function ActionsNeededConfigInteractive({
   initialServantsQrColor: string;
   initialDefaultPattern: string | null;
   initialTerminalPattern: string;
+  notificationDefaults: NotificationDefaultRow[];
 }) {
   const [rows, setRows] = useState(initial);
   const [pending, startTransition] = useTransition();
@@ -428,8 +431,8 @@ export function ActionsNeededConfigInteractive({
       <p className="text-sm text-[#666] mb-3">
         Locks the app on a servant&rsquo;s phone or computer after a few minutes without use, so nobody who picks it up can
         see {appSettings.member_label.toLowerCase()} details. It also hides the app while it&rsquo;s in the background.
-        Servants unlock it with Face ID, a fingerprint or their device&rsquo;s PIN (once they turn that on in Account
-        Security), their authenticator code, or by signing in again. Applies to everyone, Admins and GCs included.
+        Servants unlock it with Face ID, a fingerprint or their device&rsquo;s PIN (once they turn that on in My
+        Settings &rarr; Screen Lock &amp; Face ID), their authenticator code, or by signing in again. Applies to everyone, Admins and GCs included.
       </p>
       <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
         Lock after
@@ -459,6 +462,9 @@ export function ActionsNeededConfigInteractive({
         {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
       </div>
     </div>
+
+    {/* Owner-requested (6 Oct 2026, migration 0096). */}
+    <NotificationDefaultsCard rows={notificationDefaults} />
 
     {/* Owner-requested (4 Oct 2026, migration 0087): for ministries that
         keep parents' details, e.g. High School and Sunday School. */}
