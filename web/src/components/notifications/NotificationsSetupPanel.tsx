@@ -16,8 +16,11 @@ export function NotificationsSetupPanel({
   publicKey,
   onAnswered,
   withDismiss = false,
+  waitingForApproval = false,
 }: {
   publicKey: string | null;
+  /** The "waiting for approval" screens: say they'll hear when it happens. */
+  waitingForApproval?: boolean;
   onAnswered?: (answer: "on" | "later" | "never") => void;
   /** The one-time prompt: "Not now" and "Don't ask again" buttons. */
   withDismiss?: boolean;
@@ -49,10 +52,15 @@ export function NotificationsSetupPanel({
     <div className="text-left">
       <h3 className="text-sm font-bold text-[#333]">Get notified on this device</h3>
       {endpoint ? (
-        <p className="mt-1 text-sm text-[#155724]">Notifications are on for this device.</p>
+        <p className="mt-1 text-sm text-[#155724]">
+          Notifications are on for this device.{waitingForApproval && " We’ll let you know here as soon as you’re approved."}
+        </p>
       ) : support === "needs-home-screen" ? (
         <div className="mt-1 text-sm text-[#555]">
-          <p>Ministry Hub can alert you when something needs you. On an iPhone or iPad, first add it to your Home Screen:</p>
+          <p>
+            {waitingForApproval ? "Ministry Hub can let you know as soon as you’re approved, and later" : "Ministry Hub can alert you"} when
+            something needs you. On an iPhone or iPad, first add it to your Home Screen:
+          </p>
           <ol className="mt-1 list-decimal space-y-0.5 pl-5">
             <li>
               Tap the <strong>Share</strong> button in Safari (the square with an arrow).
@@ -73,7 +81,10 @@ export function NotificationsSetupPanel({
       ) : (
         <>
           <p className="mt-1 text-sm text-[#555]">
-            Ministry Hub can send an alert to this device when something needs you. Your phone will ask you to allow it.
+            {waitingForApproval
+              ? "Ministry Hub can let you know on this device as soon as you’re approved, and later when something needs you."
+              : "Ministry Hub can send an alert to this device when something needs you."}{" "}
+            Your phone will ask you to allow it.
           </p>
           {isAndroid() && (
             <p className="mt-1 text-xs text-[#777]">

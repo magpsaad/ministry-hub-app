@@ -93,7 +93,7 @@ export function RegisterInteractive({
           Your registration has been submitted. A Coordinator or System Admin will review it and give you access soon.
         </p>
         <div className="border-t border-[#eee] pt-4 mt-3">
-          <NotificationsSetupPanel publicKey={publicKey} />
+          <NotificationsSetupPanel publicKey={publicKey} waitingForApproval />
         </div>
       </div>
     );

@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { dispatchPush } from "@/lib/push";
 
 /** Marks a self-registered servant approved -- the account itself is created
  * automatically the first time that real person signs into the app (see
@@ -18,6 +20,8 @@ export async function approvePendingServantAction(id: string) {
     .eq("id", id);
   if (error) return { error: error.message };
 
+  // "You're approved" to their phone, if they turned notifications on (0093).
+  after(dispatchPush);
   revalidatePath("/admin/pending-servants");
   return { error: null };
 }

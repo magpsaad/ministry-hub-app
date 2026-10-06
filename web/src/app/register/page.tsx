@@ -80,7 +80,7 @@ export default async function RegisterPage() {
             </p>
             {/* Owner-requested (6 Oct 2026): notifications while they wait. */}
             <div className="border-t border-[#eee] pt-4 mt-3">
-              <NotificationsSetupPanel publicKey={vapidPublicKey()} />
+              <NotificationsSetupPanel publicKey={vapidPublicKey()} waitingForApproval />
             </div>
           </div>
         ) : (

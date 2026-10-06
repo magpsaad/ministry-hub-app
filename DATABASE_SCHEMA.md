@@ -151,12 +151,13 @@ Functions (security definer, pinned `search_path`, signed-in users only):
 
 0088 added `agreement_versions.accepts_earlier_signatures` (default false). A version with it set is a small addition: earlier signatures keep counting (a signature is valid when its version is at or after the latest published version that does *not* accept earlier signatures), and signed copies keep showing the version actually signed. Version 2 (5 Oct 2026, the lawyer's "Our responsibility" section after "Why this agreement") is such a version.
 
-## N. Phone notifications (migration 0092)
+## N. Phone notifications (migrations 0092–0093)
 
 - `push_subscriptions` (`user_id`, `ministry_id`, `endpoint` unique, `p256dh`, `auth`, `label`, `created_at`, `last_sent_at`) — each device someone turned notifications on for, per ministry address; a person reads their own; written only by `save_push_subscription()` / `remove_push_subscription()`.
-- `notification_outbox` (`ministry_id`, `event`, `audience` = `admins_gcs` for now, `title`, `body`, `url`, `created_at`, `claimed_at`, `attempts`, `sent_at`, `last_error`) — filled by triggers, no API access.
+- `notification_outbox` (`ministry_id`, `event`, `audience` = `admins_gcs` or `person` (0093), `target_user_id` (only and always for `person`), `title`, `body`, `url`, `created_at`, `claimed_at`, `attempts`, `sent_at`, `last_error`) — filled by triggers, no API access.
 - `push_claim(limit)` / `push_mark_sent(...)` — server key only (`app_server_check()`): the app's server takes waiting messages (with their recipients' devices; up to 5 tries, nothing older than a day), sends them with Web Push (VAPID keys in Vercel), marks them sent and drops devices the push service says are gone.
 - Event 1, trigger `trg_notify_pending_servant` on `pending_servants` insert: "New servant waiting for approval" (short name) to the ministry's Admins and GCs, opening `/admin/pending-servants`.
+- Event 2 (0093), trigger `trg_notify_servant_approved` on `pending_servants` update of `approved_at` (null → set, not the self-tidy-up that links it in the same step): "You're approved!" to that servant only — the signed-in submitter, or the account with the matching confirmed email — and only if they have notifications on for that ministry; opens `/`.
 
 ## S. Screen lock and Face ID unlock (migration 0089)
 
