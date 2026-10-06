@@ -67,6 +67,15 @@ export async function sendTestNotification(): Promise<{ error: string | null; se
   return { error: null, sent: result.sent.length };
 }
 
+/** The weekly recap's day (0 = Sunday) and hour, for me here (0095). */
+export async function setNotificationSchedule(event: string, day: number, hour: number): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_notification_schedule", { p_event: event, p_day: day, p_hour: hour });
+  if (error) return { error: "Couldn't save that. Please try again." };
+  revalidatePath("/settings/notifications");
+  return { error: null };
+}
+
 /** One kind of notification on or off for me, on this ministry (0094). */
 export async function setNotificationPreference(event: string, enabled: boolean): Promise<{ error: string | null }> {
   const supabase = await createClient();

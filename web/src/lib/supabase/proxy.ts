@@ -25,8 +25,9 @@ const AGREEMENT_EXEMPT_PREFIXES = ["/login", "/auth", "/checkin", SECURITY_PREFI
  * an app-store-style crawler) -- must never be redirected regardless of
  * auth state. Distinct from GATE_EXEMPT_PREFIXES above, which is about what
  * a signed-in-but-incomplete person can reach, not what an anonymous
- * request can. */
-const PUBLIC_ASSET_PATHS = ["/manifest.webmanifest", "/sw.js"];
+ * request can. /api/push/tick is the database's "send what's due" call
+ * (migration 0095), which has no session either. */
+const PUBLIC_ASSET_PATHS = ["/manifest.webmanifest", "/sw.js", "/api/push/tick"];
 
 /** MULTI_TENANT_PLAN.md §3.2 -- the two plain status pages. Neither makes a
  * single data call. */
