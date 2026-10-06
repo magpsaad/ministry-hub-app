@@ -10,4 +10,6 @@ end
 $$;
 
 alter table app_releases alter column released_on set default current_date;
+drop function if exists set_console_timezone(text);
 drop function if exists church_timezone();
+drop table if exists console_settings;

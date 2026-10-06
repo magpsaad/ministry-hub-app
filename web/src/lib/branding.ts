@@ -43,8 +43,8 @@ const NEUTRAL: Omit<Branding, "app_title_long" | "app_title_short" | "app_subtit
  */
 /** Owner-reported (5 Oct 2026): the console worked in UTC, so at 8:22 PM in
  * Toronto its Release Notes date already said tomorrow. Addresses that
- * belong to no ministry use the timezone the church's ministries use
- * (Ministry Settings -> Timezone; migration 0091's church_timezone()). */
+ * belong to no ministry use the console's own timezone (Console ->
+ * Settings; migration 0091's church_timezone()). */
 const getChurchTimezone = cache(async (): Promise<string> => {
   const supabase = createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     db: { schema: process.env.NEXT_PUBLIC_APP_ENV as "qa" | "prod" },

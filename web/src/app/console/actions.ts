@@ -185,3 +185,20 @@ export async function removeMinistryAddressAction(code: string, host: string) {
   revalidatePath(`/console/ministries/${code}`);
   return { error: null };
 }
+
+/** The console's own timezone (Console -> Settings, migration 0091). The
+ * database accepts only a real timezone name and only from the Church Admin;
+ * this checks the name first for a friendlier message. */
+export async function setConsoleTimezoneAction(timezone: string): Promise<{ error: string | null }> {
+  const tz = timezone.trim();
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+  } catch {
+    return { error: `"${tz}" isn't a recognized timezone name (for example America/Toronto).` };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_console_timezone", { p_timezone: tz });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { error: null };
+}
