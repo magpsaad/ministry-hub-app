@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startRegistration } from "@simplewebauthn/browser";
 import { removeUnlockDevice } from "./actions";
 import { CARD, PRIMARY_BUTTON } from "./shared";
+import { useTimezone } from "@/components/TimezoneProvider";
+import { formatDateTimeInZone } from "@/lib/timezone";
 
 export type UnlockDeviceRow = { id: string; label: string | null; created_at: string; last_used_at: string | null };
 
@@ -18,7 +20,6 @@ function deviceLabel(): string {
   return "This device";
 }
 
-const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 
 /** Account Security -> Face ID / fingerprint unlock (migration 0089): turn
  * it on for this device, see and remove the devices set up for this
@@ -26,6 +27,8 @@ const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { year:
  * public key is kept. */
 export function FaceIdCard({ devices, lockMinutes }: { devices: UnlockDeviceRow[]; lockMinutes: number | null }) {
   const router = useRouter();
+  const timeZone = useTimezone();
+  const day = (iso: string) => formatDateTimeInZone(iso, timeZone, { year: "numeric", month: "short", day: "numeric" });
   const [supported, setSupported] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [pending, startTransition] = useTransition();

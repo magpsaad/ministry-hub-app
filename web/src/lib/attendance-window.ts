@@ -1,3 +1,5 @@
+import { shiftDateKey, todayInZone } from "@/lib/timezone";
+
 /**
  * Pure, dependency-free average-attendance-% helpers -- split out of
  * app-settings.ts so a client component (AnalyticsInteractive.tsx) can
@@ -15,6 +17,9 @@ export type AttendanceWindowSettings = {
    * Postgres function -- the regular service day, Friday (5) by default for
    * this deployment. */
   service_weekday: number;
+  /** The ministry's timezone (App Settings) -- "today" for the rolling
+   * window is that calendar day, not the server's UTC one. */
+  timezone: string;
 };
 
 /**
@@ -52,12 +57,13 @@ export function weekdayName(serviceWeekday: number): string {
  * entire attendance history. Returns null if the person has never
  * attended (no join date yet).
  */
-export function resolveAttendanceSince(joinDate: string | null, windowWeeks: number | null): string | null {
+export function resolveAttendanceSince(joinDate: string | null, windowWeeks: number | null, timeZone: string): string | null {
   if (!joinDate) return null;
   if (windowWeeks === null) return joinDate;
 
-  const windowStart = new Date();
-  windowStart.setDate(windowStart.getDate() - windowWeeks * 7);
-  const windowStartISO = windowStart.toISOString().slice(0, 10);
+  // Owner-reported (5 Oct 2026): computed from the UTC clock, the window
+  // moved a day early every evening -- on a Friday night it dropped a
+  // service from the count. Today is the ministry's calendar day.
+  const windowStartISO = shiftDateKey(todayInZone(timeZone), { days: -windowWeeks * 7 });
   return joinDate > windowStartISO ? joinDate : windowStartISO;
 }

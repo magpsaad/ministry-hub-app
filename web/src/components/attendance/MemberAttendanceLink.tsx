@@ -4,6 +4,7 @@ import { useState } from "react";
 import { resolveAttendanceSince } from "@/lib/attendance-window";
 import { getMemberPresentDatesAction } from "@/app/g/[groupId]/members/data-actions";
 import { AttendanceHistoryModal } from "./AttendanceHistoryModal";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 /**
  * Owner-requested: the average-attendance % on a Member List card opens the
@@ -35,6 +36,7 @@ export function MemberAttendanceLink({
   className?: string;
   children: React.ReactNode;
 }) {
+  const timeZone = useTimezone();
   const [dates, setDates] = useState<{ date: string; present: boolean }[] | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -42,7 +44,7 @@ export function MemberAttendanceLink({
     setLoading(true);
     const present = new Set(await getMemberPresentDatesAction(memberId));
     setLoading(false);
-    const since = resolveAttendanceSince(joinDate, windowWeeks);
+    const since = resolveAttendanceSince(joinDate, windowWeeks, timeZone);
     setDates(since ? serviceWeekdayDates.filter((d) => d >= since).map((d) => ({ date: d, present: present.has(d) })) : []);
   }
 

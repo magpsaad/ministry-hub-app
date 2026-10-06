@@ -3,8 +3,11 @@
 import { useState, useTransition } from "react";
 import type { PendingServant } from "@/lib/pending-servants";
 import { approvePendingServantAction, removePendingServantAction } from "@/app/admin/pending-servants/actions";
+import { useTimezone } from "@/components/TimezoneProvider";
+import { formatDateTimeInZone } from "@/lib/timezone";
 
 export function PendingServantRow({ servant }: { servant: PendingServant }) {
+  const timeZone = useTimezone();
   const [pending, startTransition] = useTransition();
   const [approved, setApproved] = useState(!!servant.approved_at);
   const [removed, setRemoved] = useState(false);
@@ -49,7 +52,7 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
         )}
         {servant.registration_comments && <p className="text-xs text-[#666] italic">&ldquo;{servant.registration_comments}&rdquo;</p>}
         <p className="text-xs text-[#999] mt-1">
-          First registered {new Date(servant.submitted_at).toLocaleDateString()} · checked in {servant.checkInCount}{" "}
+          First registered {formatDateTimeInZone(servant.submitted_at, timeZone, { year: "numeric", month: "short", day: "numeric" })} · checked in {servant.checkInCount}{" "}
           time{servant.checkInCount === 1 ? "" : "s"}
         </p>
         {error && <p className="text-xs text-[#dc3545] mt-1">{error}</p>}

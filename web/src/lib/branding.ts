@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { createClient as createPlainClient } from "@supabase/supabase-js";
 import { getAddressContext } from "@/lib/ministry-context";
 import { getAppSettings, type AppSettings } from "@/lib/app-settings";
 import { getLatestReleaseVersion } from "@/lib/releases";
@@ -22,9 +23,8 @@ export type Branding = Pick<
 
 /** Neutral chrome for addresses that belong to no ministry -- the Church
  * Admin console and an address nobody set up. Deliberately not any
- * ministry's name, logo or colours (MULTI_TENANT_PLAN.md §3.2, A11). No
- * ministry data is shown on these pages, so the timezone is only a
- * formality. */
+ * ministry's name, logo or colours (MULTI_TENANT_PLAN.md §3.2, A11). The
+ * timezone is replaced by the church's (below). */
 const NEUTRAL: Omit<Branding, "app_title_long" | "app_title_short" | "app_subtitle" | "app_version"> = {
   logo_url: null,
   theme_color: "#334155",
@@ -41,17 +41,38 @@ const NEUTRAL: Omit<Branding, "app_title_long" | "app_title_short" | "app_subtit
  * addresses -- it reads the request's host every time (§14, R16).
  * React.cache()-memoized per request.
  */
+/** Owner-reported (5 Oct 2026): the console worked in UTC, so at 8:22 PM in
+ * Toronto its Release Notes date already said tomorrow. Addresses that
+ * belong to no ministry use the timezone the church's ministries use
+ * (Ministry Settings -> Timezone; migration 0091's church_timezone()). */
+const getChurchTimezone = cache(async (): Promise<string> => {
+  const supabase = createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+    db: { schema: process.env.NEXT_PUBLIC_APP_ENV as "qa" | "prod" },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const { data } = await supabase.rpc("church_timezone");
+  return typeof data === "string" && data ? data : NEUTRAL.timezone;
+});
+
 export const getBranding = cache(async (): Promise<Branding> => {
   const ctx = await getAddressContext();
   if (ctx.kind === "ministry") return getAppSettings();
   if (ctx.kind === "console") {
     return {
       ...NEUTRAL,
+      timezone: await getChurchTimezone(),
       app_title_long: "Church Admin Console",
       app_title_short: "Church Admin",
       app_subtitle: "Ministries, addresses and release notes",
       app_version: (await getLatestReleaseVersion()) ?? "",
     };
   }
-  return { ...NEUTRAL, app_title_long: "Ministry Hub", app_title_short: "Ministry Hub", app_subtitle: "", app_version: "" };
+  return {
+    ...NEUTRAL,
+    timezone: await getChurchTimezone(),
+    app_title_long: "Ministry Hub",
+    app_title_short: "Ministry Hub",
+    app_subtitle: "",
+    app_version: "",
+  };
 });

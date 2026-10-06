@@ -5,6 +5,7 @@ import type { ServantAttendanceBundle } from "@/lib/servant-attendance";
 import { resolveAttendanceSince } from "@/lib/attendance-window";
 import { setServantAttendanceAction } from "@/app/servants-attendance/actions";
 import { AttendanceHistoryModal } from "@/components/attendance/AttendanceHistoryModal";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -23,6 +24,7 @@ export function ServantsAttendanceInteractive({
   windowWeeks: number | null;
   dayName: string;
 }) {
+  const timeZone = useTimezone();
   const [attendanceByServant, setAttendanceByServant] = useState(bundle.attendanceByServant);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -32,7 +34,7 @@ export function ServantsAttendanceInteractive({
   const [historyMember, setHistoryMember] = useState<{ id: string; full_name: string } | null>(null);
 
   function historyFor(servantId: string, joinDate: string | null) {
-    const since = resolveAttendanceSince(joinDate, bundle.windowWeeks);
+    const since = resolveAttendanceSince(joinDate, bundle.windowWeeks, timeZone);
     if (!since) return [];
     const presentSet = new Set(attendanceByServant[servantId] ?? []);
     return bundle.serviceWeekdayDates.filter((d) => d >= since).map((d) => ({ date: d, present: presentSet.has(d) }));

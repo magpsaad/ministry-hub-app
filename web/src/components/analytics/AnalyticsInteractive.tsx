@@ -11,6 +11,7 @@ import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import { ClipboardCheckIcon, UsersIcon, ChartBarIcon, MapPinIcon } from "@/components/icons";
 import { ProximityDonut } from "@/components/charts/ProximityDonut";
 import { AttendanceTrendChart } from "@/components/charts/AttendanceTrendChart";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 type SortKey = "name" | "gender" | "caseload" | "cohort";
 
@@ -73,6 +74,7 @@ export function AnalyticsInteractive({
   serviceWeekday: number;
   windowWeeks: number | null;
 }) {
+  const timeZone = useTimezone();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
   // Combined view: the header's cohort checkboxes (CohortFilter).
@@ -161,7 +163,7 @@ export function AnalyticsInteractive({
         let presentCount = 0;
         let totalSlots = 0;
         for (const m of members) {
-          const since = resolveAttendanceSince(m.join_date, windowWeeks);
+          const since = resolveAttendanceSince(m.join_date, windowWeeks, timeZone);
           if (!since) continue;
           for (const d of dates) {
             if (d < since) continue;

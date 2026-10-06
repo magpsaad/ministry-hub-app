@@ -30,6 +30,8 @@ import {
 } from "@/components/icons";
 import { dismissNewAssignmentAction } from "@/app/g/[groupId]/members/actions";
 import { dismissFollowUpAction } from "@/app/g/[groupId]/outreach/actions";
+import { useTimezone } from "@/components/TimezoneProvider";
+import { formatDateTimeInZone } from "@/lib/timezone";
 
 type ActionsNeededConfigRow = {
   proximity: string;
@@ -146,6 +148,7 @@ export function DashboardInteractive({
   canEditAll?: boolean;
   editableGroupIds?: string[];
 }) {
+  const timeZone = useTimezone();
   const router = useRouter();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
@@ -428,7 +431,7 @@ export function DashboardInteractive({
                               Absent for {m.currentConsecutiveAbsences} week{m.currentConsecutiveAbsences === 1 ? "" : "s"}
                             </p>
                             <p className="text-xs text-[#666]">
-                              Last outreach: {m.lastOutreachDate ? new Date(m.lastOutreachDate).toLocaleDateString() : "Never"}
+                              Last outreach: {m.lastOutreachDate ? formatDateTimeInZone(m.lastOutreachDate, timeZone, { year: "numeric", month: "short", day: "numeric" }) : "Never"}
                             </p>
                           </div>
                           {/* Owner-reported: Outreach was tucked below the

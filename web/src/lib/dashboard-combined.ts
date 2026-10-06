@@ -130,6 +130,7 @@ export async function getCombinedDashboardData(groupIds: string[]): Promise<Comb
       })),
     settings.birthday_window_days_before,
     settings.birthday_window_days_after,
+    settings.timezone,
   );
 
   // Members are read newest first, the order both of these lists use.
@@ -172,6 +173,7 @@ export async function getCombinedDashboardData(groupIds: string[]): Promise<Comb
     config,
     settings.proximity_enabled,
     settings.actions_needed_lookback_months,
+    settings.timezone,
   );
 
   return { statsData, birthdays, unassigned, actionsNeeded, newlyAssigned, followUpsDue };

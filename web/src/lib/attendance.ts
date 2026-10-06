@@ -130,7 +130,7 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
     .sort();
 
   const membersWithAttendance = members.map((m) => {
-    const since = resolveAttendanceSince(m.join_date, windowSettings.youth_attendance_window_weeks);
+    const since = resolveAttendanceSince(m.join_date, windowSettings.youth_attendance_window_weeks, windowSettings.timezone);
     if (!since) return m;
     const trackedInWindow = serviceWeekdayDates.filter((d) => d >= since);
     const presentSet = new Set(attendanceByMember[m.id] ?? []);

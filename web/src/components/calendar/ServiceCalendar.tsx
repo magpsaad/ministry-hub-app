@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { CalendarEvent } from "@/lib/calendar-types";
 import { EVENT_TYPE_COLORS, contrastText } from "@/lib/calendar-types";
 import { EventForm } from "./EventForm";
+import { useTimezone } from "@/components/TimezoneProvider";
+import { todayInZone } from "@/lib/timezone";
 
 type View = "month" | "week" | "list" | "fridays";
 
@@ -74,7 +76,8 @@ function DayGrid({
   onDayClick: (dateISO: string) => void;
   onEventClick: (event: CalendarEvent) => void;
 }) {
-  const todayISO = toISO(new Date());
+  const timeZone = useTimezone();
+  const todayISO = todayInZone(timeZone);
   return (
     <div className="grid grid-cols-7 gap-px bg-[#e0e0e0] rounded-lg overflow-hidden border border-[#e0e0e0]">
       {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
@@ -129,8 +132,9 @@ function DateRow({
   onEventClick: (event: CalendarEvent) => void;
   rowRef?: (el: HTMLDivElement | null) => void;
 }) {
+  const timeZone = useTimezone();
   const dateISO = toISO(date);
-  const isToday = dateISO === toISO(new Date());
+  const isToday = dateISO === todayInZone(timeZone);
   return (
     <div ref={rowRef} className={`flex border-b border-[#e0e0e0] ${isToday ? "bg-[#eef4fb]" : "bg-white"}`}>
       <div className={`w-20 shrink-0 px-2 py-3 text-center border-l-2 ${isToday ? "border-l-brand" : "border-l-transparent"}`}>
@@ -173,6 +177,7 @@ export function ServiceCalendar({
   serviceWeekdayLabel: string;
   serviceWeekday: number;
 }) {
+  const timeZone = useTimezone();
   const router = useRouter();
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState(new Date());
@@ -225,7 +230,7 @@ export function ServiceCalendar({
   // Auto-position List/Fridays to the current week on open/view-switch.
   useEffect(() => {
     if (view !== "list" && view !== "fridays") return;
-    const todayISO = toISO(new Date());
+    const todayISO = todayInZone(timeZone);
     const source = view === "list" ? listDates : fridaysListDates;
     const target = source.find((d) => toISO(d.date) >= todayISO) ?? source[source.length - 1];
     if (target) {

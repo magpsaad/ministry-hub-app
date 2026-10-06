@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAppSettings } from "@/lib/app-settings";
+import { todayInZone } from "@/lib/timezone";
 
 /** D12 -- how two or more graduating groups enter hand-over. */
 export type HandOverMode = "one" | "by_gender" | "separate";
@@ -85,5 +87,6 @@ export async function suggestedNewCohortYear(): Promise<number> {
     .eq("kind", "pre_entry")
     .eq("is_archived", false)
     .maybeSingle();
-  return data?.cohort_year ? data.cohort_year + 1 : new Date().getFullYear();
+  if (data?.cohort_year) return data.cohort_year + 1;
+  return Number(todayInZone((await getAppSettings()).timezone).slice(0, 4));
 }

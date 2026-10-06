@@ -86,6 +86,8 @@ Every `legacy_source_ref` unique index is now `(ministry_id, legacy_source_ref)`
 
 ### M.5 Functions
 
+- `church_timezone()` (0091): the timezone the church's active ministries use (most common `app_settings.timezone`), for addresses that belong to no ministry (the console). `app_releases.released_on` defaults to today in it.
+
 - **Explicit-ministry helpers:** `is_church_admin(uid)`, `ministry_exists(m)`, `ministry_is_active(m)`, `is_app_user_in(m, uid)`, `is_admin_in(m, uid)`, `is_admin_or_gc_in(m, uid)`, `is_coordinator_in(m, uid)`, `group_ministry_id(gid)`. The Church Admin passes the role checks in every existing ministry; everyone else also needs the ministry to be active.
 - **Existing helpers, same names and signatures,** now mean "in the current ministry": `is_app_user`, `is_admin`, `is_admin_or_general_coordinator`, `is_coordinator`, `can_manage_servants`, `has_group_access` (the group must belong to the current ministry), `has_readonly_or_full_group_access`.
 - **`accessible_group_ids(p_include_read_only)`** (0067): the current user's accessible group ids in the current ministry, as one array, so security rules evaluate it once per query instead of once per row.

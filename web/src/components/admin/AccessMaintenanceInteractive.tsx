@@ -3,6 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import type { AccessProfile, AccessRoleRow } from "@/app/admin/access-maintenance/actions";
 import type { GroupSummary } from "@/lib/groups";
+import { useTimezone } from "@/components/TimezoneProvider";
+import { formatDateTimeInZone } from "@/lib/timezone";
 import {
   addPersonByEmailAction,
   grantRoleAction,
@@ -52,6 +54,7 @@ export function AccessMaintenanceInteractive({
   initialRoles: AccessRoleRow[];
   groups: GroupSummary[];
 }) {
+  const timeZone = useTimezone();
   const [profiles, setProfiles] = useState(initialProfiles);
   const [roles, setRoles] = useState(initialRoles);
   const [search, setSearch] = useState("");
@@ -435,7 +438,7 @@ export function AccessMaintenanceInteractive({
               <div className="mb-4 rounded-md border border-[#e0e0e0] bg-[#f7f7f7] p-3 text-sm text-[#555]">
                 <p>
                   <strong className="text-[#333]">Deactivated</strong> on{" "}
-                  {new Date(selectedProfile.deactivated_at).toLocaleDateString(undefined, {
+                  {formatDateTimeInZone(selectedProfile.deactivated_at, timeZone, {
                     year: "numeric",
                     month: "short",
                     day: "numeric",

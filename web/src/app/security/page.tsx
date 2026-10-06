@@ -92,7 +92,7 @@ export default async function AccountSecurityPage() {
                       On
                     </span>
                     Added{" "}
-                    {new Date(f.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                    {formatDateTimeInZone(f.created_at, branding.timezone, { year: "numeric", month: "short", day: "numeric" })}
                   </span>
                   <RemoveAuthenticatorButton factorId={f.id} required={required} />
                 </li>

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/pagination";
 import { getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
+import { shiftDateKey, todayInZone } from "@/lib/timezone";
 
 export type ServantDirectoryEntry = {
   id: string;
@@ -48,9 +49,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const windowWeeks = windowSettings.servant_attendance_window_weeks;
   let queryFloorISO: string | null = null;
   if (windowWeeks !== null) {
-    const windowStart = new Date();
-    windowStart.setDate(windowStart.getDate() - windowWeeks * 7);
-    queryFloorISO = windowStart.toISOString().slice(0, 10);
+    queryFloorISO = shiftDateKey(todayInZone(windowSettings.timezone), { days: -windowWeeks * 7 });
   }
 
   const profilesById = new Map((profileRows ?? []).map((p) => [p.id, p]));
@@ -121,7 +120,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     if (!profile) continue;
 
     let averageAttendance: number | null = null;
-    const since = resolveAttendanceSince(profile.join_date, windowWeeks);
+    const since = resolveAttendanceSince(profile.join_date, windowWeeks, windowSettings.timezone);
     if (since) {
       const relevantDates = trackedDates.filter((d) => d >= since);
       const presentSet = presentByServant.get(userId) ?? new Set<string>();

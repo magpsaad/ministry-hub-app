@@ -11,6 +11,7 @@ import { useCohortFilter } from "@/components/CohortFilter";
 import { MemberDetailLink } from "@/components/members/MemberDetailLink";
 import { setAttendanceAction } from "@/app/g/[groupId]/attendance/actions";
 import { AttendanceHistoryModal } from "./AttendanceHistoryModal";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 /** What the Member Detail modal needs, so the attendance-history popup's
  * name can link back to the youth's record (owner-requested) -- the same
@@ -73,6 +74,7 @@ export function AttendanceInteractive({
   currentUserId: string;
   memberRecord: AttendanceMemberRecordContext;
 }) {
+  const timeZone = useTimezone();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   // Combined view: the header's cohort checkboxes (CohortFilter). With a
   // single group there's nothing to filter (memberRecord.groups is empty).
@@ -106,7 +108,7 @@ export function AttendanceInteractive({
     const dates = attendanceByMember[memberId] ?? [];
     const earliest = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
     const effectiveJoin = joinDate && earliest ? (earliest < joinDate ? earliest : joinDate) : (joinDate ?? earliest);
-    const since = resolveAttendanceSince(effectiveJoin, bundle.windowWeeks);
+    const since = resolveAttendanceSince(effectiveJoin, bundle.windowWeeks, timeZone);
     if (!since) return null;
     const tracked = bundle.serviceWeekdayDates.filter((d) => d >= since);
     if (tracked.length === 0) return null;
@@ -115,7 +117,7 @@ export function AttendanceInteractive({
   }
 
   function historyFor(memberId: string, joinDate: string | null) {
-    const since = resolveAttendanceSince(joinDate, bundle.windowWeeks);
+    const since = resolveAttendanceSince(joinDate, bundle.windowWeeks, timeZone);
     if (!since) return [];
     const presentSet = new Set(attendanceByMember[memberId] ?? []);
     return bundle.serviceWeekdayDates.filter((d) => d >= since).map((d) => ({ date: d, present: presentSet.has(d) }));

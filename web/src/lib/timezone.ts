@@ -26,6 +26,14 @@ export function todayInZone(timeZone: string): string {
   return dateKeyInZone(new Date().toISOString(), timeZone);
 }
 
+/** A "YYYY-MM-DD" key moved by whole days and/or months -- plain calendar
+ * arithmetic, so no timezone can shift it. Start from todayInZone(), never
+ * from `new Date()` (the server's clock is UTC; a device's is its own). */
+export function shiftDateKey(key: string, { days = 0, months = 0 }: { days?: number; months?: number }): string {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1 + months, d + days)).toISOString().slice(0, 10);
+}
+
 /** Today's date plus minutes-since-midnight right now, both in `timeZone`
  * (the same-day cutoff rule needs both). */
 export function nowInZone(timeZone: string): { date: string; timeMinutes: number } {

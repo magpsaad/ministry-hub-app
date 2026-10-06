@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/pagination";
 import { getAppSettings } from "@/lib/app-settings";
+import { shiftDateKey, todayInZone } from "@/lib/timezone";
 
 export type ActionsNeededMember = {
   id: string;
@@ -99,6 +100,7 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
     config,
     appSettings.proximity_enabled,
     appSettings.actions_needed_lookback_months,
+    appSettings.timezone,
   );
 }
 
@@ -127,14 +129,14 @@ export function computeActionsNeeded(
   config: ConfigRow[],
   proximityEnabled: boolean,
   lookbackMonths: number,
+  timeZone: string,
 ): ActionsNeededMember[] {
   const configByProximity = new Map(config.map((c: ConfigRow) => [c.proximity, c]));
 
   // Look-back for presenceCount: App Settings' actions_needed_lookback_months
   // (was a fixed 12 months -- MULTI_TENANT_PLAN.md §10, A12).
-  const lookbackStart = new Date();
-  lookbackStart.setMonth(lookbackStart.getMonth() - lookbackMonths);
-  const cutoffISO = lookbackStart.toISOString().slice(0, 10);
+  // From the ministry's calendar day, not the server's UTC one.
+  const cutoffISO = shiftDateKey(todayInZone(timeZone), { months: -lookbackMonths });
 
   const presentByMember = new Map<string, Set<string>>();
   const lastPresentByMember = new Map<string, string>();

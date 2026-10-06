@@ -18,6 +18,8 @@ import {
   updateNamePatternsAction,
 } from "@/app/admin/actions-needed-config/actions";
 import { levelText, renderGroupName, PATTERN_PLACEHOLDER } from "@/lib/group-names";
+import { useTimezone } from "@/components/TimezoneProvider";
+import { todayInZone } from "@/lib/timezone";
 
 const SERVANTS = "servants";
 
@@ -58,6 +60,7 @@ export function GroupNamesInteractive({
   initialDefaultPattern: string | null;
   initialTerminalPattern: string;
 }) {
+  const timeZone = useTimezone();
   const router = useRouter();
   const [groups, setGroups] = useState(initial);
   const [servantsQrColor, setServantsQrColor] = useState(initialServantsQrColor);
@@ -79,7 +82,7 @@ export function GroupNamesInteractive({
   const regular = groups.filter((g) => g.kind === "regular");
   const topLevel = regular.length > 0 ? Math.max(...regular.map((g) => g.ladder_position)) : 0;
   const preEntryYear = groups.find((g) => g.kind === "pre_entry")?.cohort_year ?? null;
-  const exampleYear = preEntryYear ?? new Date().getFullYear();
+  const exampleYear = preEntryYear ?? Number(todayInZone(timeZone).slice(0, 4));
   const graduatingYear = regular.find((g) => g.ladder_position === topLevel && g.cohort_year !== null)?.cohort_year ?? null;
   const nameOf = (id: string | null) => groups.find((g) => g.id === id)?.name ?? "another group";
 

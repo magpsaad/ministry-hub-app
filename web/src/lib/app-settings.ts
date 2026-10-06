@@ -136,5 +136,6 @@ export async function getAttendanceWindowSettings(): Promise<AttendanceWindowSet
     youth_attendance_window_weeks: s.youth_attendance_window_weeks,
     servant_attendance_window_weeks: s.servant_attendance_window_weeks,
     service_weekday: s.service_weekday,
+    timezone: s.timezone,
   };
 }

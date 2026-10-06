@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { zoneMidnightUtcIso } from "@/lib/timezone";
+import { shiftDateKey, todayInZone, zoneMidnightUtcIso } from "@/lib/timezone";
 import { getAppSettings } from "@/lib/app-settings";
 
 export type AuditLogRow = {
@@ -94,9 +94,9 @@ export async function toggleAuditConfigAction(actionType: string, enabled: boole
  * meant to be append-only outside of an explicit, Admin-only archive tool). */
 export async function archiveAuditLogAction(olderThanDays: number) {
   const supabase = await createClient();
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - olderThanDays);
-  const { data, error } = await supabase.rpc("archive_audit_log", { cutoff_date: cutoff.toISOString().slice(0, 10) });
+  const settings = await getAppSettings();
+  const cutoff = shiftDateKey(todayInZone(settings.timezone), { days: -olderThanDays });
+  const { data, error } = await supabase.rpc("archive_audit_log", { cutoff_date: cutoff });
   if (error) return { error: error.message, deleted: 0 };
 
   revalidatePath("/admin/audit-logs");

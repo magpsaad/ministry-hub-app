@@ -103,7 +103,7 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
 
   const members: ServantAttendanceMember[] = ids.map((id) => {
     const info = byUser.get(id)!;
-    const since = resolveAttendanceSince(info.join_date, windowSettings.servant_attendance_window_weeks);
+    const since = resolveAttendanceSince(info.join_date, windowSettings.servant_attendance_window_weeks, windowSettings.timezone);
     if (!since) {
       return { id, full_name: info.full_name, groupLabel: info.groupLabel, join_date: info.join_date, averageAttendance: null };
     }

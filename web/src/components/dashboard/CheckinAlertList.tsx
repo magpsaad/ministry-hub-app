@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { reviewCheckinAlertAction } from "@/app/admin/checkin-alerts/actions";
+import { formatDateTimeInZone } from "@/lib/timezone";
+import { useTimezone } from "@/components/TimezoneProvider";
 
 export type CheckinAlert = { id: string; created_at: string; signups_last_hour: number };
 
 export function CheckinAlertList({ alerts: initial, timeZone }: { alerts: CheckinAlert[]; timeZone?: string }) {
+  const ministryZone = useTimezone();
   const [alerts, setAlerts] = useState(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +41,7 @@ export function CheckinAlertList({ alerts: initial, timeZone }: { alerts: Checki
           <p className="text-sm font-bold text-[#721c24]">Unusual number of check-in sign-ups</p>
           <p className="mt-1 text-sm text-[#333]">
             <strong>{a.signups_last_hour}</strong> people signed up through check-in posters within an hour (
-            {new Date(a.created_at).toLocaleString(undefined, {
+            {formatDateTimeInZone(a.created_at, timeZone ?? ministryZone, {
               weekday: "short",
               month: "short",
               day: "numeric",

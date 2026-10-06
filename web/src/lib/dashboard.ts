@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getAppSettings } from "@/lib/app-settings";
+import { todayInZone } from "@/lib/timezone";
 import { fetchAllRows } from "@/lib/pagination";
 
 export type MemberStatRow = {
@@ -174,6 +175,7 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
     ((data ?? []) as unknown as Omit<BirthdayMember, "daysFromToday">[]).map((m) => ({ ...m, group_id: groupId })),
     settings.birthday_window_days_before,
     settings.birthday_window_days_after,
+    settings.timezone,
   );
 }
 
@@ -184,12 +186,16 @@ export function birthdaysInWindow(
   members: Omit<BirthdayMember, "daysFromToday">[],
   daysBefore: number,
   daysAfter: number,
+  timeZone: string,
 ): BirthdayMember[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Owner-reported (5 Oct 2026): "today" was the server's UTC day, so every
+  // evening the window (and "today's" birthdays) moved a day ahead. Today
+  // is the ministry's calendar day; all the arithmetic stays in UTC dates.
+  const [ty, tm, td] = todayInZone(timeZone).split("-").map(Number);
+  const today = new Date(Date.UTC(ty, tm - 1, td));
   const dayOfYear = (d: Date) => {
-    const start = new Date(d.getFullYear(), 0, 0);
-    return Math.floor((d.getTime() - start.getTime()) / 86400000);
+    const start = Date.UTC(d.getUTCFullYear(), 0, 0);
+    return Math.floor((d.getTime() - start) / 86400000);
   };
   const todayDoy = dayOfYear(today);
 
@@ -201,7 +207,7 @@ export function birthdaysInWindow(
   return members
     .map((m) => {
       const [, month, day] = m.date_of_birth.split("-").map(Number);
-      const bdayThisYear = new Date(today.getFullYear(), month - 1, day);
+      const bdayThisYear = new Date(Date.UTC(today.getUTCFullYear(), month - 1, day));
       let diff = dayOfYear(bdayThisYear) - todayDoy;
       // wrap around the year boundary in both directions
       if (diff < -daysBefore) diff += 365;

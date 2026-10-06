@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
+import { todayInZone } from "@/lib/timezone";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
@@ -50,7 +51,7 @@ export default async function CalendarMaintenancePage() {
         <HeaderWordmark />
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        <CalendarMaintenanceInteractive defaultYear={new Date().getFullYear()} initialRules={initialRules} />
+        <CalendarMaintenanceInteractive defaultYear={Number(todayInZone(settings.timezone).slice(0, 4))} initialRules={initialRules} />
         <DeletedEventsBin initial={deletedEvents} />
       </main>
     </div>

@@ -136,7 +136,7 @@ export async function getGroupMembers(groupId: string | string[]): Promise<Group
   }
 
   const membersWithAttendance = members.map((m) => {
-    const since = resolveAttendanceSince(m.join_date, windowSettings.youth_attendance_window_weeks);
+    const since = resolveAttendanceSince(m.join_date, windowSettings.youth_attendance_window_weeks, windowSettings.timezone);
     if (!since) return { ...m, avgAttendancePercent: null };
 
     const trackedInWindow = trackedDates.filter((d) => d >= since);
