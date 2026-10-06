@@ -155,7 +155,7 @@ export function ScreenLock() {
     <div className="fixed inset-x-0 bottom-4 z-[900] flex justify-center px-4">
       <div className="flex w-full max-w-md items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-[#333] shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
         <span className="flex-1">Unlock this app with Face ID or your fingerprint instead of an email code?</span>
-        <Link href="/security#face-id" onClick={dismissOffer} className="shrink-0 font-semibold text-brand hover:underline">
+        <Link href="/settings/screen-lock" onClick={dismissOffer} className="shrink-0 font-semibold text-brand hover:underline">
           Set it up
         </Link>
         <button type="button" onClick={dismissOffer} className="shrink-0 text-[#777] hover:underline">

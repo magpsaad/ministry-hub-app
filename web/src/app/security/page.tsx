@@ -10,15 +10,15 @@ import { CARD, PRIMARY_BUTTON } from "./shared";
 import { RemoveAuthenticatorButton } from "./RemoveAuthenticatorButton";
 import { getBranding } from "@/lib/branding";
 import { formatDateTimeInZone } from "@/lib/timezone";
-import { relyingParty } from "@/lib/screen-lock-server";
-import { FaceIdCard, type UnlockDeviceRow } from "./FaceIdCard";
 import { LinkSpinner, SubmitButton } from "@/components/PendingButton";
 
 /** Account Security (owner-approved sign-in changes B and F, 3 Oct 2026):
  * the optional -- or, for Admins, General Coordinators and the Church
- * Admin, required -- authenticator app, Face ID unlock, and "Sign out of
- * all devices". (The confidentiality agreement moved to My Settings ->
- * Confidentiality Agreement, 6 Oct 2026.) */
+ * Admin, required -- authenticator app and "Sign out of all devices": the
+ * things that work the same on every ministry's address and the console.
+ * (Moved out, 6 Oct 2026: the confidentiality agreement to My Settings ->
+ * Confidentiality Agreement, Face ID unlock to My Settings -> Screen Lock &
+ * Face ID.) */
 export default async function AccountSecurityPage() {
   const supabase = await createClient();
   const {
@@ -26,19 +26,11 @@ export default async function AccountSecurityPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { rpID } = await relyingParty();
-  const [{ data: factors }, { data: gate }, branding, { data: unlockDevices }, { data: lockState }] = await Promise.all([
+  const [{ data: factors }, { data: gate }, branding] = await Promise.all([
     supabase.auth.mfa.listFactors(),
     supabase.rpc("gate_info"),
     getBranding(),
-    supabase
-      .from("unlock_devices")
-      .select("id, label, created_at, last_used_at")
-      .eq("rp_id", rpID)
-      .order("created_at"),
-    supabase.rpc("screen_lock_state", { p_touch: false }),
   ]);
-  const lockMinutes = (lockState as { lock_minutes: number | null }[] | null)?.[0]?.lock_minutes ?? null;
   const required = Boolean((gate as { mfa_required: boolean }[] | null)?.[0]?.mfa_required);
   const authenticators = (factors?.totp ?? []).filter((f) => f.status === "verified");
 
@@ -95,8 +87,6 @@ export default async function AccountSecurityPage() {
             </Link>
           )}
         </div>
-
-        <FaceIdCard devices={(unlockDevices ?? []) as UnlockDeviceRow[]} lockMinutes={lockMinutes} />
 
         <div className={CARD}>
           <h2 className="text-base font-bold text-[#333]">Sign out of all devices</h2>

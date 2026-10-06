@@ -145,7 +145,7 @@ export function UnlockPanel({ onUnlocked }: { onUnlocked: () => void }) {
       </div>
       {methods && !methods.faceId && (
         <p className="mt-4 text-xs text-[#777]">
-          Tip: turn on Face ID / fingerprint unlock for this device on the Account Security page.
+          Tip: turn on Face ID / fingerprint unlock for this device in My Settings &rarr; Screen Lock &amp; Face ID.
         </p>
       )}
     </div>

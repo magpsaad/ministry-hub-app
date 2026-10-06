@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startRegistration } from "@simplewebauthn/browser";
 import { removeUnlockDevice } from "./actions";
-import { CARD, PRIMARY_BUTTON } from "./shared";
+import { CARD, PRIMARY_BUTTON } from "@/app/security/shared";
+import { BusyLabel } from "@/components/PendingButton";
 import { deviceLabel } from "@/lib/device-label";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { formatDateTimeInZone } from "@/lib/timezone";
@@ -13,9 +14,10 @@ export type UnlockDeviceRow = { id: string; label: string | null; created_at: st
 
 
 
-/** Account Security -> Face ID / fingerprint unlock (migration 0089): turn
- * it on for this device, see and remove the devices set up for this
- * address. The face or fingerprint never leaves the device; only its
+/** My Settings -> Screen Lock & Face ID (migration 0089; moved here from
+ * Account Security 6 Oct 2026): turn Face ID / fingerprint unlock on for
+ * this device, see and remove the devices set up for this ministry's
+ * address (each address is set up separately). The face or fingerprint never leaves the device; only its
  * public key is kept. */
 export function FaceIdCard({ devices, lockMinutes }: { devices: UnlockDeviceRow[]; lockMinutes: number | null }) {
   const router = useRouter();
@@ -39,6 +41,7 @@ export function FaceIdCard({ devices, lockMinutes }: { devices: UnlockDeviceRow[
   }, []);
 
   async function turnOn() {
+    if (busy) return;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -88,12 +91,11 @@ export function FaceIdCard({ devices, lockMinutes }: { devices: UnlockDeviceRow[
     <div id="face-id" className={CARD}>
       <h2 className="text-base font-bold text-[#333]">Face ID / fingerprint unlock</h2>
       <p className="mt-1 text-sm text-[#555]">
-        {lockMinutes
-          ? `This ministry locks the app after ${lockMinutes} minutes without use. `
-          : "If your ministry turns on the screen lock, "}
-        Unlock it with Face ID, your fingerprint or your device&rsquo;s PIN instead of waiting for an email code. Your face
-        or fingerprint never leaves your device.
+        {lockMinutes ? "When the app locks, unlock" : "If the screen lock is turned on, unlock"} it with Face ID, your
+        fingerprint or your device&rsquo;s PIN instead of waiting for an email code. Your face or fingerprint never leaves
+        your device.
       </p>
+      <p className="mt-1 text-xs text-[#777]">Set up separately for each ministry&rsquo;s web address.</p>
 
       {devices.length > 0 && (
         <ul className="mt-3 divide-y divide-[#f0f0f0]">
@@ -127,7 +129,9 @@ export function FaceIdCard({ devices, lockMinutes }: { devices: UnlockDeviceRow[
         </p>
       ) : (
         <button type="button" onClick={turnOn} disabled={busy || supported === null} className={`${PRIMARY_BUTTON} mt-4`}>
-          {busy ? "Follow the prompt on your device…" : devices.length ? "Turn it on for this device too" : "Turn it on for this device"}
+          <BusyLabel busy={busy} busyText="Follow the prompt on your device…">
+            {devices.length ? "Turn it on for this device too" : "Turn it on for this device"}
+          </BusyLabel>
         </button>
       )}
     </div>
