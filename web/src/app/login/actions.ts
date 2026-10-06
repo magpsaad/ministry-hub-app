@@ -68,7 +68,14 @@ export async function requestEmailCode(formData: FormData) {
 
   if (error) {
     const code = (error as { code?: string }).code ?? "";
-    if (code === "over_email_send_rate_limit" || error.status === 429) fail("rate", mode);
+    if (code === "over_email_send_rate_limit" || error.status === 429) {
+      // Owner-reported (5 Oct 2026): a double tap sent two requests; the
+      // second hit this limit and sent the person back to the email screen,
+      // away from the code that had already arrived. Go to the code step.
+      if (create) fail("rate", mode);
+      await rememberCodeEmail(email);
+      fail("already_sent", "code");
+    }
     if (code === "captcha_failed") fail("captcha", mode);
     if (code === "email_address_invalid" || code === "validation_failed") fail("invalid_email", mode);
     // An address with no account on the sign-in form: carry on to the code
@@ -76,6 +83,12 @@ export async function requestEmailCode(formData: FormData) {
     if (!(code === "otp_disabled" || code === "signup_disabled" || code === "user_not_found")) fail("send_failed", mode);
   }
 
+  await rememberCodeEmail(email);
+  redirect("/login?mode=code");
+}
+
+/** The address the code step is for (shown masked, never in the address bar). */
+async function rememberCodeEmail(email: string) {
   (await cookies()).set(CODE_EMAIL_COOKIE, email, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -83,7 +96,6 @@ export async function requestEmailCode(formData: FormData) {
     path: "/",
     maxAge: CODE_EMAIL_SECONDS,
   });
-  redirect("/login?mode=code");
 }
 
 /** "Send a new code" on the code step -- same as the first send, for the
@@ -99,7 +111,7 @@ export async function resendEmailCode(formData: FormData) {
   });
   if (error) {
     const code = (error as { code?: string }).code ?? "";
-    if (code === "over_email_send_rate_limit" || error.status === 429) fail("rate", "code");
+    if (code === "over_email_send_rate_limit" || error.status === 429) fail("already_sent", "code");
     if (code === "captcha_failed") fail("captcha", "code");
     if (!(code === "otp_disabled" || code === "signup_disabled" || code === "user_not_found")) fail("send_failed", "code");
   }

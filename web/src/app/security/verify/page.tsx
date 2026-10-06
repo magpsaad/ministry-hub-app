@@ -4,6 +4,7 @@ import { signOut } from "@/app/login/actions";
 import { verifyAuthenticatorCode } from "../actions";
 import { safeNext, CARD, PRIMARY_BUTTON, CODE_INPUT } from "../shared";
 import { SecurityShell } from "../Shell";
+import { SubmitButton } from "@/components/PendingButton";
 
 /** The second sign-in step for someone with an authenticator app set up
  * (migration 0079: until it's done, the database treats Admin/GC/Church
@@ -52,9 +53,9 @@ export default async function VerifyAuthenticatorPage({
             aria-label="6-digit code"
             className={CODE_INPUT}
           />
-          <button type="submit" className={PRIMARY_BUTTON}>
+          <SubmitButton className={PRIMARY_BUTTON} busyText="Checking…">
             Continue
-          </button>
+          </SubmitButton>
         </form>
         <p className="mt-4 text-xs text-[#777]">
           Lost or replaced your phone? Ask your ministry&apos;s Admin to reset your authenticator, then sign in again
@@ -62,9 +63,9 @@ export default async function VerifyAuthenticatorPage({
         </p>
       </div>
       <form action={signOut} className="mt-4 text-center">
-        <button type="submit" className="text-sm text-[#666] hover:underline">
+        <SubmitButton className="text-sm text-[#666] hover:underline" busyText="Signing out…">
           Sign out
-        </button>
+        </SubmitButton>
       </form>
     </SecurityShell>
   );

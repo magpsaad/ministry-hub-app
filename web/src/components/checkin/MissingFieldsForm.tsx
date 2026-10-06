@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { University } from "@/lib/universities";
 import { fillMissingMemberFieldsAction, type MissingFieldsInput, type MissingMemberFields } from "@/app/checkin/actions";
 import { todayInZone } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { PARENT_FIELDS } from "@/lib/parent-contacts";
+import { BusyLabel } from "@/components/PendingButton";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
@@ -46,6 +47,7 @@ export function MissingFieldsForm({
   const timeZone = useTimezone();
   const [form, setForm] = useState<MissingFieldsInput>(EMPTY);
   const [pending, setPending] = useState(false);
+  const saving = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   function field<K extends keyof MissingFieldsInput>(key: K, value: MissingFieldsInput[K]) {
@@ -62,6 +64,16 @@ export function MissingFieldsForm({
     missingParents.some(({ key }) => !!form[key]?.trim());
 
   async function handleSave() {
+    if (saving.current) return;
+    saving.current = true;
+    try {
+      await saveOnce();
+    } finally {
+      saving.current = false;
+    }
+  }
+
+  async function saveOnce() {
     setPending(true);
     setError(null);
     const result = await fillMissingMemberFieldsAction(token, memberId, form);
@@ -143,7 +155,9 @@ export function MissingFieldsForm({
           disabled={pending || !hasAnyInput}
           className="flex-1 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
         >
-          {pending ? "Saving…" : "Save"}
+          <BusyLabel busy={pending} busyText="Saving…">
+            Save
+          </BusyLabel>
         </button>
         <button
           type="button"

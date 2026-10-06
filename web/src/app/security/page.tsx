@@ -13,6 +13,7 @@ import { formatDateTimeInZone } from "@/lib/timezone";
 import { firstGateRow } from "@/lib/agreement";
 import { relyingParty } from "@/lib/screen-lock-server";
 import { FaceIdCard, type UnlockDeviceRow } from "./FaceIdCard";
+import { LinkSpinner, SubmitButton } from "@/components/PendingButton";
 
 /** Account Security (owner-approved sign-in changes B and F, 3 Oct 2026):
  * the optional -- or, for Admins, General Coordinators and the Church
@@ -101,6 +102,7 @@ export default async function AccountSecurityPage() {
           ) : (
             <Link href="/security/setup?next=/security" className={`${PRIMARY_BUTTON} mt-4 block text-center`}>
               {required ? "Set it up" : "Turn it on"}
+              <LinkSpinner />
             </Link>
           )}
         </div>
@@ -119,6 +121,7 @@ export default async function AccountSecurityPage() {
             </p>
             <Link href="/security/agreement?next=/security" className={`${PRIMARY_BUTTON} mt-4 block text-center`}>
               {agreement.needs_signature ? "Read and sign" : "Read the agreement"}
+              <LinkSpinner />
             </Link>
           </div>
         )}
@@ -130,12 +133,12 @@ export default async function AccountSecurityPage() {
             ministry&apos;s address and the console. You&apos;ll need to sign in again here too.
           </p>
           <form action={signOutEverywhere} className="mt-3">
-            <button
-              type="submit"
+            <SubmitButton
               className="w-full rounded-md border border-[#dc3545] bg-white py-2.5 text-sm font-semibold text-[#dc3545] hover:bg-[#fdf2f3]"
+              busyText="Signing out everywhere…"
             >
               Sign out of all devices
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </main>

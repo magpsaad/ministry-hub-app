@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitOwnRegistrationAction, completeOwnProfileAction, type RegistrationInput } from "@/app/register/actions";
+import { BusyLabel } from "@/components/PendingButton";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
@@ -35,8 +36,21 @@ export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; f
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  const submitting = useRef(false);
+  // Owner-reported (5 Oct 2026): one submit at a time, even for two taps
+  // landing before the button has greyed out.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      await submitOnce();
+    } finally {
+      submitting.current = false;
+    }
+  }
+
+  async function submitOnce() {
     const validationError = validate(form);
     if (validationError) {
       setError(validationError);
@@ -46,15 +60,17 @@ export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; f
     setError(null);
     const action = hasRole ? completeOwnProfileAction : submitOwnRegistrationAction;
     const result = await action(form);
-    setPending(false);
     if (result.error) {
+      setPending(false);
       setError(result.error);
       return;
     }
     if (hasRole) {
+      // Stays locked (spinner on) until the next page is up.
       router.push("/");
       router.refresh();
     } else {
+      setPending(false);
       setSubmitted(true);
     }
   }
@@ -121,7 +137,9 @@ export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; f
         disabled={pending}
         className="w-full rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
       >
-        {pending ? "Submitting…" : "Submit"}
+        <BusyLabel busy={pending} busyText="Submitting…">
+            Submit
+          </BusyLabel>
       </button>
     </form>
   );

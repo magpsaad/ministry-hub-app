@@ -1,14 +1,13 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
 import { PRIMARY_BUTTON } from "../shared";
+import { SubmitButton } from "@/components/PendingButton";
 
 export function SignButton() {
-  const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className={PRIMARY_BUTTON}>
-      {pending ? "Signing…" : "Sign"}
-    </button>
+    <SubmitButton className={PRIMARY_BUTTON} busyText="Signing…">
+      Sign
+    </SubmitButton>
   );
 }
 

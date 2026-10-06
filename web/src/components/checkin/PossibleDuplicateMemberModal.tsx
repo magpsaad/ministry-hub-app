@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { resolveDuplicateMemberAction, type DuplicateMatch, type NewMemberInput } from "@/app/checkin/actions";
+import { BusyLabel } from "@/components/PendingButton";
 
 /** Owner-requested: shown instead of silently creating a duplicate record
  * when checkPossibleDuplicateMemberAction finds a likely existing match
@@ -39,7 +40,19 @@ export function PossibleDuplicateMemberModal({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const confirming = useRef(false);
+  const [leaving, setLeaving] = useState(false);
   async function handleConfirm() {
+    if (confirming.current) return;
+    confirming.current = true;
+    try {
+      await confirmOnce();
+    } finally {
+      confirming.current = false;
+    }
+  }
+
+  async function confirmOnce() {
     setPending(true);
     setError(null);
     const result = await resolveDuplicateMemberAction(token, formInput, moveRequested);
@@ -68,7 +81,12 @@ export function PossibleDuplicateMemberModal({
           </button>
           <button
             type="button"
-            onClick={onNotMe}
+            onClick={() => {
+              if (leaving) return;
+              setLeaving(true);
+              onNotMe();
+            }}
+            disabled={leaving}
             className="flex-1 rounded-md bg-[#f0f0f0] px-4 py-3 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
           >
             No, that&rsquo;s not me
@@ -114,7 +132,9 @@ export function PossibleDuplicateMemberModal({
         disabled={pending}
         className="w-full rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
       >
-        {pending ? "Saving…" : "Confirm"}
+        <BusyLabel busy={pending} busyText="Saving…">
+            Confirm
+          </BusyLabel>
       </button>
     </div>
   );

@@ -1,8 +1,9 @@
 "use client";
 
 import { checkinPersonProblem } from "@/lib/checkin-validation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { submitNewServantAction, type NewServantInput } from "@/app/checkin/actions";
+import { BusyLabel } from "@/components/PendingButton";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
@@ -43,8 +44,21 @@ export function ServantIntakeForm({
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  const submitting = useRef(false);
+  // Owner-reported (5 Oct 2026): one submit at a time, even for two taps
+  // landing before the button has greyed out.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      await submitOnce();
+    } finally {
+      submitting.current = false;
+    }
+  }
+
+  async function submitOnce() {
     const validationError = validate(form);
     if (validationError) {
       setError(validationError);
@@ -142,7 +156,9 @@ export function ServantIntakeForm({
           disabled={pending}
           className="flex-1 rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
         >
-          {pending ? "Submitting…" : "Submit"}
+          <BusyLabel busy={pending} busyText="Submitting…">
+            Submit
+          </BusyLabel>
         </button>
       </div>
     </form>

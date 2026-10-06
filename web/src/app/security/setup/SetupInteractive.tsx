@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { startAuthenticatorSetup, finishAuthenticatorSetup } from "../actions";
 import { CARD, PRIMARY_BUTTON, CODE_INPUT } from "../shared";
+import { BusyLabel } from "@/components/PendingButton";
 
 type Setup = { factorId: string; qr: string; secret: string; uri: string };
 
@@ -12,33 +13,53 @@ export function SetupInteractive({ required, next }: { required: boolean; next: 
   const [setup, setSetup] = useState<Setup | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState("");
-  const [pending, startTransition] = useTransition();
+  const [busy, setBusy] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  // Owner-reported (5 Oct 2026): every start makes a new QR code and
+  // cancels the previous one, and a quick second tap made two. One start
+  // at a time, and one "Turn on" at a time.
+  const starting = useRef(false);
+  const finishing = useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    startAuthenticatorSetup().then((res) => {
-      if (cancelled) return;
-      if ("error" in res) setError(res.error);
-      else setSetup(res);
-    });
-    return () => {
-      cancelled = true;
-    };
+  const begin = useCallback(async () => {
+    if (starting.current) return;
+    starting.current = true;
+    setError(null);
+    setCode("");
+    const res = await startAuthenticatorSetup();
+    starting.current = false;
+    setRestarting(false);
+    if ("error" in res) setError(res.error);
+    else setSetup(res);
   }, []);
 
-  function finish(e: React.FormEvent) {
+  useEffect(() => {
+    const t = window.setTimeout(() => void begin(), 0);
+    return () => window.clearTimeout(t);
+  }, [begin]);
+
+  function restart() {
+    setRestarting(true);
+    setSetup(null);
+    void begin();
+  }
+
+  async function finish(e: React.FormEvent) {
     e.preventDefault();
-    if (!setup) return;
+    if (!setup || finishing.current) return;
+    finishing.current = true;
+    setBusy(true);
     setError(null);
-    startTransition(async () => {
-      const res = await finishAuthenticatorSetup(setup.factorId, code);
-      if (res.error) {
-        setError(res.error);
-        return;
-      }
-      // A full load, so every page picks up the completed second step.
-      window.location.assign(next);
-    });
+    const res = await finishAuthenticatorSetup(setup.factorId, code);
+    if (res.error) {
+      finishing.current = false;
+      setBusy(false);
+      setError(res.error);
+      return;
+    }
+    // A full load, so every page picks up the completed second step. The
+    // button stays locked until that page is up.
+    window.location.assign(next);
   }
 
   return (
@@ -61,7 +82,13 @@ export function SetupInteractive({ required, next }: { required: boolean; next: 
         <li>Type the 6-digit code it shows for Ministry Hub below.</li>
       </ol>
 
-      {!setup && !error && <p className="py-8 text-center text-sm text-[#888]">Preparing your code&hellip;</p>}
+      {!setup && !error && (
+        <p className="py-8 text-center text-sm text-[#888]">
+          <BusyLabel busy busyText="Preparing your code…">
+            Preparing your code&hellip;
+          </BusyLabel>
+        </p>
+      )}
 
       {setup && (
         <>
@@ -93,14 +120,28 @@ export function SetupInteractive({ required, next }: { required: boolean; next: 
               aria-label="6-digit code from the app"
               className={CODE_INPUT}
             />
-            <button type="submit" disabled={pending} className={PRIMARY_BUTTON}>
-              {pending ? "Checking…" : "Turn on"}
+            <button type="submit" disabled={busy} aria-busy={busy} className={PRIMARY_BUTTON}>
+              <BusyLabel busy={busy} busyText="Checking…">
+                Turn on
+              </BusyLabel>
             </button>
           </form>
         </>
       )}
 
       {error && <p className="mt-3 rounded-md bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]">{error}</p>}
+      {error && !busy && (
+        <button
+          type="button"
+          onClick={restart}
+          disabled={restarting}
+          className="mt-3 w-full rounded-md border border-[#ddd] bg-white py-2.5 text-sm font-semibold text-[#333] hover:bg-[#f5f5f5] disabled:opacity-60"
+        >
+          <BusyLabel busy={restarting} busyText="Making a new code…">
+            Get a new QR code and start again
+          </BusyLabel>
+        </button>
+      )}
     </div>
   );
 }

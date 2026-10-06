@@ -5,6 +5,7 @@ import { signOut } from "@/app/login/actions";
 import { safeNext } from "../shared";
 import { SecurityShell } from "../Shell";
 import { SetupInteractive } from "./SetupInteractive";
+import { SubmitButton } from "@/components/PendingButton";
 
 /** Setting up the authenticator app (owner-approved sign-in change B). The
  * front door (lib/supabase/proxy.ts) sends Admins, General Coordinators and
@@ -40,9 +41,9 @@ export default async function SetupAuthenticatorPage({
       <div className="mt-4 text-center text-sm">
         {required ? (
           <form action={signOut}>
-            <button type="submit" className="text-[#666] hover:underline">
+            <SubmitButton className="text-[#666] hover:underline" busyText="Signing out…">
               Not now &mdash; sign out
-            </button>
+            </SubmitButton>
           </form>
         ) : (
           <Link href="/security" className="text-[#666] hover:underline">

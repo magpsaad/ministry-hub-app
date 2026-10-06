@@ -8,6 +8,8 @@ export const LOGIN_ERRORS = {
   google_failed: "Google sign-in didn't start. Please try again.",
   send_failed: "We couldn't send the code. Please try again.",
   rate: "Too many codes were requested. Please wait a minute and try again.",
+  already_sent:
+    "A code was already sent to this address in the last minute. Enter it below, or wait a minute, then tap Send a new code.",
   captcha: "Please complete the security check and try again.",
   bad_code: "That code didn't work or has expired. Check the latest email, or send a new code.",
   invalid_email: "Enter a valid email address.",

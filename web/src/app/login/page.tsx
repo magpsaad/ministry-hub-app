@@ -7,6 +7,7 @@ import { AppLogo } from "@/components/AppLogo";
 import { ClearMenuCache } from "@/components/ClearMenuCache";
 import { MinistryHubLogo, MinistryHubName } from "@/components/MinistryHubBrand";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { SubmitButton } from "@/components/PendingButton";
 import { signInWithGoogle, requestEmailCode, resendEmailCode, verifyEmailCode, startOver } from "./actions";
 import { CODE_EMAIL_COOKIE, loginError, loginMessage, maskEmail } from "./messages";
 
@@ -88,29 +89,27 @@ export default async function LoginPage({
                     className={`${INPUT} text-center text-lg tracking-[0.4em]`}
                   />
                 </div>
-                <button type="submit" className={PRIMARY}>
+                <SubmitButton className={PRIMARY} busyText="Signing in…">
                   Sign in
-                </button>
+                </SubmitButton>
               </form>
               <form action={resendEmailCode} className="mt-4 space-y-2">
                 <TurnstileWidget />
-                <button type="submit" className="w-full text-sm font-semibold text-brand hover:underline">
+                <SubmitButton className="w-full text-sm font-semibold text-brand hover:underline" busyText="Sending…">
                   Send a new code
-                </button>
+                </SubmitButton>
               </form>
               <form action={startOver} className="mt-1">
-                <button type="submit" className="w-full text-sm text-[#666] hover:underline">
-                  Use a different email
-                </button>
+                <SubmitButton className="w-full text-sm text-[#666] hover:underline">Use a different email</SubmitButton>
               </form>
             </>
           ) : (
             <>
               <form action={signInWithGoogle}>
-                <button type="submit" className={`${PRIMARY} flex items-center justify-center gap-2`}>
+                <SubmitButton className={`${PRIMARY} flex items-center justify-center gap-2`} busyText="Opening Google…">
                   <GoogleIcon />
                   Continue with Google
-                </button>
+                </SubmitButton>
               </form>
 
               <div className="my-5 flex items-center gap-3 text-xs text-[#999]">
@@ -138,9 +137,9 @@ export default async function LoginPage({
                   <input id="email" name="email" type="email" required autoComplete="email" className={INPUT} />
                 </div>
                 <TurnstileWidget />
-                <button type="submit" className={SECONDARY}>
+                <SubmitButton className={SECONDARY} busyText="Sending your code…">
                   {step === "signup" ? "Create account — email me a code" : "Email me a sign-in code"}
-                </button>
+                </SubmitButton>
               </form>
 
               <p className="mt-4 text-center text-sm text-[#666]">

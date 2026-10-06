@@ -9,6 +9,7 @@ import { SecurityShell } from "../Shell";
 import { CARD, safeNext } from "../shared";
 import { AgreementText } from "./AgreementText";
 import { SignButton } from "./Buttons";
+import { SubmitButton } from "@/components/PendingButton";
 import { signAgreement, remindLater } from "./actions";
 
 const ERRORS: Record<string, string> = {
@@ -153,15 +154,15 @@ export default async function AgreementPage({
             {graceOpen ? (
               <form action={remindLater} className="mt-3">
                 <input type="hidden" name="next" value={next} />
-                <button type="submit" className="w-full rounded-md border border-[#ddd] bg-white py-2.5 text-sm font-semibold text-[#333] hover:bg-[#f5f5f5]">
+                <SubmitButton className="w-full rounded-md border border-[#ddd] bg-white py-2.5 text-sm font-semibold text-[#333] hover:bg-[#f5f5f5]">
                   Remind me later
-                </button>
+                </SubmitButton>
               </form>
             ) : (
               <form action={signOut} className="mt-3 text-center">
-                <button type="submit" className="text-sm font-semibold text-[#666] hover:underline">
+                <SubmitButton className="text-sm font-semibold text-[#666] hover:underline" busyText="Signing out…">
                   Sign out
-                </button>
+                </SubmitButton>
               </form>
             )}
           </div>

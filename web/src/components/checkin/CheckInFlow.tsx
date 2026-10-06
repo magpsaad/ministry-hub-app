@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import type { CheckInPerson } from "@/lib/checkin";
 import type { University } from "@/lib/universities";
 import {
@@ -14,6 +14,7 @@ import {
 import { MemberIntakeForm } from "./MemberIntakeForm";
 import { ServantIntakeForm } from "./ServantIntakeForm";
 import { MissingFieldsForm } from "./MissingFieldsForm";
+import { BusyLabel } from "@/components/PendingButton";
 
 const NO_MISSING_FIELDS: MissingMemberFields = {
   phone: false,
@@ -94,6 +95,9 @@ export function CheckInFlow({
   );
   const [q, setQ] = useState("");
   const [pending, setPending] = useState(false);
+  const selecting = useRef(false);
+  const [selectingId, setSelectingId] = useState<string | null>(null);
+  const undoBusy = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [successName, setSuccessName] = useState<string | null>(null);
   const [attendanceRecorded, setAttendanceRecorded] = useState(true);
@@ -162,6 +166,19 @@ export function CheckInFlow({
   const shown = letters >= 3 ? results : [];
 
   async function handleSelect(person: CheckInPerson) {
+    // Owner-reported (5 Oct 2026): one check-in at a time.
+    if (selecting.current) return;
+    selecting.current = true;
+    setSelectingId(person.id);
+    try {
+      await selectOnce(person);
+    } finally {
+      selecting.current = false;
+      setSelectingId(null);
+    }
+  }
+
+  async function selectOnce(person: CheckInPerson) {
     setPending(true);
     setError(null);
     const result = isServant
@@ -204,6 +221,16 @@ export function CheckInFlow({
   }
 
   async function handleUndo() {
+    if (undoBusy.current) return;
+    undoBusy.current = true;
+    try {
+      await undoOnce();
+    } finally {
+      undoBusy.current = false;
+    }
+  }
+
+  async function undoOnce() {
     if (!checkedInPerson) return;
     setUndoing(true);
     setError(null);
@@ -253,7 +280,9 @@ export function CheckInFlow({
               disabled={undoing}
               className="mt-4 text-base font-bold text-[#dc3545] underline hover:text-[#c82333] disabled:opacity-50"
             >
-              {undoing ? "Removing…" : "Not you? Undo"}
+              <BusyLabel busy={undoing} busyText="Removing…">
+            Not you? Undo
+          </BusyLabel>
             </button>
           </>
         )}
@@ -329,7 +358,9 @@ export function CheckInFlow({
           onClick={() => handleSelect(rememberedPerson)}
           className="mb-3 w-full rounded-md border-l-4 border-brand bg-[#eef4fa] px-3 py-3 text-left font-semibold text-brand disabled:opacity-50"
         >
-          Check in as {rememberedPerson.full_name}
+          <BusyLabel busy={selectingId === rememberedPerson.id} busyText="Checking you in…">
+            Check in as {rememberedPerson.full_name}
+          </BusyLabel>
         </button>
       )}
       <label className="flex items-center gap-2 text-xs text-[#666]">
@@ -359,7 +390,9 @@ export function CheckInFlow({
             onClick={() => handleSelect(p)}
             className="w-full text-left px-2 py-3 text-[#333] hover:bg-[#f5f5f5] disabled:opacity-50"
           >
-            {p.full_name}
+            <BusyLabel busy={selectingId === p.id} busyText={`${p.full_name} — checking you in…`}>
+              {p.full_name}
+            </BusyLabel>
           </button>
         ))}
         {letters < 3 && <p className="px-2 py-3 text-sm text-[#666]">Type at least 3 letters of your name.</p>}
