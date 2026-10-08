@@ -92,7 +92,7 @@ export function RegisterInteractive({
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center space-y-2">
         <h2 className="text-base font-bold text-brand">Thanks, {fullName}!</h2>
         <p className="text-sm text-[#666]">
-          Your registration has been submitted. A {L.coordinator} or System Admin will review it and give you access soon.
+          Your registration has been submitted. The {L.generalCoordinator} or System Admin will review it and give you access soon.
         </p>
         <div className="border-t border-[#eee] pt-4 mt-3">
           <NotificationsSetupPanel publicKey={publicKey} waitingForApproval />
@@ -107,7 +107,7 @@ export function RegisterInteractive({
       <p className="text-sm text-[#666]">
         {hasRole
           ? "Please fill in a few more details before continuing."
-          : `Please fill in your info so a ${L.coordinator} or System Admin can review and approve your access.`}
+          : `Please fill in your info so the ${L.generalCoordinator} or System Admin can review and approve your access.`}
       </p>
       {error && <p className="text-sm text-[#dc3545]">{error}</p>}
       <Field label="Phone *">
