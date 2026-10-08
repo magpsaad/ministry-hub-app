@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAccessibleGroups, LAST_GROUP_COOKIE, pickDefaultGroupId } from "@/lib/groups";
 import { getAccessSummary } from "@/lib/roles";
+import { getRoleLabels } from "@/lib/role-labels-server";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
 import { logAudit } from "@/lib/audit";
@@ -47,7 +48,7 @@ export default async function LandingPage() {
   const defaultGroupId = pickDefaultGroupId(groups, access, cookieStore.get(LAST_GROUP_COOKIE)?.value);
   if (defaultGroupId) redirect(`/g/${defaultGroupId}/dashboard`);
 
-  const settings = await getAppSettings();
+  const [settings, L] = await Promise.all([getAppSettings(), getRoleLabels()]);
   // The proxy gate (src/lib/supabase/proxy.ts) already redirects anyone
   // with no role at all to /register before they ever reach this page --
   // this is just a defensive fallback in case that somehow didn't fire.
@@ -77,8 +78,8 @@ export default async function LandingPage() {
           <>
             <h2 className="text-lg font-bold text-[#333]">No {settings.group_label.toLowerCase()} assigned yet</h2>
             <p className="mt-2 text-sm text-[#666]">
-              A coordinator will assign you to a {settings.group_label.toLowerCase()}. Meanwhile, the menu at the top
-              left has the Servant Directory, Service Calendar and more.
+              A {L.coordinatorLower} will assign you to a {settings.group_label.toLowerCase()}. Meanwhile, the menu at
+              the top left has the {L.servant} Directory, Service Calendar and more.
             </p>
           </>
         ) : (

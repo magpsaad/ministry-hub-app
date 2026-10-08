@@ -7,6 +7,7 @@ import type { ServantOption } from "@/lib/servants";
 import type { GroupSummary } from "@/lib/groups";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { useCohortFilter } from "@/components/CohortFilter";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { SearchIcon } from "@/components/icons";
 import { MemberGrid } from "./MemberGrid";
 import { MemberOverridesContext, type MemberPatch } from "./MemberOverrides";
@@ -60,6 +61,7 @@ export function MemberListInteractive({
 }) {
   const isCombined = groupId === ALL_COHORTS_GROUP_ID;
   const { myAssignedOnly, hydrated } = useMyAssigned();
+  const L = useRoleLabels();
 
   // Changes just saved from a youth's record, shown straight away (QA S-3,
   // R-2); dropped as soon as the server's refreshed list arrives, since that
@@ -182,7 +184,7 @@ export function MemberListInteractive({
         <div className="mt-2 rounded-md border border-[#ddd] p-3 space-y-3 bg-white">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm font-semibold mb-1">Assigned Servant</p>
+              <p className="text-sm font-semibold mb-1">Assigned {L.servant}</p>
               <select
                 multiple
                 size={5}

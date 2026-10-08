@@ -13,15 +13,19 @@ import {
   grantServantRoleAction,
   type AddableRole,
 } from "@/app/servant-assignments/actions";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
+import type { RoleLabels } from "@/lib/role-labels";
 
-const ROLE_LABELS: Record<RoleGrant["role"], string> = {
-  servant: "Servant",
-  // Owner-requested: displayed as just "Coordinator" now (was
-  // "Sub-Coordinator") -- the internal role/key name is unchanged.
-  sub_coordinator: "Coordinator",
-  read_only: "Read-only",
-  general_coordinator: "Gen. Coord",
-};
+function roleChipLabels(L: RoleLabels): Record<RoleGrant["role"], string> {
+  return {
+    servant: L.servant,
+    // Owner-requested: displayed as just "Coordinator" now (was
+    // "Sub-Coordinator") -- the internal role/key name is unchanged.
+    sub_coordinator: L.coordinator,
+    read_only: "Read-only",
+    general_coordinator: L.gc,
+  };
+}
 
 const ADDABLE_ROLES: AddableRole[] = ["servant", "sub_coordinator", "read_only"];
 
@@ -78,6 +82,8 @@ export function ServantAssignmentsInteractive({
   groups: GroupSummary[];
   canManageServants: boolean;
 }) {
+  const L = useRoleLabels();
+  const ROLE_LABELS = roleChipLabels(L);
   const router = useRouter();
   // Picks up the fresh list after a Refresh by adjusting state during
   // render when the prop changes (React's recommended pattern), rather than
@@ -244,7 +250,7 @@ export function ServantAssignmentsInteractive({
     if (grant.role === "servant") {
       return (
         <span key={grant.id} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
-          {showGroupInLabel ? "Servant" : label}
+          {showGroupInLabel ? L.servant : label}
           <select
             value={grant.group_id ?? ""}
             disabled={!canManageServants || pending}
@@ -361,7 +367,7 @@ export function ServantAssignmentsInteractive({
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="text"
-          placeholder="Search servants..."
+          placeholder={`Search ${L.servantsLower}...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 min-w-[180px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
@@ -376,7 +382,7 @@ export function ServantAssignmentsInteractive({
         </div>
       </div>
 
-      {!canManageServants && <p className="text-xs text-[#666]">Only General Coordinators/Admins can grant, reassign, or revoke roles here.</p>}
+      {!canManageServants && <p className="text-xs text-[#666]">Only {L.generalCoordinators}/Admins can grant, reassign, or revoke roles here.</p>}
       {error && <p className="text-sm text-[#dc3545]">{error}</p>}
 
       {viewMode === "categorical" ? (
@@ -403,7 +409,7 @@ export function ServantAssignmentsInteractive({
                         rows.length > 0 && (
                           <div key={kind}>
                             <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">
-                              {genderSubheading(kind, rows.length)}
+                              {genderSubheading(kind, rows.length, L)}
                             </h4>
                             <div className="divide-y divide-[#f0f0f0]">{rows.map(renderPersonRow)}</div>
                           </div>
@@ -443,7 +449,7 @@ export function ServantAssignmentsInteractive({
           })}
 
           {categoricalBuckets.generalCoordinators.length > 0 && (
-            <BucketCard label="General Coordinators" rows={categoricalBuckets.generalCoordinators} renderChip={renderChip} renderAddRoleControl={renderAddRoleControl} />
+            <BucketCard label={L.generalCoordinators} rows={categoricalBuckets.generalCoordinators} renderChip={renderChip} renderAddRoleControl={renderAddRoleControl} />
           )}
 
           {categoricalBuckets.unassigned.length > 0 && (
@@ -462,7 +468,7 @@ export function ServantAssignmentsInteractive({
               </span>
             </div>
           ))}
-          {alphabetical.length === 0 && <p className="py-8 text-sm text-[#666] text-center">No servants match.</p>}
+          {alphabetical.length === 0 && <p className="py-8 text-sm text-[#666] text-center">No {L.servantsLower} match.</p>}
         </div>
       )}
     </div>
@@ -494,6 +500,7 @@ function BucketCard({
   renderChip: (person: AssignmentPerson, grant: RoleGrant, showGroupInLabel: boolean) => React.ReactNode;
   renderAddRoleControl: (person: AssignmentPerson) => React.ReactNode;
 }) {
+  const L = useRoleLabels();
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
       <h3 className="text-sm font-bold text-brand mb-3">{label}</h3>
@@ -505,7 +512,7 @@ function BucketCard({
             <span className="w-32 shrink-0 font-semibold text-[#333] truncate">{person.full_name}</span>
             <span className="flex-1 flex items-center gap-1.5 flex-wrap justify-end">
               {grants.map((g) => renderChip(person, g, false))}
-              {label !== "General Coordinators" && renderAddRoleControl(person)}
+              {label !== L.generalCoordinators && renderAddRoleControl(person)}
             </span>
           </div>
         ))}
@@ -537,6 +544,8 @@ function BringSomeoneNew({
   onSubmit: () => void;
   pending: boolean;
 }) {
+  const L = useRoleLabels();
+  const ROLE_LABELS = roleChipLabels(L);
   if (!open) {
     return (
       <button type="button" onClick={onOpen} className="mt-3 w-full rounded-md border border-dashed border-[#ddd] px-3 py-1.5 text-xs font-semibold text-[#666] hover:bg-[#f5f5f5]">

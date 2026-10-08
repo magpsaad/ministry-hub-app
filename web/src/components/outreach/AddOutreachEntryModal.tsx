@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import type { MemberBasic } from "@/lib/members";
 import { addOutreachEntryAction } from "@/app/g/[groupId]/outreach/actions";
 import { OutreachQuickActions } from "./OutreachQuickActions";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 function nowLocalDatetime() {
   const d = new Date();
@@ -34,6 +35,7 @@ export function AddOutreachEntryModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const L = useRoleLabels();
   const [memberFilter, setMemberFilter] = useState<MemberFilter>("mine");
   const [memberId, setMemberId] = useState("");
   const [occurredAt, setOccurredAt] = useState(nowLocalDatetime());
@@ -129,7 +131,7 @@ export function AddOutreachEntryModal({
             </select>
           </div>
           <p>
-            <span className="font-semibold">Servant:</span> {currentUserName}
+            <span className="font-semibold">{L.servant}:</span> {currentUserName}
           </p>
           <div>
             <label className="block font-semibold mb-1">Date &amp; Time</label>

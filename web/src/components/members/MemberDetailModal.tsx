@@ -18,6 +18,7 @@ import {
   type UpdateMemberInput,
 } from "@/app/g/[groupId]/members/actions";
 import { CameraIcon, TrashIcon } from "@/components/icons";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
 import { PrevOutreachModal } from "@/components/outreach/PrevOutreachModal";
 import { PhotoCropperModal } from "@/components/PhotoCropperModal";
@@ -70,6 +71,7 @@ export function MemberDetailModal({
    * own shape so the Member List can show it immediately (QA S-3/R-2). */
   onSaved: (patch?: MemberPatch) => void;
 }) {
+  const L = useRoleLabels();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -446,12 +448,12 @@ export function MemberDetailModal({
               </select>
               {editing && canDelete && memberGroupId !== member.group_id && (
                 <p className="mt-1 text-xs text-[#b35900]">
-                  Moving cohorts will unassign their current servant.
+                  Moving cohorts will unassign their current {L.servantLower}.
                 </p>
               )}
             </FieldRow>
           )}
-          <FieldRow label="Assigned Servant">
+          <FieldRow label={`Assigned ${L.servant}`}>
             <select
               value={assignedServantId ?? ""}
               onChange={(e) => setAssignedServantId(e.target.value || null)}
@@ -466,7 +468,7 @@ export function MemberDetailModal({
               ))}
             </select>
           </FieldRow>
-          <FieldRow label="Servant Comments">
+          <FieldRow label={`${L.servant} Comments`}>
             <textarea
               value={form.servant_comments ?? ""}
               onChange={(e) => field("servant_comments", e.target.value)}

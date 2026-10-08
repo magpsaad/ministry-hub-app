@@ -6,6 +6,7 @@ import { sendTestNotification } from "./actions";
 import { CARD, PRIMARY_BUTTON } from "@/app/security/shared";
 import { BusyLabel } from "@/components/PendingButton";
 import { usePushSetup } from "@/components/notifications/usePushSetup";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 /** My Settings -> Notifications -> this device (migration 0092): turn
  * phone notifications on or off for this device on this ministry's
@@ -21,6 +22,7 @@ export function NotificationsCard({
   /** Whether any kind of notification can reach this person here. */
   hasTypes: boolean;
 }) {
+  const L = useRoleLabels();
   const router = useRouter();
   const push = usePushSetup(publicKey);
   const { support, permission, endpoint } = push;
@@ -73,7 +75,7 @@ export function NotificationsCard({
       <p className="mt-1 text-sm text-[#555]">
         {hasTypes
           ? "Get an alert on this phone or computer when something needs you. Choose which ones below."
-          : "Get alerts on this phone or computer from Ministry Hub. More alerts for servants are coming."}
+          : `Get alerts on this phone or computer from Ministry Hub. More alerts for ${L.servantsLower} are coming.`}
       </p>
 
       {support === "checking" && <p className="mt-3 text-sm text-[#888]">One moment&hellip;</p>}

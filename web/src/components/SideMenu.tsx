@@ -8,6 +8,7 @@ import { logGroupSelectedAction } from "@/app/actions";
 import { ChevronDownIcon, CloseIcon, GearIcon, SpinnerIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { MinistryHubLogo, MinistryHubName } from "@/components/MinistryHubBrand";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { LAST_GROUP_COOKIE } from "@/lib/allCohorts";
 import type { MenuData } from "@/lib/menu-types";
 
@@ -20,6 +21,7 @@ const ITEM = "block w-full text-left pl-9 pr-5 py-2.5 text-sm text-[#333] hover:
  * (and preloads it in the background once the page settles).
  */
 export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: () => void }) {
+  const L = useRoleLabels();
   const pathname = usePathname();
   const router = useRouter();
   const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -134,18 +136,18 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
               </div>
             )}
 
-            <Section title="Servant Corner">
-              {link("/servants-directory", "Servant Directory")}
+            <Section title={`${L.servant} Corner`}>
+              {link("/servants-directory", `${L.servant} Directory`)}
               {link("/calendar", "Service Calendar")}
               {link("/qr-codes", "Checkin - QR Codes")}
               {link("/version-control", "Release History")}
             </Section>
 
             {data.isCoordinator && (
-              <Section title="Coordinator Corner">
-                {link("/servant-profiles", "Servant Profiles")}
-                {link("/servant-assignments", "Servant Assignments")}
-                {link("/servants-attendance", "Servant Attendance")}
+              <Section title={`${L.coordinator} Corner`}>
+                {link("/servant-profiles", `${L.servant} Profiles`)}
+                {link("/servant-assignments", `${L.servant} Assignments`)}
+                {link("/servants-attendance", `${L.servant} Attendance`)}
                 {link("/export-lists", "Print/Export Lists")}
               </Section>
             )}
@@ -153,11 +155,11 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
             {/* Owner-requested: what only General Coordinators (and Admins)
                 can do, in its own section. */}
             {data.isAdminOrGeneralCoordinator && (
-              <Section title="General Coordinators">
+              <Section title={L.generalCoordinators}>
                 {link(
                   "/admin/pending-servants",
                   <span className="flex items-center gap-2">
-                    Pending Servants
+                    Pending {L.servants}
                     {data.pendingServantsCount > 0 && (
                       <span className="rounded-full bg-[#dc3545] text-white text-[11px] px-2 py-0.5">
                         {data.pendingServantsCount}

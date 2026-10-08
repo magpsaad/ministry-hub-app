@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
 import { getAppSettings } from "@/lib/app-settings";
+import { getRoleLabels } from "@/lib/role-labels-server";
 import { createClient } from "@/lib/supabase/server";
 import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -39,7 +40,7 @@ export default async function RegisterPage() {
   // around, so it's safe to call unconditionally on every load.
   await supabase.rpc("absorb_own_pending_registration");
 
-  const [{ data: profile }, { data: roles }, { data: pending }, settings] = await Promise.all([
+  const [{ data: profile }, { data: roles }, { data: pending }, settings, L] = await Promise.all([
     supabase.from("profiles").select("full_name, phone, gender").eq("id", user.id).maybeSingle(),
     supabase.from("user_roles").select("role").eq("user_id", user.id),
     supabase
@@ -49,6 +50,7 @@ export default async function RegisterPage() {
       .is("resulting_profile_id", null)
       .maybeSingle(),
     getAppSettings(),
+    getRoleLabels(),
   ]);
 
   const hasRole = (roles?.length ?? 0) > 0;
@@ -75,7 +77,7 @@ export default async function RegisterPage() {
           <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center space-y-2">
             <h2 className="text-base font-bold text-brand">Awaiting approval</h2>
             <p className="text-sm text-[#666]">
-              Thanks, {fullName} — your registration is in and waiting for a Coordinator or System Admin to review it.
+              Thanks, {fullName} — your registration is in and waiting for a {L.coordinator} or System Admin to review it.
               There&rsquo;s nothing else to do right now; check back once they&rsquo;ve approved it.
             </p>
             {/* Owner-requested (6 Oct 2026): notifications while they wait. */}

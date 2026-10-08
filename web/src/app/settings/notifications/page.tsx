@@ -9,6 +9,8 @@ import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { vapidPublicKey } from "@/lib/push";
 import { getAddressContext } from "@/lib/ministry-context";
+import { getRoleLabels } from "@/lib/role-labels-server";
+import { relabelRoleWords } from "@/lib/role-labels";
 import { NotificationsCard } from "./NotificationsCard";
 import { NotificationTypesCard, type NotificationTypeRow } from "./NotificationTypesCard";
 
@@ -27,12 +29,18 @@ export default async function NotificationSettingsPage() {
   const address = await getAddressContext();
   if (address.kind !== "ministry") redirect("/security");
 
-  const [{ data: pushRows }, { data: types }, settings] = await Promise.all([
+  const [{ data: pushRows }, { data: types }, settings, L] = await Promise.all([
     supabase.from("push_subscriptions").select("endpoint").eq("ministry_id", address.ministryId),
     supabase.rpc("my_notification_settings"),
     getAppSettings(),
+    getRoleLabels(),
   ]);
-  const rows = (types ?? []) as NotificationTypeRow[];
+  // The names are stored with the standard words (migration 0097).
+  const rows = ((types ?? []) as NotificationTypeRow[]).map((r) => ({
+    ...r,
+    label: relabelRoleWords(r.label, L),
+    description: relabelRoleWords(r.description, L),
+  }));
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">

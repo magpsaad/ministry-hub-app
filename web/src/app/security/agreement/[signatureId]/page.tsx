@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getBranding } from "@/lib/branding";
+import { getRoleLabels } from "@/lib/role-labels-server";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import { SecurityShell } from "../../Shell";
 import { CARD } from "../../shared";
@@ -21,7 +22,7 @@ export default async function SignedAgreementPage({ params }: { params: Promise<
 
   const { signatureId } = await params;
   const id = Number(signatureId);
-  const [{ data: sig }, branding] = await Promise.all([
+  const [{ data: sig }, branding, L] = await Promise.all([
     Number.isInteger(id)
       ? supabase
           .from("agreement_signatures")
@@ -30,6 +31,7 @@ export default async function SignedAgreementPage({ params }: { params: Promise<
           .maybeSingle()
       : Promise.resolve({ data: null }),
     getBranding(),
+    getRoleLabels(),
   ]);
   const version = sig?.version as unknown as { version: number; title: string; body: string } | null;
 
@@ -79,7 +81,7 @@ export default async function SignedAgreementPage({ params }: { params: Promise<
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
           <Link href={own ? "/security/agreement" : "/servant-profiles"} className="text-sm font-semibold text-brand hover:underline">
-            &larr; {own ? "Back to the agreement" : "Servant Profiles"}
+            &larr; {own ? "Back to the agreement" : `${L.servant} Profiles`}
           </Link>
           <PrintButton />
         </div>

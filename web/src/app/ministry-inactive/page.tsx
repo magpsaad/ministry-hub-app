@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAddressContext } from "@/lib/ministry-context";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
+import { getRoleLabels } from "@/lib/role-labels-server";
 import { SignOutButton } from "@/components/SignOutButton";
 
 /** MULTI_TENANT_PLAN.md §3.2 / §3.8 -- what an inactive ministry's address
@@ -11,7 +12,7 @@ export default async function MinistryInactivePage() {
   const ctx = await getAddressContext();
   if (ctx.kind !== "ministry" || ctx.isActive) redirect("/");
 
-  const user = await getCurrentUser();
+  const [user, L] = await Promise.all([getCurrentUser(), getRoleLabels()]);
 
   return (
     <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
@@ -19,7 +20,7 @@ export default async function MinistryInactivePage() {
         <h1 className="text-lg font-bold text-brand">This ministry isn&rsquo;t active</h1>
         <p className="mt-2 text-sm text-[#666]">
           {ctx.name} isn&rsquo;t using this app right now. If you think this is a mistake, please contact your
-          ministry&rsquo;s coordinators.
+          ministry&rsquo;s {L.coordinatorsLower}.
         </p>
         {user && (
           <div className="mt-4 flex justify-center">

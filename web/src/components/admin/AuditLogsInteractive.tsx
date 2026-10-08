@@ -6,6 +6,8 @@ import { getAuditLogsAction, toggleAuditConfigAction, archiveAuditLogAction } fr
 import { DateFilterModal } from "@/components/outreach/DateFilterModal";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
+import { relabelRoleWords } from "@/lib/role-labels";
 
 /** Migration 0080: written by the database for every check-in poster
  * sign-up and sign-up surge, and (0086) for every confidentiality agreement
@@ -31,6 +33,7 @@ export function AuditLogsInteractive({
   initialActionType?: string;
 }) {
   const timeZone = useTimezone();
+  const L = useRoleLabels();
   const [logs, setLogs] = useState(initialLogs);
   const [config, setConfig] = useState(initialConfig);
   const [actionType, setActionType] = useState(initialActionType);
@@ -157,7 +160,7 @@ export function AuditLogsInteractive({
                   onChange={(e) => handleToggleConfig(c.action_type, e.target.checked)}
                 />
                 <span className="font-mono text-[#666]">{c.action_type}</span>
-                {c.description && <span className="text-[#999]">— {c.description}</span>}
+                {c.description && <span className="text-[#999]">— {relabelRoleWords(c.description, L)}</span>}
               </label>
             ))}
           </div>
@@ -222,7 +225,7 @@ export function AuditLogsInteractive({
                         {log.details.poster ? ` (${String(log.details.poster)})` : ""}
                       </span>
                     ) : log.details?.unmatched_email ? (
-                      <span className="italic text-[#856404]" title="No matching account -- this email wasn't found in the migrated servant roster">
+                      <span className="italic text-[#856404]" title={`No matching account -- this email wasn't found in the migrated ${L.servantLower} roster`}>
                         {String(log.details.unmatched_email)} (unmatched)
                       </span>
                     ) : (

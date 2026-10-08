@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import type { GroupSummary } from "@/lib/groups";
 import { getGroupMemberNamesAction, getServantNamesAction } from "@/app/export-lists/actions";
 import { csvCell } from "@/lib/csv";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 const SERVANTS_KEY = "servants";
 
@@ -21,15 +22,16 @@ export function ExportListsInteractive({
   memberLabel: string;
   appTitle: string;
 }) {
+  const L = useRoleLabels();
   const [selectedKey, setSelectedKey] = useState<string>(groups[0]?.id ?? SERVANTS_KEY);
   const [names, setNames] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, startTransition] = useTransition();
 
   const listTitle = useMemo(() => {
-    if (selectedKey === SERVANTS_KEY) return "Servants";
+    if (selectedKey === SERVANTS_KEY) return L.servants;
     return groups.find((g) => g.id === selectedKey)?.name ?? "";
-  }, [selectedKey, groups]);
+  }, [selectedKey, groups, L.servants]);
 
   useEffect(() => {
     startTransition(async () => {
@@ -118,7 +120,7 @@ export function ExportListsInteractive({
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 print:hidden">
         <h2 className="text-lg font-bold text-brand mb-1">Export or Print a List</h2>
         <p className="text-xs text-[#666] mb-4">
-          Names only -- no phone, email, attendance, or other {memberLabel.toLowerCase()}/servant details are ever included.
+          Names only -- no phone, email, attendance, or other {memberLabel.toLowerCase()}/{L.servantLower} details are ever included.
         </p>
 
         <label className="block text-sm font-semibold text-[#333] mb-1">Which list?</label>
@@ -132,7 +134,7 @@ export function ExportListsInteractive({
               {g.name}
             </option>
           ))}
-          <option value={SERVANTS_KEY}>Servants</option>
+          <option value={SERVANTS_KEY}>{L.servants}</option>
         </select>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -174,7 +176,7 @@ export function ExportListsInteractive({
           <p className="mt-2 text-sm text-[#666] print:hidden">Loading…</p>
         ) : names.length === 0 ? (
           <p className="mt-2 text-sm text-[#666]">
-            No {selectedKey === SERVANTS_KEY ? "servants" : memberLabel.toLowerCase() + "s"} found.
+            No {selectedKey === SERVANTS_KEY ? L.servantsLower : memberLabel.toLowerCase() + "s"} found.
           </p>
         ) : (
           <ol className="mt-2 columns-1 sm:columns-2 print:columns-2 gap-x-6 text-sm text-[#333] list-decimal list-inside">

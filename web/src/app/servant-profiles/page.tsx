@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
 import { getServantDirectory } from "@/lib/servant-directory";
+import { getRoleLabels } from "@/lib/role-labels-server";
 import { logAudit } from "@/lib/audit";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
@@ -39,10 +40,11 @@ export default async function ServantProfilesPage() {
   }
 
   const canManageServants = access.isAdmin || access.isGeneralCoordinator;
-  const [settings, servants, agreements] = await Promise.all([
+  const [settings, servants, agreements, L] = await Promise.all([
     getAppSettings(),
     getServantDirectory(),
     canManageServants ? getAgreementStatuses() : Promise.resolve(null),
+    getRoleLabels(),
   ]);
 
   await logAudit(user.id, "SERVANT_PROFILES_VIEWED");
@@ -61,7 +63,7 @@ export default async function ServantProfilesPage() {
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
-        <p className="mt-1 text-sm opacity-90">Servant Profiles</p>
+        <p className="mt-1 text-sm opacity-90">{L.servant} Profiles</p>
         <HeaderWordmark />
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">

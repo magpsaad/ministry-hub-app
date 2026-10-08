@@ -1,3 +1,5 @@
+import { roleLabels, type RoleLabels } from "@/lib/role-labels";
+
 /**
  * REQUIREMENTS.md §6.13 -- shared between Servant Assignments and Servant
  * Profiles' Categorical view (owner asked for identical "n Female
@@ -22,7 +24,7 @@ export function groupByGender<T>(items: T[], getGender: (item: T) => string | nu
 /** "3 Female Servants" / "1 Female Servant" / "2 Other" -- other never
  * carries the "Servants" suffix since it's not a real ministry-defined
  * bucket, just an overflow catch-all. */
-export function genderSubheading(kind: "Female" | "Male" | "Other", n: number): string {
+export function genderSubheading(kind: "Female" | "Male" | "Other", n: number, L: RoleLabels = roleLabels()): string {
   if (kind === "Other") return `${n} Other`;
-  return `${n} ${kind} Servant${n === 1 ? "" : "s"}`;
+  return `${n} ${kind} ${n === 1 ? L.servant : L.servants}`;
 }

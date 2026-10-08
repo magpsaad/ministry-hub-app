@@ -14,6 +14,7 @@ import { CameraIcon, TrashIcon } from "@/components/icons";
 import { PhotoCropperModal } from "@/components/PhotoCropperModal";
 import { ErrorModal } from "@/components/ErrorModal";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import type { AgreementStatus } from "@/lib/agreement";
 
@@ -44,6 +45,7 @@ export function ServantDetailModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const L = useRoleLabels();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +119,7 @@ export function ServantDetailModal({
   }
 
   function handleRemove() {
-    if (!confirm(`Remove ${servant.full_name} as a servant? This cannot be undone.`)) return;
+    if (!confirm(`Remove ${servant.full_name} as a ${L.servantLower}? This cannot be undone.`)) return;
     startTransition(async () => {
       const result = await removeServantAction(servant.id);
       if (result.error) {
@@ -270,7 +272,7 @@ export function ServantDetailModal({
               disabled={pending}
               className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
-              Remove Servant
+              Remove {L.servant}
             </button>
           )}
         </div>

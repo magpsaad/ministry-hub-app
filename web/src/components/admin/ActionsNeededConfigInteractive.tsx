@@ -15,6 +15,7 @@ import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive"
 import { levelText } from "@/lib/group-names";
 import { LOCK_MINUTE_CHOICES } from "@/lib/screen-lock";
 import { NotificationDefaultsCard, type NotificationDefaultRow } from "@/components/admin/NotificationDefaultsCard";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 // ISO weekday numbering (Monday=1..Sunday=7), matching app_settings.service_weekday.
 const WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -42,6 +43,7 @@ export function ActionsNeededConfigInteractive({
   initialTerminalPattern: string;
   notificationDefaults: NotificationDefaultRow[];
 }) {
+  const L = useRoleLabels();
   const [rows, setRows] = useState(initial);
   const [pending, startTransition] = useTransition();
   const [savedProximity, setSavedProximity] = useState<string | null>(null);
@@ -205,6 +207,29 @@ export function ActionsNeededConfigInteractive({
           <input
             value={appSettings.member_label}
             onChange={(e) => updateAppField("member_label", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+          />
+        </label>
+        {/* Owner-requested (7 Oct 2026, migration 0097): the two role words,
+            used everywhere instead of "Coordinator" and "Servant". */}
+        <label className="text-xs text-[#666]">
+          Sub-coordinator Label (e.g. &ldquo;Coordinator&rdquo;, &ldquo;Grade Coordinator&rdquo;, &ldquo;Steward&rdquo;)
+          <input
+            value={appSettings.sub_coordinator_label}
+            onChange={(e) => updateAppField("sub_coordinator_label", e.target.value)}
+            maxLength={30}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+          />
+          <span className="mt-0.5 block text-[11px] text-[#999]">
+            General Coordinators are then called &ldquo;General {appSettings.sub_coordinator_label.trim() || "Coordinator"}&rdquo;.
+          </span>
+        </label>
+        <label className="text-xs text-[#666]">
+          Servant Label (e.g. &ldquo;Servant&rdquo;, &ldquo;Teacher&rdquo;, &ldquo;Class Leader&rdquo;)
+          <input
+            value={appSettings.servant_label}
+            onChange={(e) => updateAppField("servant_label", e.target.value)}
+            maxLength={30}
             className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
@@ -398,9 +423,9 @@ export function ActionsNeededConfigInteractive({
     />
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Coordinators</h2>
+      <h2 className="text-lg font-bold text-brand mb-1">{L.coordinators}</h2>
       <p className="text-sm text-[#666] mb-3">
-        When on, making someone Coordinator of a {appSettings.group_label.toLowerCase()} also makes them a Servant
+        When on, making someone {L.coordinator} of a {appSettings.group_label.toLowerCase()} also makes them a {L.servant}
         of that {appSettings.group_label.toLowerCase()} automatically. Changing this only affects grants made from now
         on; existing roles are left as they are.
       </p>
@@ -410,7 +435,7 @@ export function ActionsNeededConfigInteractive({
           checked={appSettings.sub_coordinator_auto_servant}
           onChange={(e) => updateAppField("sub_coordinator_auto_servant", e.target.checked)}
         />
-        Coordinators automatically become Servants
+        {L.coordinators} automatically become {L.servants}
       </label>
       <div className="flex items-center gap-3">
         <button
@@ -429,10 +454,10 @@ export function ActionsNeededConfigInteractive({
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-brand mb-1">Screen Lock</h2>
       <p className="text-sm text-[#666] mb-3">
-        Locks the app on a servant&rsquo;s phone or computer after a few minutes without use, so nobody who picks it up can
+        Locks the app on a {L.servantLower}&rsquo;s phone or computer after a few minutes without use, so nobody who picks it up can
         see {appSettings.member_label.toLowerCase()} details. It also hides the app while it&rsquo;s in the background.
-        Servants unlock it with Face ID, a fingerprint or their device&rsquo;s PIN (once they turn that on in My
-        Settings &rarr; Screen Lock &amp; Face ID), their authenticator code, or by signing in again. Applies to everyone, Admins and GCs included.
+        {L.servants} unlock it with Face ID, a fingerprint or their device&rsquo;s PIN (once they turn that on in My
+        Settings &rarr; Screen Lock &amp; Face ID), their authenticator code, or by signing in again. Applies to everyone, Admins and {L.gcs} included.
       </p>
       <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
         Lock after
@@ -472,7 +497,7 @@ export function ActionsNeededConfigInteractive({
       <h2 className="text-lg font-bold text-brand mb-1">Parents&rsquo; Contact Details</h2>
       <p className="text-sm text-[#666] mb-3">
         When on, each {appSettings.member_label.toLowerCase()}&rsquo;s details include Parent 1 and Parent 2 (name,
-        phone and email), all optional. Servants see and edit them like the other details, the check-in
+        phone and email), all optional. {L.servants} see and edit them like the other details, the check-in
         page&rsquo;s registration form asks for them, and after checking in a {appSettings.member_label.toLowerCase()}{" "}
         is offered to fill in any that are blank. Turning it off hides them everywhere; anything already entered is
         kept.
@@ -549,7 +574,7 @@ export function ActionsNeededConfigInteractive({
           joined.
         </li>
         <li>Leave a field blank to calculate over that group&rsquo;s entire attendance history instead, with no rolling cap.</li>
-        <li>{appSettings.member_label}s and servants are configured independently.</li>
+        <li>{appSettings.member_label}s and {L.servantsLower} are configured independently.</li>
       </ul>
       {windowError && <p className="mb-3 text-sm text-[#dc3545]">{windowError}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -569,7 +594,7 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
         <label className="text-xs text-[#666]">
-          Servant attendance window (weeks, blank = no cap)
+          {L.servant} attendance window (weeks, blank = no cap)
           <input
             type="number"
             min={1}
@@ -648,7 +673,7 @@ export function ActionsNeededConfigInteractive({
       </p>
       <p className="text-sm text-[#666] mb-4">
         These cards clear themselves automatically &mdash; no one needs to dismiss them by hand. A card disappears
-        the moment the member shows up again, or as soon as any servant logs a new outreach entry for them.
+        the moment the member shows up again, or as soon as any {L.servantLower} logs a new outreach entry for them.
       </p>
       <div className="border border-[#f0f0f0] rounded-lg p-4 mb-4">
         <h3 className="text-sm font-bold text-brand mb-1">Look-back period</h3>

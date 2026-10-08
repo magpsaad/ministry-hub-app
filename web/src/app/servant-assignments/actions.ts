@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { roleWords } from "@/lib/role-labels-server";
 
 export type AddableRole = "servant" | "sub_coordinator" | "read_only";
 
@@ -35,7 +36,7 @@ export async function reassignRoleGroupAction(roleId: string, groupId: string | 
   if (!user) return { error: "Not signed in" };
 
   const { error } = await supabase.rpc("reassign_role_group", { p_role_id: roleId, p_group_id: groupId });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   await logAudit(user.id, "SERVANT_GROUP_UPDATED", { groupId, details: { roleId } });
   revalidatePath("/servant-assignments");
@@ -53,7 +54,7 @@ export async function revokeRoleGrantAction(roleId: string) {
   if (!user) return { error: "Not signed in" };
 
   const { error } = await supabase.rpc("revoke_role_grant", { p_role_id: roleId });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   await logAudit(user.id, "SERVANT_GROUP_UPDATED", { details: { action: "revoke", roleId } });
   revalidatePath("/servant-assignments");
@@ -78,7 +79,7 @@ export async function grantServantRoleAction(userId: string, role: AddableRole, 
     p_role: role,
     p_group_id: groupId,
   });
-  if (error) return { error: error.message, id: null };
+  if (error) return { error: await roleWords(error.message), id: null };
 
   await logAudit(user.id, "SERVANT_GROUP_UPDATED", { groupId, details: { action: "grant", userId, role } });
   revalidatePath("/servant-assignments");

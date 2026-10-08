@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings, getAttendanceWindowSettings, weekdayName } from "@/lib/app-settings";
 import { getServantDirectory } from "@/lib/servant-directory";
+import { getRoleLabels } from "@/lib/role-labels-server";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
@@ -25,10 +26,11 @@ export default async function ServantsDirectoryPage() {
     );
   }
 
-  const [settings, servants, windowSettings] = await Promise.all([
+  const [settings, servants, windowSettings, L] = await Promise.all([
     getAppSettings(),
     getServantDirectory(),
     getAttendanceWindowSettings(),
+    getRoleLabels(),
   ]);
 
   return (
@@ -45,7 +47,7 @@ export default async function ServantsDirectoryPage() {
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
-        <p className="mt-1 text-sm opacity-90">Servant Directory</p>
+        <p className="mt-1 text-sm opacity-90">{L.servant} Directory</p>
         <HeaderWordmark />
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">

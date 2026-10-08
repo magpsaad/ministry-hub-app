@@ -261,6 +261,8 @@ create table app_settings (
 
   group_label             text not null default 'Group',      -- "Cohort" for this deployment
   member_label            text not null default 'Member',     -- "Youth" for this deployment
+  servant_label           text not null default 'Servant',    -- 0097: this ministry's word for the servant role ("Teacher", "Class Leader")
+  sub_coordinator_label   text not null default 'Coordinator',-- 0097: word for sub_coordinator ("Grade Coordinator", "Steward"); GC = "General " + it
   university_label        text not null default 'School',     -- "University/College" for this deployment (0059)
   program_label           text not null default 'Field of Focus', -- "Program of Study" for this deployment (0059)
 

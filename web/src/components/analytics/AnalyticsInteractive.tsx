@@ -12,6 +12,7 @@ import { ClipboardCheckIcon, UsersIcon, ChartBarIcon, MapPinIcon } from "@/compo
 import { ProximityDonut } from "@/components/charts/ProximityDonut";
 import { AttendanceTrendChart } from "@/components/charts/AttendanceTrendChart";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 type SortKey = "name" | "gender" | "caseload" | "cohort";
 
@@ -74,6 +75,7 @@ export function AnalyticsInteractive({
   serviceWeekday: number;
   windowWeeks: number | null;
 }) {
+  const L = useRoleLabels();
   const timeZone = useTimezone();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
@@ -245,7 +247,7 @@ export function AnalyticsInteractive({
           <ClipboardCheckIcon className="h-5 w-5" /> Data Completeness
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <StatCard label="Assigned to Servants" value={`${completeness.pctAssignedServant}%`} />
+          <StatCard label={`Assigned to ${L.servants}`} value={`${completeness.pctAssignedServant}%`} />
           <StatCard label="Has Phone" value={`${completeness.pctPhone}%`} />
           <StatCard label="Has Email" value={`${completeness.pctEmail}%`} />
           <StatCard label="Has Date of Birth" value={`${completeness.pctDob}%`} />
@@ -315,7 +317,7 @@ export function AnalyticsInteractive({
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="flex items-center gap-2 text-lg font-bold text-brand">
-            <UsersIcon className="h-5 w-5" /> Servant Assignments
+            <UsersIcon className="h-5 w-5" /> {L.servant} Assignments
           </h2>
           <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
             <button
@@ -347,13 +349,13 @@ export function AnalyticsInteractive({
               <table className="w-full text-sm">
                 <tbody>
                   <tr className="bg-[#f9f9f9]">
-                    <td className="px-4 py-2.5 font-semibold text-[#333]">Unassigned {memberLabel}s (no servant)</td>
+                    <td className="px-4 py-2.5 font-semibold text-[#333]">Unassigned {memberLabel}s (no {L.servantLower})</td>
                     <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{visibleUnassignedCount}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            {visibleServants.length === 0 && <p className="text-sm text-[#666] text-center py-6">No servants assigned yet.</p>}
+            {visibleServants.length === 0 && <p className="text-sm text-[#666] text-center py-6">No {L.servantsLower} assigned yet.</p>}
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
@@ -362,7 +364,7 @@ export function AnalyticsInteractive({
                 <tr className="bg-[#f5f5f5] text-left text-[#666]">
                   <th className="px-4 py-2">
                     <button type="button" onClick={() => handleSort("name")} className="font-semibold hover:underline">
-                      Servant{indicator("name")}
+                      {L.servant}{indicator("name")}
                     </button>
                   </th>
                   <th className="px-4 py-2">
@@ -402,7 +404,7 @@ export function AnalyticsInteractive({
                 {sortedServants.length === 0 && (
                   <tr>
                     <td colSpan={combined ? 4 : 3} className="px-4 py-6 text-center text-[#666]">
-                      No servants assigned to this group yet.
+                      No {L.servantsLower} assigned to this group yet.
                     </td>
                   </tr>
                 )}
@@ -421,6 +423,7 @@ export function AnalyticsInteractive({
  * sort here, the grouping IS the order. Gender/Cohort columns are dropped
  * (redundant with the heading/subheading text). */
 function ServantCohortTable({ label, servants, memberLabel }: { label: string; servants: ServantOption[]; memberLabel: string }) {
+  const L = useRoleLabels();
   const { female, male, other } = groupByGender(servants, (s) => s.gender);
   return (
     <div>
@@ -429,7 +432,7 @@ function ServantCohortTable({ label, servants, memberLabel }: { label: string; s
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#f5f5f5] text-left text-[#666]">
-              <th className="px-4 py-2 font-semibold">Servant</th>
+              <th className="px-4 py-2 font-semibold">{L.servant}</th>
               <th className="px-4 py-2 text-right font-semibold">Assigned {memberLabel}s</th>
             </tr>
           </thead>
@@ -445,7 +448,7 @@ function ServantCohortTable({ label, servants, memberLabel }: { label: string; s
                 <Fragment key={kind}>
                   <tr className="bg-[#f9f9f9]">
                     <td colSpan={2} className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#666]">
-                      {genderSubheading(kind, rows.length)}
+                      {genderSubheading(kind, rows.length, L)}
                     </td>
                   </tr>
                   {[...rows]

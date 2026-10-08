@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleLabels } from "@/lib/role-labels-server";
 import {
   getMemberOutreach,
   getOutreachEntries,
@@ -134,7 +135,8 @@ export async function dismissFollowUpAction(groupId: string, entryId: string) {
 
   const { data: entry } = await supabase.from("outreach_entries").select("servant_id").eq("id", entryId).single();
   if (!entry || entry.servant_id !== user.id) {
-    return { error: "Only the servant who logged this entry can dismiss it." };
+    const L = await getRoleLabels();
+    return { error: `Only the ${L.servantLower} who logged this entry can dismiss it.` };
   }
 
   const { error } = await supabase

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/pagination";
 import { getAppSettings, getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
 import { nowInZone } from "@/lib/timezone";
+import { getRoleLabels } from "@/lib/role-labels-server";
 
 export type ServantAttendanceMember = {
   id: string;
@@ -39,13 +40,14 @@ function toMinutes(hms: string): number {
 export async function getServantAttendanceBundle(): Promise<ServantAttendanceBundle> {
   const supabase = await createClient();
 
-  const [settings, { data: roleRows }, windowSettings] = await Promise.all([
+  const [settings, { data: roleRows }, windowSettings, L] = await Promise.all([
     getAppSettings(),
     supabase
       .from("user_roles")
       .select("user_id, role, group_id, groups(name), profiles(full_name, join_date)")
       .in("role", ["servant", "general_coordinator"]),
     getAttendanceWindowSettings(),
+    getRoleLabels(),
   ]);
 
   const cutoff = settings.same_day_cutoff_time;
@@ -57,7 +59,7 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
     const profile = r.profiles as unknown as { full_name: string; join_date: string | null } | null;
     if (!profile) continue;
     const groupName = (r.groups as unknown as { name: string } | null)?.name;
-    const groupLabel = r.role === "general_coordinator" ? "General Coordinator" : (groupName ?? "Unassigned");
+    const groupLabel = r.role === "general_coordinator" ? L.generalCoordinator : (groupName ?? "Unassigned");
     byUser.set(r.user_id, { full_name: profile.full_name, join_date: profile.join_date, groupLabel });
   }
 

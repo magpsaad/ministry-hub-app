@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { addOutreachEntryAction } from "@/app/g/[groupId]/outreach/actions";
 import { OutreachQuickActions } from "./OutreachQuickActions";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 function nowLocalDatetime() {
   const d = new Date();
@@ -34,6 +35,7 @@ export function AddOutreachModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const L = useRoleLabels();
   const [occurredAt, setOccurredAt] = useState(nowLocalDatetime());
   const [type, setType] = useState("");
   const [notes, setNotes] = useState("");
@@ -80,7 +82,7 @@ export function AddOutreachModal({
             <span className="font-semibold">{memberLabel}:</span> {memberName}
           </p>
           <p>
-            <span className="font-semibold">Servant:</span> {currentUserName}
+            <span className="font-semibold">{L.servant}:</span> {currentUserName}
           </p>
           <div>
             <label className="block font-semibold mb-1">Date &amp; Time</label>

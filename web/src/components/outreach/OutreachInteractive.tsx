@@ -14,6 +14,7 @@ import { EditOutreachEntryModal } from "./EditOutreachEntryModal";
 import { DateFilterModal } from "./DateFilterModal";
 import { dateKeyInZone, formatDateTimeInZone } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 /** REQUIREMENTS.md §6.6 -- full Outreach tab: search + filter (Member,
  * Servant, Date range, My Assigned List), "+ Add Outreach Entry", Edit/
@@ -45,6 +46,7 @@ export function OutreachInteractive({
   groupIds?: string[];
 }) {
   const timeZone = useTimezone();
+  const L = useRoleLabels();
   const router = useRouter();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const cohort = useCohortFilter(groupIds);
@@ -121,7 +123,7 @@ export function OutreachInteractive({
             onChange={(e) => setServantId(e.target.value)}
             className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
           >
-            <option value="">All Servants</option>
+            <option value="">All {L.servants}</option>
             {servants.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.full_name}

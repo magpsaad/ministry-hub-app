@@ -4,6 +4,7 @@ import { checkinPersonProblem } from "@/lib/checkin-validation";
 import { useRef, useState } from "react";
 import { submitNewServantAction, type NewServantInput } from "@/app/checkin/actions";
 import { BusyLabel } from "@/components/PendingButton";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
@@ -36,6 +37,7 @@ export function ServantIntakeForm({
   onBack?: () => void;
   onSubmitted: (name: string, attendanceRecorded: boolean) => void;
 }) {
+  const L = useRoleLabels();
   const [form, setForm] = useState<NewServantInput>(EMPTY_FORM);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,9 +79,9 @@ export function ServantIntakeForm({
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4 space-y-3">
-      <h2 className="text-base font-bold text-brand">New Servant Registration</h2>
+      <h2 className="text-base font-bold text-brand">New {L.servant} Registration</h2>
       <p className="text-xs text-[#666]">
-        Your info will be recorded. A coordinator will follow up to give you app access.
+        Your info will be recorded. A {L.coordinatorLower} will follow up to give you app access.
       </p>
       <Field label="Full Name *">
         <input

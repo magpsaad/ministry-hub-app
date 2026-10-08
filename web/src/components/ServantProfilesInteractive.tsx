@@ -8,6 +8,7 @@ import { servantPhotoUrl } from "@/lib/storage";
 import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import { ServantDetailModal } from "@/components/ServantDetailModal";
 import type { AgreementStatus } from "@/lib/agreement";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 /** Migration 0086: who still needs to sign the confidentiality agreement
  * (Admins and General Coordinators only; null for everyone else). */
@@ -35,6 +36,7 @@ export function ServantProfilesInteractive({
   canManageServants: boolean;
   agreements: Agreements;
 }) {
+  const L = useRoleLabels();
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [search, setSearch] = useState("");
@@ -58,28 +60,31 @@ export function ServantProfilesInteractive({
       }
       byLabel.get(label)!.push(entry);
     }
+    const gcLabel = L.generalCoordinators;
     for (const s of filtered) {
       for (const g of s.servantGroups) add(g.name, s, g.display_order);
       if (s.isUnassignedServant) add("Unassigned", s);
-      if (s.isGeneralCoordinator) add("General Coordinators", s);
+      if (s.isGeneralCoordinator) add(gcLabel, s);
     }
     // The groups' list order (display_order, GROUP_LADDER_PLAN D4), not
     // alphabetical by name -- same fix as Servant Assignments' Categorical
     // view (owner-reported), so both screens agree on ordering.
     const groupLabels = order
-      .filter((l) => l !== "General Coordinators" && l !== "Unassigned")
+      .filter((l) => l !== gcLabel && l !== "Unassigned")
       .sort((a, b) => (positionByLabel.get(a) ?? 0) - (positionByLabel.get(b) ?? 0));
-    const tail = order.filter((l) => l === "General Coordinators" || l === "Unassigned").sort().reverse();
+    // Unassigned, then General Coordinators -- the order the old fixed-word
+    // sort().reverse() gave, kept whatever the role word is.
+    const tail = ["Unassigned", gcLabel].filter((l) => order.includes(l));
 
     return [...groupLabels, ...tail].map((label) => ({
       label,
       // Only real cohorts get the Female/Male subheadings below (owner
       // asked for "within each Cohort grouping", same scope as Servant
       // Assignments) -- General Coordinators/Unassigned stay a flat list.
-      isCohort: label !== "General Coordinators" && label !== "Unassigned",
+      isCohort: label !== gcLabel && label !== "Unassigned",
       entries: byLabel.get(label)!.sort((a, b) => a.full_name.localeCompare(b.full_name)),
     }));
-  }, [filtered]);
+  }, [filtered, L.generalCoordinators]);
 
   const alphabetical = useMemo(() => [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name)), [filtered]);
   const signedCount = agreements ? servants.filter((s) => agreements[s.id]?.is_current).length : 0;
@@ -89,7 +94,7 @@ export function ServantProfilesInteractive({
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="text"
-          placeholder="Search servants..."
+          placeholder={`Search ${L.servantsLower}...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 min-w-[180px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
@@ -114,7 +119,7 @@ export function ServantProfilesInteractive({
 
       {agreements && (
         <p className="text-sm text-[#555]">
-          Confidentiality agreement: <strong>{signedCount}</strong> of {servants.length} servants have signed.
+          Confidentiality agreement: <strong>{signedCount}</strong> of {servants.length} {L.servantsLower} have signed.
         </p>
       )}
 
@@ -135,7 +140,7 @@ export function ServantProfilesInteractive({
             </div>
           )}
 
-      {filtered.length === 0 && <p className="text-sm text-[#666] text-center py-8">No servants match.</p>}
+      {filtered.length === 0 && <p className="text-sm text-[#666] text-center py-8">No {L.servantsLower} match.</p>}
 
       {selected && (
         <ServantDetailModal
@@ -162,6 +167,7 @@ function GenderGroupedRows({
   onSelect: (s: ServantDirectoryEntry) => void;
   agreements: Agreements;
 }) {
+  const L = useRoleLabels();
   const { female, male, other } = groupByGender(entries, (e) => e.gender);
   return (
     <div className="space-y-3">
@@ -175,7 +181,7 @@ function GenderGroupedRows({
         ([kind, rows]) =>
           rows.length > 0 && (
             <div key={kind}>
-              <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">{genderSubheading(kind, rows.length)}</h4>
+              <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">{genderSubheading(kind, rows.length, L)}</h4>
               <ServantRows entries={rows} onSelect={onSelect} agreements={agreements} />
             </div>
           ),

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { roleWords } from "@/lib/role-labels-server";
 
 export type AccessProfile = { id: string; full_name: string; email: string | null; deactivated_at: string | null };
 
@@ -49,7 +50,7 @@ export async function addPersonByEmailAction(email: string) {
   if (!user) return { error: "Not signed in", profile: null };
 
   const { data: personId, error } = await supabase.rpc("add_person_to_ministry_by_email", { p_email: trimmed });
-  if (error) return { error: error.message, profile: null };
+  if (error) return { error: await roleWords(error.message), profile: null };
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -92,7 +93,7 @@ export async function grantRoleAction(
       .maybeSingle();
     if (existing) {
       const { error } = await supabase.from("user_roles").update({ group_id: groupId }).eq("id", existing.id);
-      if (error) return { error: error.message, id: null };
+      if (error) return { error: await roleWords(error.message), id: null };
 
       await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { groupId, details: { action: "reassign", userId, role } });
       revalidatePath("/admin/access-maintenance");
@@ -105,7 +106,7 @@ export async function grantRoleAction(
     .insert({ user_id: userId, role, group_id: groupId })
     .select("id")
     .single();
-  if (error) return { error: error.message, id: null };
+  if (error) return { error: await roleWords(error.message), id: null };
 
   await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { groupId, details: { action: "grant", userId, role } });
   revalidatePath("/admin/access-maintenance");
@@ -120,7 +121,7 @@ export async function revokeRoleAction(roleRowId: string) {
   if (!user) return { error: "Not signed in" };
 
   const { error } = await supabase.from("user_roles").delete().eq("id", roleRowId);
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { details: { action: "revoke", roleRowId } });
   revalidatePath("/admin/access-maintenance");
@@ -142,7 +143,7 @@ export async function removeProfileCompletelyAction(profileId: string) {
   if (!user) return { error: "Not signed in" };
 
   const { error } = await supabase.rpc("remove_profile_completely", { p_profile_id: profileId });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { details: { action: "remove_profile", profileId } });
   revalidatePath("/admin/access-maintenance");
@@ -165,7 +166,7 @@ export async function setPersonDeactivatedAction(profileId: string, deactivated:
     p_profile_id: profileId,
     p_deactivated: deactivated,
   });
-  if (error) return { error: error.message, deactivatedAt: null };
+  if (error) return { error: await roleWords(error.message), deactivatedAt: null };
 
   const { data: profile } = await supabase.from("profiles").select("deactivated_at").eq("id", profileId).maybeSingle();
 
@@ -187,7 +188,7 @@ export async function resetAuthenticatorAction(profileId: string) {
   if (!user) return { error: "Not signed in", cleared: 0 };
 
   const { data, error } = await supabase.rpc("reset_person_authenticator", { p_user_id: profileId });
-  if (error) return { error: error.message, cleared: 0 };
+  if (error) return { error: await roleWords(error.message), cleared: 0 };
 
   const cleared = (data as number | null) ?? 0;
   if (cleared > 0) {
@@ -207,7 +208,7 @@ export async function resetUnlockDevicesAction(profileId: string) {
   if (!user) return { error: "Not signed in", cleared: 0 };
 
   const { data, error } = await supabase.rpc("reset_person_unlock_devices", { p_user_id: profileId });
-  if (error) return { error: error.message, cleared: 0 };
+  if (error) return { error: await roleWords(error.message), cleared: 0 };
 
   const cleared = (data as number | null) ?? 0;
   if (cleared > 0) {
@@ -231,7 +232,7 @@ export async function mergeServantAccountsAction(keepId: string, removeId: strin
   if (!user) return { error: "Not signed in" };
 
   const { error } = await supabase.rpc("merge_servant_accounts", { p_keep_id: keepId, p_remove_id: removeId });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { details: { action: "merge_accounts", keepId, removeId } });
   revalidatePath("/admin/access-maintenance");

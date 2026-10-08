@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import type { AccessProfile, AccessRoleRow } from "@/app/admin/access-maintenance/actions";
 import type { GroupSummary } from "@/lib/groups";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
+import type { RoleLabels } from "@/lib/role-labels";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import {
   addPersonByEmailAction,
@@ -16,27 +18,31 @@ import {
   resetUnlockDevicesAction,
 } from "@/app/admin/access-maintenance/actions";
 
-const ROLE_LABELS: Record<AccessRoleRow["role"], string> = {
-  // "System Admin" (not just "Admin") deliberately -- owner-reported:
-  // disambiguates the role from someone doing "an admin function" for the
-  // service day-to-day (food, marketing, trips) with no need for cohort
-  // data access at all.
-  admin: "System Admin",
-  general_coordinator: "General Coordinator",
-  // Owner-requested: displayed as just "Coordinator" now (was
-  // "Sub-Coordinator") -- the internal role/key name is unchanged.
-  sub_coordinator: "Coordinator",
-  servant: "Servant",
-  read_only: "Read-Only (exception access)",
-};
+function roleLabelsFor(L: RoleLabels): Record<AccessRoleRow["role"], string> {
+  return {
+    // "System Admin" (not just "Admin") deliberately -- owner-reported:
+    // disambiguates the role from someone doing "an admin function" for the
+    // service day-to-day (food, marketing, trips) with no need for cohort
+    // data access at all.
+    admin: "System Admin",
+    general_coordinator: L.generalCoordinator,
+    // Owner-requested: displayed as just "Coordinator" now (was
+    // "Sub-Coordinator") -- the internal role/key name is unchanged.
+    sub_coordinator: L.coordinator,
+    servant: L.servant,
+    read_only: "Read-Only (exception access)",
+  };
+}
 
-const ROLE_DESCRIPTIONS: Record<AccessRoleRow["role"], string> = {
-  admin: "Can: everything, everywhere — every group's data, plus every admin-only screen (this one included). Cannot be restricted from anything.",
-  general_coordinator: "Can: full read/write on every group's data, and the Coordinator Corner. Cannot open admin-only screens, unless also separately granted System Admin.",
-  sub_coordinator: "Can: full read/write, same as General Coordinator, but scoped to just one group. Cannot reassign a servant's group, remove a servant, or see/edit any other group's data.",
-  servant: "Can: view/edit their one assigned group's data (or none at all, if Unassigned), and appear in that group's assignment list — the only role that does, even though Coordinators/Read-Only can also access that group's data. Cannot see or edit any other group's data.",
-  read_only: "Can: view one group's data — members, attendance, outreach. Cannot make any edit there, and never appears in that group's assignment dropdown. Meant to sit alongside someone's real primary role, not as their only grant.",
-};
+function roleDescriptionsFor(L: RoleLabels): Record<AccessRoleRow["role"], string> {
+  return {
+    admin: "Can: everything, everywhere — every group's data, plus every admin-only screen (this one included). Cannot be restricted from anything.",
+    general_coordinator: `Can: full read/write on every group's data, and the ${L.coordinator} Corner. Cannot open admin-only screens, unless also separately granted System Admin.`,
+    sub_coordinator: `Can: full read/write, same as ${L.generalCoordinator}, but scoped to just one group. Cannot reassign a ${L.servantLower}'s group, remove a ${L.servantLower}, or see/edit any other group's data.`,
+    servant: `Can: view/edit their one assigned group's data (or none at all, if Unassigned), and appear in that group's assignment list — the only role that does, even though ${L.coordinators}/Read-Only can also access that group's data. Cannot see or edit any other group's data.`,
+    read_only: "Can: view one group's data — members, attendance, outreach. Cannot make any edit there, and never appears in that group's assignment dropdown. Meant to sit alongside someone's real primary role, not as their only grant.",
+  };
+}
 
 const ROLES_REQUIRING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "read_only"];
 const ROLES_ALLOWING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "servant", "read_only"];
@@ -55,6 +61,9 @@ export function AccessMaintenanceInteractive({
   groups: GroupSummary[];
 }) {
   const timeZone = useTimezone();
+  const L = useRoleLabels();
+  const ROLE_LABELS = roleLabelsFor(L);
+  const ROLE_DESCRIPTIONS = roleDescriptionsFor(L);
   const [profiles, setProfiles] = useState(initialProfiles);
   const [roles, setRoles] = useState(initialRoles);
   const [search, setSearch] = useState("");

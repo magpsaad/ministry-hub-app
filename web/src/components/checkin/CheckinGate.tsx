@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loadTurnstile, TURNSTILE_SITE_KEY } from "@/components/turnstile-loader";
 import { startCheckinPassAction } from "@/app/checkin/actions";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 /** Security audit #2 (owner-approved, 4 Oct 2026): the check-in page's
  * one-time bot check. Shown instead of the check-in form until this browser
@@ -12,6 +13,7 @@ import { startCheckinPassAction } from "@/app/checkin/actions";
  * page reloads into the normal check-in. */
 export function CheckinGate({ token }: { token: string }) {
   const router = useRouter();
+  const L = useRoleLabels();
   const ref = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
 
@@ -53,7 +55,7 @@ export function CheckinGate({ token }: { token: string }) {
       <div ref={ref} className="mt-4 flex justify-center" />
       {failed && (
         <p className="mt-3 text-sm text-[#721c24]">
-          That didn&rsquo;t work. Please reload the page, or ask a servant for help.
+          That didn&rsquo;t work. Please reload the page, or ask a {L.servantLower} for help.
         </p>
       )}
     </div>

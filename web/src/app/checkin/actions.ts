@@ -8,6 +8,7 @@ import { grantCheckinPass, hasCheckinPass } from "@/lib/checkin-session";
 import { checkinPersonProblem, parentsProblem, type CheckinPersonFields } from "@/lib/checkin-validation";
 import { PARENT_FIELDS, pickParents, type ParentContacts, type ParentField } from "@/lib/parent-contacts";
 import type { CheckInPerson } from "@/lib/checkin";
+import { roleWords } from "@/lib/role-labels-server";
 import {
   SERVANT_CHECKIN_COOKIE,
   MEMBER_CHECKIN_COOKIE,
@@ -165,7 +166,7 @@ export async function markMemberAttendanceAction(token: string, memberId: string
   }
 
   return {
-    error: error?.message ?? null,
+    error: await roleWords(error?.message),
     attendanceRecorded: row?.attendance_recorded ?? false,
     newlyCreated: row?.newly_created ?? false,
     missingFields,
@@ -214,7 +215,7 @@ export async function fillMissingMemberFieldsAction(token: string, memberId: str
     p_father_of_confession: input.father_of_confession?.trim() || null,
     ...parentArgs(input),
   });
-  return { error: error?.message ?? null };
+  return { error: await roleWords(error?.message) };
 }
 
 /** Mis-tap recovery for the self-check-in list (owner-reported: a wrong tap
@@ -235,7 +236,7 @@ export async function undoMemberAttendanceAction(
     await restoreRememberCookie(MEMBER_CHECKIN_COOKIE, restoreCookie.previousRemembered);
   }
 
-  return { error: error?.message ?? null };
+  return { error: await roleWords(error?.message) };
 }
 
 export type NewMemberInput = {
@@ -337,7 +338,7 @@ export async function resolveDuplicateMemberAction(token: string, input: NewMemb
       ...parentArgs(input),
     })
     .single();
-  if (error) return { error: error.message, attendanceRecorded: false };
+  if (error) return { error: await roleWords(error.message), attendanceRecorded: false };
   const row = data as { attendance_recorded: boolean; newly_created: boolean } | null;
   return { error: null, attendanceRecorded: row?.attendance_recorded ?? false };
 }
@@ -365,7 +366,7 @@ export async function submitNewMemberAction(token: string, input: NewMemberInput
     })
     .single();
 
-  if (error) return { error: error.message, attendanceRecorded: false };
+  if (error) return { error: await roleWords(error.message), attendanceRecorded: false };
   const row = data as { member_id: string; attendance_recorded: boolean } | null;
   return { error: null, attendanceRecorded: row?.attendance_recorded ?? false };
 }
@@ -399,7 +400,7 @@ export async function markServantAttendanceAction(token: string, id: string, kin
   }
 
   return {
-    error: error?.message ?? null,
+    error: await roleWords(error?.message),
     attendanceRecorded: row?.attendance_recorded ?? false,
     newlyCreated: row?.newly_created ?? false,
     rememberedCookieWritten,
@@ -429,7 +430,7 @@ export async function undoServantAttendanceAction(
     await restoreRememberCookie(SERVANT_CHECKIN_COOKIE, restoreCookie.previousRemembered);
   }
 
-  return { error: error?.message ?? null };
+  return { error: await roleWords(error?.message) };
 }
 
 export type NewServantInput = {
@@ -459,7 +460,7 @@ export async function submitNewServantAction(token: string, input: NewServantInp
     })
     .single();
 
-  if (error) return { error: error.message, attendanceRecorded: false };
+  if (error) return { error: await roleWords(error.message), attendanceRecorded: false };
   const row = data as { pending_id: string; attendance_recorded: boolean } | null;
   // Migration 0092: a new pending servant queues an alert for the
   // ministry's Admins and GCs; send it once this answer is on its way.

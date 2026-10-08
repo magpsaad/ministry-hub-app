@@ -9,6 +9,7 @@ import { checkUpload, isUuid } from "@/lib/upload-check";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 import { getAppSettings } from "@/lib/app-settings";
 import { pickParents, type ParentContacts } from "@/lib/parent-contacts";
+import { getRoleLabels } from "@/lib/role-labels-server";
 
 export type UpdateMemberInput = {
   phone: string | null;
@@ -175,7 +176,8 @@ export async function dismissNewAssignmentAction(memberId: string, groupId: stri
 
   const { data: member } = await supabase.from("members").select("assigned_servant_id").eq("id", memberId).single();
   if (!member || member.assigned_servant_id !== user.id) {
-    return { error: "Only the assigned servant can dismiss this." };
+    const L = await getRoleLabels();
+    return { error: `Only the assigned ${L.servantLower} can dismiss this.` };
   }
 
   const { data, error } = await supabase.from("members").update({ is_new_assignment: false }).eq("id", memberId).select("id");

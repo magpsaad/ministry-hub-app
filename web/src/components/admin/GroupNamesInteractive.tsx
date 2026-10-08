@@ -19,6 +19,7 @@ import {
 } from "@/app/admin/actions-needed-config/actions";
 import { levelText, renderGroupName, PATTERN_PLACEHOLDER } from "@/lib/group-names";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { todayInZone } from "@/lib/timezone";
 
 const SERVANTS = "servants";
@@ -61,6 +62,7 @@ export function GroupNamesInteractive({
   initialTerminalPattern: string;
 }) {
   const timeZone = useTimezone();
+  const L = useRoleLabels();
   const router = useRouter();
   const [groups, setGroups] = useState(initial);
   const [servantsQrColor, setServantsQrColor] = useState(initialServantsQrColor);
@@ -270,10 +272,10 @@ export function GroupNamesInteractive({
         {/* The Servants code first (owner-requested), lined up with the
             groups' dots, Rename and More columns. */}
         <div className="py-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="w-20 shrink-0 text-xs font-semibold text-[#666]">Servants</span>
+          <span className="w-20 shrink-0 text-xs font-semibold text-[#666]">{L.servants}</span>
           <span className="w-12 shrink-0" />
-          <span className="flex-1 min-w-[8rem] truncate text-sm text-[#333]">Servants check-in</span>
-          {colorDot(SERVANTS, servantsQrColor, "the Servants QR")}
+          <span className="flex-1 min-w-[8rem] truncate text-sm text-[#333]">{L.servants} check-in</span>
+          {colorDot(SERVANTS, servantsQrColor, `the ${L.servants} QR`)}
           <span aria-hidden="true" className="invisible rounded-md px-3 py-1.5 text-xs font-semibold">
             Rename
           </span>
@@ -341,7 +343,7 @@ export function GroupNamesInteractive({
                       <span className="block truncate text-sm text-[#333]">{g.name}</span>
                       <span className="block text-[11px] text-[#999]">
                         {g.active_count} active
-                        {!isRegular && " · hidden from servants"}
+                        {!isRegular && ` · hidden from ${L.servantsLower}`}
                         {sharesCode && ` · uses ${nameOf(g.check_in_code_group_id)}'s QR code`}
                       </span>
                     </span>

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAppSettings } from "@/lib/app-settings";
 import { todayInZone } from "@/lib/timezone";
+import { roleWords } from "@/lib/role-labels-server";
 
 /** D12 -- how two or more graduating groups enter hand-over. */
 export type HandOverMode = "one" | "by_gender" | "separate";
@@ -65,7 +66,7 @@ function rpcArgs(input: TransitionInput) {
 export async function previewGroupTransition(input: TransitionInput): Promise<TransitionReport> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("preview_group_transition", rpcArgs(input));
-  if (error) return { blocked: false, error: error.message };
+  if (error) return { blocked: false, error: await roleWords(error.message) };
   return data as TransitionReport;
 }
 
@@ -73,7 +74,7 @@ export async function previewGroupTransition(input: TransitionInput): Promise<Tr
 export async function runGroupTransition(input: TransitionInput): Promise<TransitionReport> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("run_group_transition", rpcArgs(input));
-  if (error) return { blocked: false, error: error.message };
+  if (error) return { blocked: false, error: await roleWords(error.message) };
   return data as TransitionReport;
 }
 

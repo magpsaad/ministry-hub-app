@@ -7,6 +7,8 @@ import { getActiveMinistry } from "@/lib/ministry-context";
 import { brandingBucket, brandingPublicUrl, ministryFilePath } from "@/lib/storage";
 import { getAttendanceWindowSettings, type AttendanceWindowSettings, type AppSettings } from "@/lib/app-settings";
 import { LOCK_MINUTE_CHOICES } from "@/lib/screen-lock";
+import { getRoleLabels, roleWords } from "@/lib/role-labels-server";
+import { relabelRoleWords } from "@/lib/role-labels";
 
 export type ActionsNeededConfigRow = {
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
@@ -34,7 +36,7 @@ export async function updateActionsNeededConfigAction(row: ActionsNeededConfigRo
       min_outreach_weeks: row.min_outreach_weeks,
     })
     .eq("proximity", row.proximity);
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   revalidatePath("/admin/actions-needed-config");
   return { error: null };
@@ -90,7 +92,7 @@ function groupsChanged() {
 export async function moveGroupAction(groupId: string, direction: "up" | "down") {
   const supabase = await createClient();
   const { error } = await supabase.rpc("move_group", { p_group_id: groupId, p_direction: direction });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   groupsChanged();
   return { error: null };
 }
@@ -99,7 +101,7 @@ export async function moveGroupAction(groupId: string, direction: "up" | "down")
 export async function setGroupLevelAction(groupId: string, level: number) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_group_level", { p_group_id: groupId, p_level: level });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   groupsChanged();
   return { error: null };
 }
@@ -108,7 +110,7 @@ export async function setGroupLevelAction(groupId: string, level: number) {
 export async function setGroupNamePatternAction(groupId: string, pattern: string) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_group_name_pattern", { p_group_id: groupId, p_pattern: pattern });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   groupsChanged();
   return { error: null };
 }
@@ -122,7 +124,7 @@ export async function setGroupGenderSaintAction(groupId: string, gender: string,
     p_gender: gender,
     p_patron_saint: patronSaint,
   });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   groupsChanged();
   return { error: null };
 }
@@ -131,7 +133,7 @@ export async function setGroupGenderSaintAction(groupId: string, gender: string,
 export async function setGroupQrActiveAction(groupId: string, active: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_group_qr_active", { p_group_id: groupId, p_active: active });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   groupsChanged();
   return { error: null };
 }
@@ -140,7 +142,7 @@ export async function setGroupQrActiveAction(groupId: string, active: boolean) {
 export async function setGroupCheckInCodeAction(groupId: string, codeGroupId: string | null) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_group_check_in_code", { p_group_id: groupId, p_code_group_id: codeGroupId });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   groupsChanged();
   return { error: null };
 }
@@ -161,7 +163,7 @@ export async function updateNamePatternsAction(defaultPattern: string, terminalP
     .update({ group_name_template: def || null, terminal_name_pattern: term })
     .eq("ministry_id", ministryId)
     .select("ministry_id");
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   if (!data || data.length === 0) return { error: "You don't have permission to change the name patterns." };
   groupsChanged();
   return { error: null };
@@ -170,7 +172,7 @@ export async function updateNamePatternsAction(defaultPattern: string, terminalP
 export async function renameGroupAction(groupId: string, name: string) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("rename_group", { p_group_id: groupId, p_name: name });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   revalidatePath("/admin/actions-needed-config");
   revalidatePath("/", "layout");
@@ -185,7 +187,7 @@ export async function updateGroupQrColorAction(groupId: string, color: string) {
   if (!HEX_COLOR.test(color)) return { error: `"${color}" isn't a valid colour -- use the #RRGGBB form.` };
   const supabase = await createClient();
   const { data, error } = await supabase.from("groups").update({ qr_color: color }).eq("id", groupId).select("id");
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   if (!data || data.length === 0) return { error: "You don't have permission to change this group's QR colour." };
 
   revalidatePath("/admin/actions-needed-config");
@@ -205,8 +207,11 @@ export async function updateServantsQrColorAction(color: string) {
     .update({ servants_qr_color: color })
     .eq("ministry_id", ministryId)
     .select("ministry_id");
-  if (error) return { error: error.message };
-  if (!data || data.length === 0) return { error: "You don't have permission to change the Servants QR colour." };
+  if (error) return { error: await roleWords(error.message) };
+  if (!data || data.length === 0) {
+    const L = await getRoleLabels();
+    return { error: `You don't have permission to change the ${L.servants} QR colour.` };
+  }
 
   revalidatePath("/admin/actions-needed-config");
   revalidatePath("/", "layout");
@@ -239,7 +244,7 @@ export async function addGroupAction(input: AddGroupInput) {
     p_qr_color: input.qrColor,
     p_name_pattern: input.namePattern,
   });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   if (newId && (input.gender.trim() || input.patronSaint.trim())) {
     const res = await supabase.rpc("set_group_gender_saint", {
       p_group_id: newId as string,
@@ -248,7 +253,7 @@ export async function addGroupAction(input: AddGroupInput) {
     });
     if (res.error) {
       groupsChanged();
-      return { error: `The group was added, but its gender and patron saint weren't saved: ${res.error.message}` };
+      return { error: `The group was added, but its gender and patron saint weren't saved: ${await roleWords(res.error.message)}` };
     }
   }
   groupsChanged();
@@ -261,7 +266,7 @@ export async function addGroupAction(input: AddGroupInput) {
 export async function deleteGroupTierAction(groupId: string) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("delete_group_tier", { p_group_id: groupId });
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   revalidatePath("/admin/actions-needed-config");
   revalidatePath("/", "layout");
@@ -310,6 +315,17 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   if (input.checkin_opens_at.slice(0, 5) >= input.checkin_closes_at.slice(0, 5)) {
     return { error: "Check-in must open before it closes." };
   }
+  // Migration 0097: the two role words -- letters, spaces, hyphens and
+  // apostrophes, 2-30 characters, shown with an "s" added for plurals.
+  const ROLE_WORD = /^[\p{L}][\p{L} '\-]{0,28}[\p{L}]$/u;
+  for (const [name, value] of [
+    ["Servant", input.servant_label],
+    ["Coordinator", input.sub_coordinator_label],
+  ] as const) {
+    if (!ROLE_WORD.test(value.trim())) {
+      return { error: `The ${name} label must be 2-30 letters (spaces, hyphens and apostrophes allowed).` };
+    }
+  }
   if (input.idle_lock_minutes !== null && !(LOCK_MINUTE_CHOICES as readonly number[]).includes(input.idle_lock_minutes)) {
     return { error: "Choose how many minutes before the screen locks, or Off." };
   }
@@ -331,6 +347,8 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     my_assigned_header_color_light: input.my_assigned_header_color_light,
     group_label: input.group_label,
     member_label: input.member_label,
+    servant_label: input.servant_label.trim().replace(/\s+/g, " "),
+    sub_coordinator_label: input.sub_coordinator_label.trim().replace(/\s+/g, " "),
     birthday_window_days_before: input.birthday_window_days_before,
     birthday_window_days_after: input.birthday_window_days_after,
     service_weekday: input.service_weekday,
@@ -354,7 +372,7 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   // refuse any other ministry's row anyway.
   const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
   const { error } = await supabase.from("app_settings").update(update).eq("ministry_id", ministryId);
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   // Branding fields are read on nearly every page (header, nav shell), so
   // revalidate broadly rather than just this one admin route.
@@ -399,7 +417,7 @@ export async function uploadLogoAction(formData: FormData) {
     .update({ logo_url: logoUrl })
     .eq("ministry_id", ministryId)
     .select("ministry_id");
-  if (error) return { error: error.message, logoUrl: null };
+  if (error) return { error: await roleWords(error.message), logoUrl: null };
   if (!data || data.length === 0) return { error: "Only System Admins can change the logo.", logoUrl: null };
 
   // The logo shows in every page header, the sign-in page and QR codes.
@@ -419,7 +437,7 @@ export async function updateAttendanceWindowSettingsAction(settings: AttendanceW
       servant_attendance_window_weeks: settings.servant_attendance_window_weeks,
     })
     .eq("ministry_id", ministryId);
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   revalidatePath("/admin/actions-needed-config");
   return { error: null };
@@ -436,7 +454,7 @@ export async function updateActionsNeededLookbackAction(months: number) {
     .from("app_settings")
     .update({ actions_needed_lookback_months: months })
     .eq("ministry_id", ministryId);
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   revalidatePath("/admin/actions-needed-config");
   return { error: null };
@@ -446,9 +464,17 @@ export async function updateActionsNeededLookbackAction(months: number) {
  * the kinds of notification people can choose, with this ministry's
  * default for each. */
 export async function getNotificationDefaultsAction() {
-  const supabase = await createClient();
+  const [supabase, L] = await Promise.all([createClient(), getRoleLabels()]);
   const { data } = await supabase.rpc("ministry_notification_defaults");
-  return (data ?? []) as {
+  // Stored with the standard words (migration 0097).
+  return ((data ?? []) as {
+    event: string;
+    label: string;
+    description: string;
+    roles: string[];
+    default_on: boolean;
+    church_default: boolean;
+  }[]).map((r) => ({ ...r, label: relabelRoleWords(r.label, L), description: relabelRoleWords(r.description, L) })) as {
     event: string;
     label: string;
     description: string;

@@ -31,6 +31,7 @@ import {
 import { dismissNewAssignmentAction } from "@/app/g/[groupId]/members/actions";
 import { dismissFollowUpAction } from "@/app/g/[groupId]/outreach/actions";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { formatDateTimeInZone } from "@/lib/timezone";
 
 type ActionsNeededConfigRow = {
@@ -149,6 +150,7 @@ export function DashboardInteractive({
   editableGroupIds?: string[];
 }) {
   const timeZone = useTimezone();
+  const L = useRoleLabels();
   const router = useRouter();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
@@ -296,7 +298,7 @@ export function DashboardInteractive({
                       </span>
                     </div>
                     <p className="text-xs text-[#666]">
-                      Assigned Servant: {m.assigned_servant?.full_name ?? "No assigned servant"}
+                      Assigned {L.servant}: {m.assigned_servant?.full_name ?? `No assigned ${L.servantLower}`}
                     </p>
                   </div>
                   {canEditFor(m.group_id) && (
@@ -329,7 +331,7 @@ export function DashboardInteractive({
           <p className="text-sm text-[#666]">
             {applyFilter
               ? "No unassigned members can be “mine” — turn off My Assigned List to see them."
-              : `All ${memberLabel.toLowerCase()}s have been assigned to servants.`}
+              : `All ${memberLabel.toLowerCase()}s have been assigned to ${L.servantsLower}.`}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -636,13 +638,13 @@ export function DashboardInteractive({
                   ×
                 </button>
               </div>
-              <p className="text-sm text-[#666] mb-2">This section surfaces three kinds of cards, grouped by servant:</p>
+              <p className="text-sm text-[#666] mb-2">This section surfaces three kinds of cards, grouped by {L.servantLower}:</p>
               <ul className="list-disc pl-5 text-sm text-[#333] space-y-2 mb-4">
                 <li>
                   <strong>Outreach Needed</strong> (amber) — a {memberLabel.toLowerCase()} currently on a
                   consecutive-absence streak at or beyond {proximityEnabled ? "their proximity’s" : "the"} minimum, whose most recent outreach
                   (or lack of any) is older than the outreach-staleness window below. Clears itself automatically the
-                  moment they attend again or any servant logs a new outreach entry for them — there&rsquo;s no
+                  moment they attend again or any {L.servantLower} logs a new outreach entry for them — there&rsquo;s no
                   manual dismiss.
                 </li>
                 <li>

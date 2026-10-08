@@ -28,6 +28,11 @@ export type AppSettings = {
   my_assigned_header_color_light: string;
   group_label: string;
   member_label: string;
+  /** Migration 0097 -- this ministry's words for the servant and
+   * sub_coordinator roles (default "Servant" / "Coordinator"); use
+   * lib/role-labels.ts roleLabels() for every form of them. */
+  servant_label: string;
+  sub_coordinator_label: string;
   app_version: string;
   /** REQUIREMENTS.md §6.3 -- how many days before/after today a birthday
    * counts as "upcoming" on the Dashboard's Current Birthdays section. */
@@ -89,7 +94,7 @@ export type AppSettings = {
 };
 
 const SETTINGS_COLUMNS =
-  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, my_assigned_header_color, my_assigned_header_color_light, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, checkin_opens_at, checkin_closes_at, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, level_number_offset, group_name_template, terminal_name_pattern, youth_attendance_window_weeks, servant_attendance_window_weeks, sub_coordinator_auto_servant, show_parent_contacts, idle_lock_minutes";
+  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, my_assigned_header_color, my_assigned_header_color_light, group_label, member_label, servant_label, sub_coordinator_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, checkin_opens_at, checkin_closes_at, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, level_number_offset, group_name_template, terminal_name_pattern, youth_attendance_window_weeks, servant_attendance_window_weeks, sub_coordinator_auto_servant, show_parent_contacts, idle_lock_minutes";
 
 /**
  * REQUIREMENTS.md §2 -- everything about the app's identity, vocabulary,

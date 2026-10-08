@@ -14,6 +14,8 @@ import {
 import { levelText } from "@/lib/group-names";
 import { ServantAssignmentsInteractive } from "@/components/ServantAssignmentsInteractive";
 import { csvCell } from "@/lib/csv";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
+import type { RoleLabels } from "@/lib/role-labels";
 
 type Stage = "preview" | "confirming" | "done";
 
@@ -28,11 +30,13 @@ const MODE_LABELS: Record<HandOverMode, string> = {
   separate: "Keep each class separate",
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  servant: "Servant",
-  sub_coordinator: "Coordinator",
-  read_only: "Read-Only",
-};
+function roleLabelsFor(L: RoleLabels): Record<string, string> {
+  return {
+    servant: L.servant,
+    sub_coordinator: L.coordinator,
+    read_only: "Read-Only",
+  };
+}
 
 /** GROUP_LADDER_PLAN.md §4.5 -- the Group Transition screen. The preview
  * comes from the database (the run itself, undone), so what it shows is
@@ -57,6 +61,8 @@ export function GroupTransitionInteractive({
   groupLabel: string;
   memberLabel: string;
 }) {
+  const L = useRoleLabels();
+  const ROLE_LABELS = roleLabelsFor(L);
   const [preview, setPreview] = useState(initialPreview);
   const [year, setYear] = useState(initialYear);
   const [preName, setPreName] = useState("");
@@ -163,11 +169,11 @@ export function GroupTransitionInteractive({
         </div>
 
         <div className={card}>
-          <h2 className="text-lg font-bold text-brand mb-2">Review Servant Assignments (optional)</h2>
+          <h2 className="text-lg font-bold text-brand mb-2">Review {L.servant} Assignments (optional)</h2>
           <p className="text-sm text-[#666] mb-3">
             The roles of the {groupWord}(s) that graduated have moved to <strong>{result.new_level_one}</strong>
             {(result.grants_dropped?.length ?? 0) > 0 && " (except for people who still serve another group)"}. Fine-tune
-            anyone&rsquo;s assignment now, or skip and do it later in Servant Assignments.
+            anyone&rsquo;s assignment now, or skip and do it later in {L.servant} Assignments.
           </p>
           {!showReview ? (
             <button
@@ -292,7 +298,7 @@ export function GroupTransitionInteractive({
               <p className="mb-2">
                 <strong>{preview.graduating?.join(", ")}</strong> {graduatingCount === 1 ? "graduates" : "graduate"}:{" "}
                 {preview.hand_over_youths} {memberLabel.toLowerCase()}(s) move to the hidden hand-over group
-                {(preview.hand_over_names?.length ?? 0) > 1 ? "s" : ""} (only Admins see them), and their servant
+                {(preview.hand_over_names?.length ?? 0) > 1 ? "s" : ""} (only Admins see them), and their {L.servantLower}
                 assignments are cleared.
               </p>
               {(preview.hand_over_names ?? []).map((name, i) => (

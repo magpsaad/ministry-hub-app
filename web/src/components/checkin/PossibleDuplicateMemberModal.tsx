@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { resolveDuplicateMemberAction, type DuplicateMatch, type NewMemberInput } from "@/app/checkin/actions";
 import { BusyLabel } from "@/components/PendingButton";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 /** Owner-requested: shown instead of silently creating a duplicate record
  * when checkPossibleDuplicateMemberAction finds a likely existing match
@@ -35,6 +36,7 @@ export function PossibleDuplicateMemberModal({
    * here used to leave no way to fix them). */
   onEdit: (message: string | null) => void;
 }) {
+  const L = useRoleLabels();
   const [step, setStep] = useState<"confirm" | "resolve">("confirm");
   const [moveRequested, setMoveRequested] = useState(false);
   const [pending, setPending] = useState(false);
@@ -101,7 +103,7 @@ export function PossibleDuplicateMemberModal({
       <h2 className="text-base font-bold text-brand">We&rsquo;ll check you in on your record</h2>
       <p className="text-sm text-[#666]">
         Anything you entered that&rsquo;s missing from your record will be added. If anything you entered is different
-        from what we have, your servants will review it and update your record.
+        from what we have, your {L.servantsLower} will review it and update your record.
       </p>
       {error && (
         <div className="space-y-2">
@@ -123,7 +125,7 @@ export function PossibleDuplicateMemberModal({
             onChange={() => setMoveRequested((v) => !v)}
             className="mt-0.5 h-4 w-4 accent-brand"
           />
-          <span>Ask my servants to move me to {currentGroupName}</span>
+          <span>Ask my {L.servantsLower} to move me to {currentGroupName}</span>
         </label>
       )}
       <button

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { getCheckInFlow, getCheckInWindow, getRememberedCheckInPerson } from "@/lib/checkin";
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
+import { getRoleLabels } from "@/lib/role-labels-server";
 import { getActiveMinistry } from "@/lib/ministry-context";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { weekdayName } from "@/lib/attendance-window";
@@ -22,12 +23,13 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
   // The school list is fetched up front with the flow lookup (it used to
   // wait for it -- an extra round trip on every QR scan). It's small and
   // readable without signing in; the servants' flow simply doesn't use it.
-  const [flow, settings, allUniversities, ministryId, user] = await Promise.all([
+  const [flow, settings, allUniversities, ministryId, user, L] = await Promise.all([
     getCheckInFlow(token),
     getAppSettings(),
     getUniversities(),
     getActiveMinistry(),
     getCurrentUser(),
+    getRoleLabels(),
   ]);
 
   // A QR code only works on its own ministry's address (it's printed with
@@ -40,7 +42,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
       <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
         <div className="max-w-sm w-full text-center bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6">
           <h1 className="text-lg font-bold text-[#dc3545]">Check-In Code Not Active</h1>
-          <p className="mt-2 text-sm text-[#666]">This QR code isn&rsquo;t in use right now. Please ask a servant for help.</p>
+          <p className="mt-2 text-sm text-[#666]">This QR code isn&rsquo;t in use right now. Please ask a {L.servantLower} for help.</p>
         </div>
       </div>
     );
@@ -50,7 +52,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
       <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
         <div className="max-w-sm w-full text-center bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6">
           <h1 className="text-lg font-bold text-[#dc3545]">Invalid Check-In Code</h1>
-          <p className="mt-2 text-sm text-[#666]">This QR code isn&rsquo;t recognized. Please ask a servant for help.</p>
+          <p className="mt-2 text-sm text-[#666]">This QR code isn&rsquo;t recognized. Please ask a {L.servantLower} for help.</p>
         </div>
       </div>
     );
@@ -74,6 +76,9 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
   const rememberedPerson = remembered ? await getRememberedCheckInPerson(token, flow.isServant, remembered) : null;
   // Owner-requested (3 Oct 2026): a general message, no day or times.
   const openingText = "Check-in opens during service hours.";
+  // Migration 0097: the database names the servants' code "Servants"; this
+  // ministry's own word is shown instead.
+  const flowLabel = flow.isServant ? L.servants : flow.label;
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -100,7 +105,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={56} />
         </div>
         <h1 className="mt-3 text-xl font-bold">{settings.app_title_short}</h1>
-        <p className="mt-1 text-sm opacity-90">{flow.label}</p>
+        <p className="mt-1 text-sm opacity-90">{flowLabel}</p>
       </header>
       <main className="max-w-md mx-auto px-4 py-6">
         {!hasPass ? (
@@ -117,7 +122,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
             programLabel={settings.program_label}
             groupLabel={settings.group_label}
             memberLabel={settings.member_label}
-            groupName={flow.label}
+            groupName={flowLabel}
             serviceDayName={weekdayName(settings.service_weekday)}
             rememberedPerson={rememberedPerson}
             showParents={settings.show_parent_contacts}

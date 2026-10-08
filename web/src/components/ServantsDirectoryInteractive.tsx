@@ -6,6 +6,7 @@ import { PhoneLink } from "@/components/PhoneLink";
 import { servantPhotoUrl } from "@/lib/storage";
 import { uploadServantPhotoAction } from "@/app/servant-profiles/actions";
 import { PhotoCropperModal } from "@/components/PhotoCropperModal";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 function initials(name: string): string {
   return name
@@ -34,6 +35,7 @@ export function ServantsDirectoryInteractive({
   windowWeeks: number | null;
   dayName: string;
 }) {
+  const L = useRoleLabels();
   const [servants, setServants] = useState(initialServants);
   const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [search, setSearch] = useState("");
@@ -62,26 +64,29 @@ export function ServantsDirectoryInteractive({
       byLabel.get(label)!.push(entry);
     }
 
+    const gcLabel = L.generalCoordinators;
     for (const s of filtered) {
       for (const g of s.servantGroups) add(g.name, s, g.display_order);
       if (s.isUnassignedServant) add("Unassigned", s);
-      if (s.isGeneralCoordinator) add("General Coordinators", s);
+      if (s.isGeneralCoordinator) add(gcLabel, s);
     }
 
     // The groups' list order (display_order, GROUP_LADDER_PLAN D4), not
     // alphabetical by name -- same fix as Servant Profiles/Assignments
     // (owner-reported), now consistent across all three screens.
     const groupLabels = order
-      .filter((l) => l !== "General Coordinators" && l !== "Unassigned")
+      .filter((l) => l !== gcLabel && l !== "Unassigned")
       .sort((a, b) => (positionByLabel.get(a) ?? 0) - (positionByLabel.get(b) ?? 0));
-    const tail = order.filter((l) => l === "General Coordinators" || l === "Unassigned").sort().reverse();
+    // Unassigned, then General Coordinators -- the order the old fixed-word
+    // sort().reverse() gave, kept whatever the role word is.
+    const tail = ["Unassigned", gcLabel].filter((l) => order.includes(l));
 
     const result: Bucket[] = [];
     for (const label of [...groupLabels, ...tail]) {
       result.push({ label, entries: byLabel.get(label)!.sort((a, b) => a.full_name.localeCompare(b.full_name)) });
     }
     return result;
-  }, [filtered]);
+  }, [filtered, L.generalCoordinators]);
 
   const alphabetical = useMemo(() => [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name)), [filtered]);
 
@@ -89,14 +94,14 @@ export function ServantsDirectoryInteractive({
     <div className="space-y-4">
       <p className="text-xs text-[#666]">
         {windowWeeks === null
-          ? `Attendance % is calculated over each servant's entire history since their Join Date, counting only ${dayName}s.`
+          ? `Attendance % is calculated over each ${L.servantLower}'s entire history since their Join Date, counting only ${dayName}s.`
           : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="text"
-          placeholder="Search servants..."
+          placeholder={`Search ${L.servantsLower}...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 min-w-[180px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
@@ -119,7 +124,7 @@ export function ServantsDirectoryInteractive({
         </div>
       </div>
 
-      {filtered.length === 0 && <p className="text-sm text-[#666] text-center py-8">No servants match.</p>}
+      {filtered.length === 0 && <p className="text-sm text-[#666] text-center py-8">No {L.servantsLower} match.</p>}
 
       {viewMode === "categorical"
         ? buckets.map((bucket) => (

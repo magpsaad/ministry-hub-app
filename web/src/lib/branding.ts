@@ -19,6 +19,8 @@ export type Branding = Pick<
   | "my_assigned_header_color_light"
   | "timezone"
   | "app_version"
+  | "servant_label"
+  | "sub_coordinator_label"
 >;
 
 /** Neutral chrome for addresses that belong to no ministry -- the Church
@@ -33,6 +35,8 @@ const NEUTRAL: Omit<Branding, "app_title_long" | "app_title_short" | "app_subtit
   my_assigned_header_color: "#334155",
   my_assigned_header_color_light: "#475569",
   timezone: "UTC",
+  servant_label: "Servant",
+  sub_coordinator_label: "Coordinator",
 };
 
 /**

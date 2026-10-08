@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { getAppSettings } from "@/lib/app-settings";
+import { getRoleLabels } from "@/lib/role-labels-server";
 
 /** Embeds the app logo in the center of a QR SVG (matches the old app's
  * look). Error-correction level "H" (~30% redundancy) is required so
@@ -67,7 +68,7 @@ async function siteOrigin(): Promise<string> {
  */
 export async function getQrCodesForPrinting(): Promise<QrCodeForPrinting[]> {
   const supabase = await createClient();
-  const [origin, settings] = await Promise.all([siteOrigin(), getAppSettings()]);
+  const [origin, settings, L] = await Promise.all([siteOrigin(), getAppSettings(), getRoleLabels()]);
 
   const { data } = await supabase.rpc("get_qr_codes_with_groups");
 
@@ -100,7 +101,11 @@ export async function getQrCodesForPrinting(): Promise<QrCodeForPrinting[]> {
       // its colour is an App Setting (was hard-coded).
       const color = r.qr_color ?? settings.servants_qr_color;
 
-      return { id: r.id, label: r.label, checkInUrl, svg, color, sharedWith: r.shared_with ?? [] };
+      // Migration 0097: the group-less row's stored label says "Servants";
+      // this ministry's own word is shown instead.
+      const label = r.group_id === null ? r.label.replace(/\bServants\b/g, L.servants) : r.label;
+
+      return { id: r.id, label, checkInUrl, svg, color, sharedWith: r.shared_with ?? [] };
     }),
   );
 }

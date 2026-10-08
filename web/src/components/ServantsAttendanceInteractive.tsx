@@ -6,6 +6,7 @@ import { resolveAttendanceSince } from "@/lib/attendance-window";
 import { setServantAttendanceAction } from "@/app/servants-attendance/actions";
 import { AttendanceHistoryModal } from "@/components/attendance/AttendanceHistoryModal";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -24,6 +25,7 @@ export function ServantsAttendanceInteractive({
   windowWeeks: number | null;
   dayName: string;
 }) {
+  const L = useRoleLabels();
   const timeZone = useTimezone();
   const [attendanceByServant, setAttendanceByServant] = useState(bundle.attendanceByServant);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -117,7 +119,7 @@ export function ServantsAttendanceInteractive({
   if (dateOptions.length === 0) {
     return (
       <div className="mt-4 rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6 text-center text-sm text-[#666]">
-        No service dates are tracked yet for servants, and today isn&rsquo;t open for attendance until the configured
+        No service dates are tracked yet for {L.servantsLower}, and today isn&rsquo;t open for attendance until the configured
         cutoff time.
       </div>
     );
@@ -140,7 +142,7 @@ export function ServantsAttendanceInteractive({
         </select>
         <input
           type="text"
-          placeholder="Search servants..."
+          placeholder={`Search ${L.servantsLower}...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 min-w-[160px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
@@ -149,7 +151,7 @@ export function ServantsAttendanceInteractive({
 
       <p className="text-xs text-[#666]">
         {windowWeeks === null
-          ? `Attendance % is calculated over each servant's entire history since their Join Date, counting only ${dayName}s.`
+          ? `Attendance % is calculated over each ${L.servantLower}'s entire history since their Join Date, counting only ${dayName}s.`
           : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
       </p>
 
@@ -157,7 +159,7 @@ export function ServantsAttendanceInteractive({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#f5f5f5] text-left text-[#666]">
-              <SortableHeader label="Servant" sortKey="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHeader label={L.servant} sortKey="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
               <SortableHeader label="Group" sortKey="group" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
               <SortableHeader label="Attendance %" sortKey="attendance" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
               <SortableHeader
@@ -212,7 +214,7 @@ export function ServantsAttendanceInteractive({
             {visible.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-center text-[#666]">
-                  No servants to show.
+                  No {L.servantsLower} to show.
                 </td>
               </tr>
             )}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { shiftDateKey, todayInZone, zoneMidnightUtcIso } from "@/lib/timezone";
 import { getAppSettings } from "@/lib/app-settings";
+import { roleWords } from "@/lib/role-labels-server";
 
 export type AuditLogRow = {
   id: number;
@@ -82,7 +83,7 @@ export async function getAuditConfigAction(): Promise<AuditConfigRow[]> {
 export async function toggleAuditConfigAction(actionType: string, enabled: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("audit_config").update({ enabled }).eq("action_type", actionType);
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
 
   revalidatePath("/admin/audit-logs");
   return { error: null };
@@ -97,7 +98,7 @@ export async function archiveAuditLogAction(olderThanDays: number) {
   const settings = await getAppSettings();
   const cutoff = shiftDateKey(todayInZone(settings.timezone), { days: -olderThanDays });
   const { data, error } = await supabase.rpc("archive_audit_log", { cutoff_date: cutoff });
-  if (error) return { error: error.message, deleted: 0 };
+  if (error) return { error: await roleWords(error.message), deleted: 0 };
 
   revalidatePath("/admin/audit-logs");
   return { error: null, deleted: (data as number) ?? 0 };
