@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import { headers } from "next/headers";
 import { getBranding } from "@/lib/branding";
 import { getAddressContext } from "@/lib/ministry-context";
 import { QaEnvBanner } from "@/components/QaEnvBanner";
@@ -55,11 +56,20 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export async function generateViewport(): Promise<Viewport> {
-  const settings = await getBranding();
+  const [settings, h] = await Promise.all([getBranding(), headers()]);
+  // Owner-reported (8 Oct 2026): on iPhones the app opened zoomed in and
+  // spilling off the screen. Tapping a box whose text is under 16px (the
+  // sign-in email box, search boxes) makes iOS zoom in, and it never zooms
+  // back -- the Home Screen app and a refresh keep it. maximum-scale=1 stops
+  // that auto-zoom and opens every page at its true size; iOS still lets
+  // people pinch-zoom on purpose. Apple devices only: on Android the same
+  // setting would block pinch-zoom, and Android doesn't auto-zoom anyway.
+  const ios = /iPhone|iPad|iPod/i.test(h.get("user-agent") ?? "");
   return {
     themeColor: settings.theme_color,
     width: "device-width",
     initialScale: 1,
+    ...(ios ? { maximumScale: 1 } : {}),
   };
 }
 
