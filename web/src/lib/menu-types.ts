@@ -7,6 +7,8 @@ export type MenuData = {
   isCoordinator: boolean;
   isAdminOrGeneralCoordinator: boolean;
   pendingServantsCount: number;
+  /** Announcements for me showing now that I haven't opened (0099). */
+  unreadAnnouncements: number;
   universityLabel: string;
   groupLabel: string;
   appVersion: string;

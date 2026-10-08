@@ -15,6 +15,7 @@ import { MemberIntakeForm } from "./MemberIntakeForm";
 import { ServantIntakeForm } from "./ServantIntakeForm";
 import { MissingFieldsForm } from "./MissingFieldsForm";
 import { BusyLabel } from "@/components/PendingButton";
+import { CheckinAnnouncements } from "@/components/checkin/CheckinAnnouncements";
 
 const NO_MISSING_FIELDS: MissingMemberFields = {
   phone: false,
@@ -286,6 +287,8 @@ export function CheckInFlow({
             </button>
           </>
         )}
+        {/* Announcements for youths (migration 0099). */}
+        {!isServant && <CheckinAnnouncements token={token} />}
         {!isServant && showMissingFields && checkedInPerson && (
           <MissingFieldsForm
             token={token}

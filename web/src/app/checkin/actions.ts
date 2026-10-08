@@ -467,3 +467,12 @@ export async function submitNewServantAction(token: string, input: NewServantInp
   after(dispatchPush);
   return { error: null, attendanceRecorded: row?.attendance_recorded ?? false };
 }
+
+/** Announcements an Admin, GC or Coordinator chose to show youths here,
+ * after they check in on this class's poster (migration 0099). */
+export async function checkinAnnouncementsAction(token: string): Promise<{ title: string; body: string; link_url: string | null }[]> {
+  if (!(await hasCheckinPass(token))) return [];
+  const supabase = await createCheckinClient();
+  const { data } = await supabase.rpc("checkin_announcements", { p_token: token });
+  return (data ?? []) as { title: string; body: string; link_url: string | null }[];
+}

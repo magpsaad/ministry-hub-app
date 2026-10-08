@@ -6,6 +6,7 @@ const NAV = [
   { href: "/console", label: "Ministries" },
   { href: "/console/ministries/new", label: "Create Ministry" },
   { href: "/console/releases", label: "Release Notes" },
+  { href: "/console/announcements", label: "Announcements" },
   { href: "/console/settings", label: "Settings" },
   // QA console only (migration 0068): never offered in production.
   ...(process.env.NEXT_PUBLIC_APP_ENV === "qa" ? [{ href: "/console/refresh-qa", label: "Refresh QA" }] : []),

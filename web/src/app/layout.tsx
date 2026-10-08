@@ -9,6 +9,7 @@ import { TimezoneProvider } from "@/components/TimezoneProvider";
 import { RoleLabelsProvider } from "@/components/RoleLabelsProvider";
 import { ScreenLock } from "@/components/ScreenLock";
 import { NotificationsPrompt } from "@/components/notifications/NotificationsPrompt";
+import { ImportantAnnouncementPopup } from "@/components/announcements/ImportantAnnouncementPopup";
 import "./globals.css";
 
 const inter = Inter({
@@ -165,6 +166,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {/* Screen lock (migration 0089): does nothing unless this ministry
             turned it on and someone is signed in. */}
         <ScreenLock />
+        {/* Important announcements (0099): "Got it" once per person. */}
+        <ImportantAnnouncementPopup />
         {/* Phone notifications (0092): asked once per device. */}
         <NotificationsPrompt />
       </body>

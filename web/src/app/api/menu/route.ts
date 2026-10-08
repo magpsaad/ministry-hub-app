@@ -32,12 +32,13 @@ export async function GET() {
   const userId = claims?.claims?.sub;
   if (!userId) return NextResponse.json(null, { status: 401 });
 
-  const [access, settings, groups, pendingServantsCount, cookieStore] = await Promise.all([
+  const [access, settings, groups, pendingServantsCount, cookieStore, { data: unread }] = await Promise.all([
     getAccessSummary(userId),
     getAppSettings(),
     getAccessibleGroups(),
     getPendingServantsCount(),
     cookies(),
+    supabase.rpc("my_announcement_badge"),
   ]);
   const isAdminOrGeneralCoordinator = access.isAdmin || access.isGeneralCoordinator;
 
@@ -46,6 +47,7 @@ export async function GET() {
     isCoordinator: access.isCoordinator || access.isAdmin,
     isAdminOrGeneralCoordinator,
     pendingServantsCount: isAdminOrGeneralCoordinator ? pendingServantsCount : 0,
+    unreadAnnouncements: typeof unread === "number" ? unread : 0,
     universityLabel: settings.university_label,
     groupLabel: settings.group_label,
     appVersion: settings.app_version,

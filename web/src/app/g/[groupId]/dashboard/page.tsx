@@ -10,6 +10,7 @@ import { getCombinedDashboardData } from "@/lib/dashboard-combined";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { DashboardInteractive } from "@/components/dashboard/DashboardInteractive";
+import { AnnouncementBanners } from "@/components/announcements/AnnouncementBanners";
 import { CheckinAlertBanner } from "@/components/dashboard/CheckinAlertBanner";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
@@ -45,6 +46,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
     return (
       <>
         {access?.isAdmin && <CheckinAlertBanner />}
+        <AnnouncementBanners />
         <DashboardInteractive
           groupId={groupId}
           combinedGroupIds={ids}
@@ -114,6 +116,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
   return (
     <>
       {access?.isAdmin && <CheckinAlertBanner />}
+      <AnnouncementBanners />
       <DashboardInteractive
         groupId={groupId}
         statsData={statsData}
