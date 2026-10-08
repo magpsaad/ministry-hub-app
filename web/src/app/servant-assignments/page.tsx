@@ -58,7 +58,8 @@ export default async function ServantAssignmentsPage() {
         <ServantAssignmentsInteractive
           people={roster}
           groups={servingGroups}
-          canManageServants={access.isAdmin || access.isGeneralCoordinator}
+          canManageAll={access.isAdmin || access.isGeneralCoordinator}
+          myGroupIds={access.roles.filter((r) => r.role === "sub_coordinator" && r.group_id).map((r) => r.group_id!)}
         />
       </main>
     </div>

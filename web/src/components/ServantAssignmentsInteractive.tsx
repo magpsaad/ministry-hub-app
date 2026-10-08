@@ -72,18 +72,32 @@ function isServingRow(row: Row): boolean {
  * read-only here -- granting/revoking it stays Access-Maintenance-only,
  * same as any brand-new person's very first grant (this screen only ever
  * adds another grant to someone who already has one).
+ *
+ * Owner-requested (8 Oct 2026, migration 0098): Coordinators help too, with
+ * Servant roles in the groups they coordinate only -- add someone as a
+ * Servant there, and move Servants into, out of (to Unassigned) or between
+ * those groups. Everything else stays with General Coordinators and Admins
+ * (canManageAll); the database enforces the same rule.
  */
 export function ServantAssignmentsInteractive({
   people,
   groups,
-  canManageServants,
+  canManageAll,
+  myGroupIds,
 }: {
   people: AssignmentPerson[];
   groups: GroupSummary[];
-  canManageServants: boolean;
+  /** General Coordinators and Admins. */
+  canManageAll: boolean;
+  /** The groups this person coordinates (sub_coordinator grants). */
+  myGroupIds: string[];
 }) {
   const L = useRoleLabels();
   const ROLE_LABELS = roleChipLabels(L);
+  const coordinatorOnly = !canManageAll && myGroupIds.length > 0;
+  const canManageServants = canManageAll || coordinatorOnly;
+  const isMine = (groupId: string | null) => canManageAll || (groupId !== null && myGroupIds.includes(groupId));
+  const addableRoles: readonly AddableRole[] = canManageAll ? ADDABLE_ROLES : ["servant"];
   const router = useRouter();
   // Picks up the fresh list after a Refresh by adjusting state during
   // render when the prop changes (React's recommended pattern), rather than
@@ -101,7 +115,7 @@ export function ServantAssignmentsInteractive({
   const [error, setError] = useState<string | null>(null);
 
   const [addingForPerson, setAddingForPerson] = useState<string | null>(null);
-  const [addRole, setAddRole] = useState<AddableRole>("read_only");
+  const [addRole, setAddRole] = useState<AddableRole>(canManageAll ? "read_only" : "servant");
   const [addGroupId, setAddGroupId] = useState("");
 
   const [addingForGroup, setAddingForGroup] = useState<string | null>(null);
@@ -109,6 +123,11 @@ export function ServantAssignmentsInteractive({
   const [bringRole, setBringRole] = useState<AddableRole>("servant");
 
   const sortedGroups = useMemo(() => [...groups].sort((a, b) => a.display_order - b.display_order), [groups]);
+  // The groups this person may put a Servant in.
+  const myGroups = useMemo(
+    () => (canManageAll ? sortedGroups : sortedGroups.filter((g) => myGroupIds.includes(g.id))),
+    [canManageAll, sortedGroups, myGroupIds],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -166,7 +185,7 @@ export function ServantAssignmentsInteractive({
   }
 
   function handleAddRole(person: AssignmentPerson) {
-    if (addRole !== "servant" && !addGroupId) {
+    if ((addRole !== "servant" || !canManageAll) && !addGroupId) {
       setError("Pick a group for this role.");
       return;
     }
@@ -248,18 +267,22 @@ export function ServantAssignmentsInteractive({
     const label = showGroupInLabel && grant.group_name ? `${ROLE_LABELS[grant.role]} · ${grant.group_name}` : ROLE_LABELS[grant.role];
 
     if (grant.role === "servant") {
+      // A Coordinator can move a Servant who is Unassigned or in one of
+      // their groups, and only to Unassigned or one of their groups.
+      const movable = canManageAll || (coordinatorOnly && (grant.group_id === null || isMine(grant.group_id)));
+      const choices = canManageAll || !movable ? sortedGroups : sortedGroups.filter((g) => isMine(g.id) || g.id === grant.group_id);
       return (
         <span key={grant.id} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
           {showGroupInLabel ? L.servant : label}
           <select
             value={grant.group_id ?? ""}
-            disabled={!canManageServants || pending}
+            disabled={!movable || pending}
             onChange={(e) => handleReassign(person.id, grant, e.target.value)}
             className="bg-transparent text-[11px] font-semibold border-none focus:outline-none disabled:opacity-60"
             style={{ color: text }}
           >
             <option value="">Unassigned</option>
-            {sortedGroups.map((g) => (
+            {choices.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name}
               </option>
@@ -280,7 +303,7 @@ export function ServantAssignmentsInteractive({
     return (
       <span key={grant.id} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
         {label}
-        {canManageServants && (
+        {canManageAll && (
           <button
             type="button"
             disabled={pending}
@@ -303,7 +326,7 @@ export function ServantAssignmentsInteractive({
           type="button"
           onClick={() => {
             setAddingForPerson(person.id);
-            setAddRole("read_only");
+            setAddRole(canManageAll ? "read_only" : "servant");
             setAddGroupId("");
             setError(null);
           }}
@@ -317,15 +340,15 @@ export function ServantAssignmentsInteractive({
     return (
       <div className="flex items-center gap-1.5 flex-wrap">
         <select value={addRole} onChange={(e) => setAddRole(e.target.value as AddableRole)} className="rounded-md border border-[#ddd] px-1.5 py-1 text-[11px]">
-          {ADDABLE_ROLES.map((r) => (
+          {addableRoles.map((r) => (
             <option key={r} value={r}>
               {ROLE_LABELS[r]}
             </option>
           ))}
         </select>
         <select value={addGroupId} onChange={(e) => setAddGroupId(e.target.value)} className="rounded-md border border-[#ddd] px-1.5 py-1 text-[11px]">
-          <option value="">{addRole === "servant" ? "Unassigned" : "Select a group…"}</option>
-          {sortedGroups.map((g) => (
+          <option value="">{addRole === "servant" && canManageAll ? "Unassigned" : "Select a group…"}</option>
+          {myGroups.map((g) => (
             <option key={g.id} value={g.id}>
               {g.name}
             </option>
@@ -383,6 +406,12 @@ export function ServantAssignmentsInteractive({
       </div>
 
       {!canManageServants && <p className="text-xs text-[#666]">Only {L.generalCoordinators}/Admins can grant, reassign, or revoke roles here.</p>}
+      {coordinatorOnly && (
+        <p className="text-xs text-[#666]">
+          You can add {L.servantsLower} to the {myGroupIds.length === 1 ? "group" : "groups"} you coordinate and move them in or
+          out. Other changes are made by {L.generalCoordinators}/Admins.
+        </p>
+      )}
       {error && <p className="text-sm text-[#dc3545]">{error}</p>}
 
       {viewMode === "categorical" ? (
@@ -425,7 +454,7 @@ export function ServantAssignmentsInteractive({
                     )}
                   </div>
                 )}
-                {canManageServants && (
+                {isMine(bucket.groupId) && (
                   <BringSomeoneNew
                     open={addingForGroup === bucket.groupId}
                     onOpen={() => {
@@ -442,6 +471,7 @@ export function ServantAssignmentsInteractive({
                     setBringRole={setBringRole}
                     onSubmit={() => handleBringSomeoneNew(bucket.groupId)}
                     pending={pending}
+                    roles={addableRoles}
                   />
                 )}
               </div>
@@ -532,6 +562,7 @@ function BringSomeoneNew({
   setBringRole,
   onSubmit,
   pending,
+  roles,
 }: {
   open: boolean;
   onOpen: () => void;
@@ -543,6 +574,8 @@ function BringSomeoneNew({
   setBringRole: (r: AddableRole) => void;
   onSubmit: () => void;
   pending: boolean;
+  /** The roles this person may give (Coordinators: Servant only). */
+  roles: readonly AddableRole[];
 }) {
   const L = useRoleLabels();
   const ROLE_LABELS = roleChipLabels(L);
@@ -564,7 +597,7 @@ function BringSomeoneNew({
         ))}
       </select>
       <select value={bringRole} onChange={(e) => setBringRole(e.target.value as AddableRole)} className="rounded-md border border-[#ddd] px-2 py-1.5 text-xs">
-        {ADDABLE_ROLES.map((r) => (
+        {roles.map((r) => (
           <option key={r} value={r}>
             {ROLE_LABELS[r]}
           </option>
