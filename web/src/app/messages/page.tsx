@@ -29,8 +29,8 @@ function keep(item: InboxItem, f: FilterKey): boolean {
 
 /** Servant Corner -> Messages (owner-approved design 8 Oct 2026, migration
  * 0102): my conversations and tasks, newest first, with filters. Those the
- * ministry lets read every conversation (General Coordinators by default,
- * Ministry Settings) also get a "Whole ministry" view. */
+ * ministry lets read every conversation (Ministry Settings; no one by
+ * default, 0103) also get a "Whole ministry" view. */
 export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ f?: string; view?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

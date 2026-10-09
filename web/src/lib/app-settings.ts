@@ -92,7 +92,8 @@ export type AppSettings = {
    * (2, 5, 10, 15 or 30); null = off. */
   idle_lock_minutes: number | null;
   /** Migration 0102 -- who may read every conversation in Messages:
-   * General Coordinators (default), GCs and System Admins, or no one. */
+   * General Coordinators, GCs and System Admins, or no one (the default,
+   * 0103). */
   message_oversight: "gc" | "gc_admin" | "none";
 };
 
