@@ -52,7 +52,12 @@ export default async function PendingServantsPage() {
         {pending.length === 0 ? (
           <p className="text-sm text-[#666] text-center">No pending {L.servantLower} registrations right now.</p>
         ) : (
-          pending.map((s) => <PendingServantRow key={s.id} servant={s} />)
+          // Owner-requested (9 Oct 2026): one compact line each, in one card.
+          <div className="overflow-hidden rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] divide-y divide-[#f0f0f0]">
+            {pending.map((s) => (
+              <PendingServantRow key={s.id} servant={s} />
+            ))}
+          </div>
         )}
       </main>
     </div>
