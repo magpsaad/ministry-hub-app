@@ -48,6 +48,16 @@ export function NotificationsSetupPanel({
 
   if (support === "checking") return null;
 
+  // Owner-reported (8 Oct 2026): in a browser tab on an iPhone there is
+  // nothing to turn on (Apple only allows notifications in the Home Screen
+  // app), and the steps always said "Safari" even in Chrome. The steps now
+  // match the browser, and the one-time prompt offers "OK, I'll add it".
+  const iosBrowser = /CriOS/.test(navigator.userAgent)
+    ? "chrome"
+    : /FxiOS|EdgiOS/.test(navigator.userAgent)
+      ? "other"
+      : "safari";
+
   return (
     <div className="text-left">
       <h3 className="text-sm font-bold text-[#333]">Get notified on this device</h3>
@@ -59,16 +69,33 @@ export function NotificationsSetupPanel({
         <div className="mt-1 text-sm text-[#555]">
           <p>
             {waitingForApproval ? "Ministry Hub can let you know as soon as you’re approved, and later" : "Ministry Hub can alert you"} when
-            something needs you. On an iPhone or iPad, first add it to your Home Screen:
+            something needs you.
+          </p>
+          <p className="mt-1">
+            On an iPhone or iPad, Apple only allows notifications in the Ministry Hub app on your Home Screen, not in a
+            browser tab, so there&rsquo;s nothing to turn on here yet. Add it to your Home Screen first:
           </p>
           <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+            {iosBrowser === "chrome" ? (
+              <li>
+                Tap the <strong>Share</strong> button at the top, next to the address bar (the square with an arrow).
+              </li>
+            ) : iosBrowser === "other" ? (
+              <li>
+                Open the browser&rsquo;s menu and tap <strong>Share</strong>.
+              </li>
+            ) : (
+              <li>
+                Tap the <strong>Share</strong> button at the bottom of Safari (the square with an arrow).
+              </li>
+            )}
             <li>
-              Tap the <strong>Share</strong> button in Safari (the square with an arrow).
+              Choose <strong>Add to Home Screen</strong> (scroll down if you don&rsquo;t see it), then <strong>Add</strong>.
             </li>
             <li>
-              Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong>.
+              Open Ministry Hub from the <strong>new icon</strong> on your Home Screen. You&rsquo;ll be asked to turn
+              notifications on there.
             </li>
-            <li>Open Ministry Hub from the new icon and turn notifications on there.</li>
           </ol>
         </div>
       ) : support === "unsupported" ? (
@@ -99,11 +126,20 @@ export function NotificationsSetupPanel({
         </>
       )}
       {error && <p className="mt-2 rounded-md bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]">{error}</p>}
+      {withDismiss && !endpoint && support === "needs-home-screen" && (
+        <button type="button" onClick={() => onAnswered?.("later")} className={`${PRIMARY} mt-3`}>
+          OK, I&rsquo;ll add it
+        </button>
+      )}
       {withDismiss && !endpoint && (
         <div className="mt-3 flex items-center justify-between gap-3 text-sm">
-          <button type="button" onClick={() => onAnswered?.("later")} disabled={busy} className="font-semibold text-[#555] hover:underline">
-            Not now
-          </button>
+          {support !== "needs-home-screen" ? (
+            <button type="button" onClick={() => onAnswered?.("later")} disabled={busy} className="font-semibold text-[#555] hover:underline">
+              Not now
+            </button>
+          ) : (
+            <span />
+          )}
           <button type="button" onClick={() => onAnswered?.("never")} disabled={busy} className="text-[#888] hover:underline">
             Don&rsquo;t ask again on this device
           </button>

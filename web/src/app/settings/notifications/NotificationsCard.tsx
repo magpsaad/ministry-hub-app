@@ -82,9 +82,14 @@ export function NotificationsCard({
 
       {support === "needs-home-screen" && (
         <div className="mt-3 rounded-md bg-[#f0f4f8] px-3 py-2 text-sm text-[#333]">
-          On an iPhone or iPad, notifications work only from the app&rsquo;s Home Screen icon:
+          On an iPhone or iPad, Apple only allows notifications in the app opened from its Home Screen icon, not in a
+          browser tab:
           <ol className="mt-1 list-decimal space-y-0.5 pl-5">
-            <li>Tap the Share button in Safari, then &ldquo;Add to Home Screen&rdquo;.</li>
+            <li>
+              {/CriOS/.test(navigator.userAgent)
+                ? "Tap the Share button next to the address bar, then “Add to Home Screen”."
+                : "Tap the Share button in Safari, then “Add to Home Screen”."}
+            </li>
             <li>Open Ministry Hub from that new icon.</li>
             <li>Come back to My Settings &rarr; Notifications and turn them on.</li>
           </ol>
