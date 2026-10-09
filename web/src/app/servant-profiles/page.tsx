@@ -67,7 +67,12 @@ export default async function ServantProfilesPage() {
         <HeaderWordmark />
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
-        <ServantProfilesInteractive servants={servants} canManageServants={canManageServants} agreements={agreements} />
+        <ServantProfilesInteractive
+          servants={servants}
+          canManageServants={canManageServants}
+          agreements={agreements}
+          groupLabel={settings.group_label}
+        />
       </main>
     </div>
   );

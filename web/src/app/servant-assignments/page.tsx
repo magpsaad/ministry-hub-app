@@ -60,6 +60,7 @@ export default async function ServantAssignmentsPage() {
           groups={servingGroups}
           canManageAll={access.isAdmin || access.isGeneralCoordinator}
           myGroupIds={access.roles.filter((r) => r.role === "sub_coordinator" && r.group_id).map((r) => r.group_id!)}
+          groupLabel={settings.group_label}
         />
       </main>
     </div>

@@ -186,7 +186,7 @@ export function GroupTransitionInteractive({
           ) : !reviewData ? (
             <p className="text-sm text-[#666]">Loading…</p>
           ) : (
-            <ServantAssignmentsInteractive people={reviewData.people} groups={reviewData.groups} canManageAll myGroupIds={[]} />
+            <ServantAssignmentsInteractive people={reviewData.people} groups={reviewData.groups} canManageAll myGroupIds={[]} groupLabel={groupLabel} />
           )}
         </div>
       </div>

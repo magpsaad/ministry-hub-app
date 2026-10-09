@@ -31,12 +31,18 @@ export function ServantProfilesInteractive({
   servants,
   canManageServants,
   agreements,
+  groupLabel,
 }: {
   servants: ServantDirectoryEntry[];
   canManageServants: boolean;
   agreements: Agreements;
+  /** The ministry's word for a group (Ministry Settings), e.g. "Class". */
+  groupLabel: string;
 }) {
   const L = useRoleLabels();
+  // Owner-requested (9 Oct 2026): "Unassigned to a Class", in the
+  // ministry's own word for a group.
+  const unassignedLabel = `Unassigned to a ${groupLabel}`;
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [search, setSearch] = useState("");
@@ -63,28 +69,28 @@ export function ServantProfilesInteractive({
     const gcLabel = L.generalCoordinators;
     for (const s of filtered) {
       for (const g of s.servantGroups) add(g.name, s, g.display_order);
-      if (s.isUnassignedServant) add("Unassigned", s);
+      if (s.isUnassignedServant) add(unassignedLabel, s);
       if (s.isGeneralCoordinator) add(gcLabel, s);
     }
     // The groups' list order (display_order, GROUP_LADDER_PLAN D4), not
     // alphabetical by name -- same fix as Servant Assignments' Categorical
     // view (owner-reported), so both screens agree on ordering.
     const groupLabels = order
-      .filter((l) => l !== gcLabel && l !== "Unassigned")
+      .filter((l) => l !== gcLabel && l !== unassignedLabel)
       .sort((a, b) => (positionByLabel.get(a) ?? 0) - (positionByLabel.get(b) ?? 0));
     // Unassigned, then General Coordinators -- the order the old fixed-word
     // sort().reverse() gave, kept whatever the role word is.
-    const tail = ["Unassigned", gcLabel].filter((l) => order.includes(l));
+    const tail = [unassignedLabel, gcLabel].filter((l) => order.includes(l));
 
     return [...groupLabels, ...tail].map((label) => ({
       label,
       // Only real cohorts get the Female/Male subheadings below (owner
       // asked for "within each Cohort grouping", same scope as Servant
       // Assignments) -- General Coordinators/Unassigned stay a flat list.
-      isCohort: label !== gcLabel && label !== "Unassigned",
+      isCohort: label !== gcLabel && label !== unassignedLabel,
       entries: byLabel.get(label)!.sort((a, b) => a.full_name.localeCompare(b.full_name)),
     }));
-  }, [filtered, L.generalCoordinators]);
+  }, [filtered, L.generalCoordinators, unassignedLabel]);
 
   const alphabetical = useMemo(() => [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name)), [filtered]);
   const signedCount = agreements ? servants.filter((s) => agreements[s.id]?.is_current).length : 0;

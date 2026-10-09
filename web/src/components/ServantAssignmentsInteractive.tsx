@@ -23,9 +23,27 @@ function roleChipLabels(L: RoleLabels): Record<RoleGrant["role"], string> {
     // "Sub-Coordinator") -- the internal role/key name is unchanged.
     sub_coordinator: L.coordinator,
     read_only: "Read-only",
-    general_coordinator: L.gc,
+    // Owner-requested (9 Oct 2026): the full label, not the initials.
+    general_coordinator: L.generalCoordinator,
   };
 }
+
+/** One name for a Coordinator's several classes in the Alphabetical view
+ * (owner-requested, 9 Oct 2026): the words their names share, e.g. "Gr12
+ * Girls St. Demiana" + "Gr12 Girls St. Phoebe" -> "Gr12 Girls"; if they
+ * share none, the names joined with "+". */
+function combinedClassName(names: string[]): string {
+  const words = names.map((n) => n.trim().split(/\s+/));
+  const shared: string[] = [];
+  const longest = Math.min(...words.map((w) => w.length - 1));
+  for (let i = 0; i < longest && words.every((w) => w[i] === words[0][i]); i++) shared.push(words[0][i]);
+  while (shared.length > 0 && /^(st\.?|sts\.?|-|–)$/i.test(shared[shared.length - 1])) shared.pop();
+  return shared.length > 0 ? shared.join(" ") : names.join(" + ");
+}
+
+// Long class names are cut off at the chip's edge -- no "...", so those
+// few characters show more of the name (owner-requested, 9 Oct 2026).
+const CLIP = "min-w-0 overflow-hidden whitespace-nowrap text-clip";
 
 const ADDABLE_ROLES: AddableRole[] = ["servant", "sub_coordinator", "read_only"];
 
@@ -84,6 +102,7 @@ export function ServantAssignmentsInteractive({
   groups,
   canManageAll,
   myGroupIds,
+  groupLabel,
 }: {
   people: AssignmentPerson[];
   groups: GroupSummary[];
@@ -91,6 +110,8 @@ export function ServantAssignmentsInteractive({
   canManageAll: boolean;
   /** The groups this person coordinates (sub_coordinator grants). */
   myGroupIds: string[];
+  /** The ministry's word for a group (Ministry Settings), e.g. "Class". */
+  groupLabel: string;
 }) {
   const L = useRoleLabels();
   const ROLE_LABELS = roleChipLabels(L);
@@ -184,6 +205,24 @@ export function ServantAssignmentsInteractive({
     });
   }
 
+  /** The combined Coordinator chip's x: removes each of its classes. */
+  function handleRevokeMany(personId: string, grants: RoleGrant[]) {
+    const names = grants.map((g) => g.group_name ?? "").join(" and ");
+    if (!confirm(`Remove ${ROLE_LABELS[grants[0].role]} — ${names}?`)) return;
+    setError(null);
+    startTransition(async () => {
+      for (const grant of grants) {
+        const res = await revokeRoleGrantAction(grant.id);
+        if (res.error) {
+          setError(res.error);
+          break;
+        }
+        patchGrant(personId, grant.id, null);
+      }
+      router.refresh();
+    });
+  }
+
   function handleAddRole(person: AssignmentPerson) {
     if ((addRole !== "servant" || !canManageAll) && !addGroupId) {
       setError("Pick a group for this role.");
@@ -264,13 +303,49 @@ export function ServantAssignmentsInteractive({
 
   function renderChip(person: AssignmentPerson, grant: RoleGrant, showGroupInLabel: boolean) {
     const { bg, text } = chipColor(grant.role);
-    const label = showGroupInLabel && grant.group_name ? `${ROLE_LABELS[grant.role]} · ${grant.group_name}` : ROLE_LABELS[grant.role];
+    // Owner-requested (9 Oct 2026): no "·" between the role and the class.
+    const label = showGroupInLabel && grant.group_name ? `${ROLE_LABELS[grant.role]} ${grant.group_name}` : ROLE_LABELS[grant.role];
 
     if (grant.role === "servant") {
       // A Coordinator can move a Servant who is Unassigned or in one of
       // their groups, and only to Unassigned or one of their groups.
       const movable = canManageAll || (coordinatorOnly && (grant.group_id === null || isMine(grant.group_id)));
       const choices = canManageAll || !movable ? sortedGroups : sortedGroups.filter((g) => isMine(g.id) || g.id === grant.group_id);
+      const options = (
+        <>
+          <option value="">Unassigned</option>
+          {choices.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </>
+      );
+      // Categorical view (owner-requested, 9 Oct 2026): the person is
+      // already listed under their class's heading, so the chip just says
+      // "Servant" like the Coordinator chips; tapping it still opens the
+      // list of classes to move them to.
+      if (!showGroupInLabel) {
+        return (
+          <span key={grant.id} className="relative inline-flex items-center gap-0.5 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
+            {label}
+            {movable && (
+              <>
+                <span aria-hidden="true">▾</span>
+                <select
+                  value={grant.group_id ?? ""}
+                  disabled={pending}
+                  onChange={(e) => handleReassign(person.id, grant, e.target.value)}
+                  aria-label={`Move ${person.full_name} to another ${groupLabel.toLowerCase()}`}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-default"
+                >
+                  {options}
+                </select>
+              </>
+            )}
+          </span>
+        );
+      }
       // Owner-reported (9 Oct 2026, HSY on a phone): a drop-down is as wide
       // as its longest class name, so long class names pushed the chip past
       // the page's right edge. The chip now stops at the row's width and the
@@ -283,15 +358,10 @@ export function ServantAssignmentsInteractive({
             disabled={!movable || pending}
             onChange={(e) => handleReassign(person.id, grant, e.target.value)}
             title={grant.group_name ?? "Unassigned"}
-            className="min-w-0 max-w-full truncate bg-transparent text-[11px] font-semibold border-none focus:outline-none disabled:opacity-60"
+            className={`${CLIP} max-w-full bg-transparent text-[11px] font-semibold border-none focus:outline-none disabled:opacity-60`}
             style={{ color: text }}
           >
-            <option value="">Unassigned</option>
-            {choices.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
+            {options}
           </select>
         </span>
       );
@@ -300,14 +370,14 @@ export function ServantAssignmentsInteractive({
     if (grant.role === "general_coordinator") {
       return (
         <span key={grant.id} title={label} className="inline-flex max-w-full min-w-0 items-center rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
-          <span className="truncate">{label}</span>
+          <span className={CLIP}>{label}</span>
         </span>
       );
     }
 
     return (
       <span key={grant.id} title={label} className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
-        <span className="truncate">{label}</span>
+        <span className={CLIP}>{label}</span>
         {canManageAll && (
           <button
             type="button"
@@ -351,7 +421,7 @@ export function ServantAssignmentsInteractive({
             </option>
           ))}
         </select>
-        <select value={addGroupId} onChange={(e) => setAddGroupId(e.target.value)} className="min-w-0 max-w-full truncate rounded-md border border-[#ddd] px-1.5 py-1 text-[11px]">
+        <select value={addGroupId} onChange={(e) => setAddGroupId(e.target.value)} className="min-w-0 max-w-full overflow-hidden text-clip rounded-md border border-[#ddd] px-1.5 py-1 text-[11px]">
           <option value="">{addRole === "servant" && canManageAll ? "Unassigned" : "Select a group…"}</option>
           {myGroups.map((g) => (
             <option key={g.id} value={g.id}>
@@ -366,6 +436,36 @@ export function ServantAssignmentsInteractive({
           Cancel
         </button>
       </div>
+    );
+  }
+
+  /** Alphabetical view: a Coordinator of several classes gets one chip
+   * ("Coordinator Gr12 Girls") instead of one per class (owner-requested,
+   * 9 Oct 2026); its x removes them all. */
+  function renderAlphabeticalChips(person: AssignmentPerson) {
+    const coord = person.grants.filter((g) => g.role === "sub_coordinator" && g.group_name);
+    if (coord.length < 2) return person.grants.map((g) => renderChip(person, g, true));
+    const { bg, text } = chipColor("sub_coordinator");
+    const label = `${ROLE_LABELS.sub_coordinator} ${combinedClassName(coord.map((g) => g.group_name!))}`;
+    const full = coord.map((g) => g.group_name).join(", ");
+    return (
+      <>
+        {person.grants.filter((g) => !coord.includes(g)).map((g) => renderChip(person, g, true))}
+        <span key="coord" title={full} className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
+          <span className={CLIP}>{label}</span>
+          {canManageAll && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => handleRevokeMany(person.id, coord)}
+              aria-label={`Remove ${ROLE_LABELS.sub_coordinator} of ${full}`}
+              className="shrink-0 leading-none disabled:opacity-60"
+            >
+              ×
+            </button>
+          )}
+        </span>
+      </>
     );
   }
 
@@ -488,7 +588,7 @@ export function ServantAssignmentsInteractive({
           )}
 
           {categoricalBuckets.unassigned.length > 0 && (
-            <BucketCard label="Unassigned" rows={categoricalBuckets.unassigned} renderChip={renderChip} renderAddRoleControl={renderAddRoleControl} />
+            <BucketCard label={`Unassigned to a ${groupLabel}`} rows={categoricalBuckets.unassigned} renderChip={renderChip} renderAddRoleControl={renderAddRoleControl} />
           )}
         </div>
       ) : (
@@ -498,7 +598,7 @@ export function ServantAssignmentsInteractive({
               <Avatar person={person} />
               <span className="w-32 shrink-0 font-semibold text-[#333] truncate">{person.full_name}</span>
               <span className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
-                {person.grants.map((g) => renderChip(person, g, true))}
+                {renderAlphabeticalChips(person)}
                 {renderAddRoleControl(person)}
               </span>
             </div>
