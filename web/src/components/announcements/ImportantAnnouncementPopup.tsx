@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { currentAnnouncementsAction, markAnnouncementAction } from "@/app/announcements/actions";
 import { BusyLabel } from "@/components/PendingButton";
-import { claimPromptSlot } from "@/lib/prompt-slot";
 import type { CurrentAnnouncement } from "@/lib/announcements";
 
 /** Important announcements (migration 0099): shown once to each person,
  * the next time they open the app, until they tap "Got it" (which the
  * poster, GCs and Admins see in the read list). One at a time. Never on the
  * sign-in, check-in, onboarding or security pages, nor on the console. It
- * goes before the notifications and Face ID suggestions (prompt slot). */
+ * covers the screen, so it's shown regardless of the bottom suggestions
+ * (notifications, Face ID) -- they wait underneath until "Got it". */
 
 const EXCLUDED = ["/login", "/auth", "/checkin", "/security", "/register", "/console", "/address-not-set-up", "/ministry-inactive"];
 
@@ -31,7 +31,7 @@ export function ImportantAnnouncementPopup() {
         if (cancelled) return;
         setChecked(true);
         const important = all.filter((a) => a.importance === "important");
-        if (important.length > 0 && claimPromptSlot("announcement")) setQueue(important);
+        if (important.length > 0) setQueue(important);
       })
       .catch(() => {});
     return () => {

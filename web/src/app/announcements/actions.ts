@@ -61,9 +61,9 @@ export async function takeDownAnnouncementAction(id: string): Promise<{ error: s
 }
 
 /** The form's "Reaches about N people". */
-export async function audienceCountAction(roles: AnnouncementRole[], groups: string[]): Promise<number | null> {
+export async function audienceCountAction(roles: AnnouncementRole[], groups: string[], youth: boolean): Promise<number | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("announcement_audience_count", { p_roles: roles, p_groups: groups });
+  const { data, error } = await supabase.rpc("announcement_audience_count", { p_roles: roles, p_groups: groups, p_youth: youth });
   return error ? null : (data as number);
 }
 

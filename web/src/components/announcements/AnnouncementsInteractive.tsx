@@ -11,7 +11,7 @@ import {
   readListAction,
   takeDownAnnouncementAction,
 } from "@/app/announcements/actions";
-import { audienceSummary, roleChips, type AnnouncementRole, type AnnouncementRow } from "@/lib/announcements";
+import { audienceSummary, roleChips, youthSummary, type AnnouncementRole, type AnnouncementRow } from "@/lib/announcements";
 
 const CARD = "rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4";
 const INPUT =
@@ -48,8 +48,8 @@ type Draft = {
 
 /** Announcements page body (migration 0099): the list for everyone; the
  * New / Edit form, Take down and the "Got it" list for those who post.
- * Coordinators (`full` false) post only to the Servants of their classes
- * and/or to fellow Coordinators -- no "Everyone" chip for them. */
+ * Coordinators (`full` false) post only to the Servants and/or the youths
+ * of the classes they coordinate (0100) -- no "Everyone" chip for them. */
 export function AnnouncementsInteractive({
   rows,
   canPost,
@@ -108,7 +108,7 @@ export function AnnouncementsInteractive({
     if (!draft) return;
     let cancelled = false;
     const t = window.setTimeout(async () => {
-      const n = await audienceCountAction(draft.roles, draft.groups);
+      const n = await audienceCountAction(draft.roles, draft.groups, draft.includeYouth);
       if (!cancelled) setCount(n);
     }, 250);
     return () => {
@@ -119,16 +119,18 @@ export function AnnouncementsInteractive({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rolesKey, groupsKey, draft === null]);
 
-  const chips = roleChips(L).filter((c) => full || c.role === "servant" || c.role === "sub_coordinator");
+  const chips = roleChips(L).filter((c) => full || c.role === "servant");
+  // A Coordinator's class choice applies to their Servants and their youths.
   const showGroups =
-    !!draft && (full ? draft.roles.includes("servant") || draft.roles.includes("sub_coordinator") : draft.roles.includes("servant"));
+    !!draft &&
+    (full ? draft.roles.includes("servant") || draft.roles.includes("sub_coordinator") : draft.roles.includes("servant") || draft.includeYouth);
 
   function toggleRole(role: AnnouncementRole | "everyone") {
     setDraft((d) => {
       if (!d) return d;
       if (role === "everyone") return { ...d, roles: [], groups: [] };
       const roles = d.roles.includes(role) ? d.roles.filter((r) => r !== role) : [...d.roles, role];
-      const keepGroups = full ? roles.includes("servant") || roles.includes("sub_coordinator") : roles.includes("servant");
+      const keepGroups = full ? roles.includes("servant") || roles.includes("sub_coordinator") : roles.includes("servant") || d.includeYouth;
       return { ...d, roles, groups: keepGroups ? d.groups : [] };
     });
   }
@@ -178,8 +180,8 @@ export function AnnouncementsInteractive({
       setError("Add a title and a message.");
       return;
     }
-    if (!full && draft.roles.length === 0) {
-      setError(`Choose ${L.servants} or ${L.coordinators}.`);
+    if (!full && draft.roles.length === 0 && !draft.includeYouth) {
+      setError(`Choose the ${L.servantsLower} of your classes, the youths, or both.`);
       return;
     }
     // A Coordinator's "all my classes" is sent as their classes explicitly
@@ -236,7 +238,14 @@ export function AnnouncementsInteractive({
         {(r.mine || full) && (
           <p className="mt-2 text-xs text-[#777]">
             For: {audienceSummary(r, groupName, L)}
-            {r.audience_count !== null ? ` · ${r.audience_count} ${r.audience_count === 1 ? "person" : "people"}` : ""}
+            {r.audience_count !== null && (r.roles === null || r.roles.length > 0)
+              ? ` · ${r.audience_count} ${r.audience_count === 1 ? "person" : "people"}`
+              : ""}
+            {youthSummary(r, groupName)
+              ? r.roles !== null && r.roles.length === 0
+                ? ` (${youthSummary(r, groupName)})`
+                : `, plus ${youthSummary(r, groupName)}`
+              : ""}
           </p>
         )}
         <div className="mt-2 flex flex-wrap gap-2">
@@ -331,7 +340,7 @@ export function AnnouncementsInteractive({
             <span className={LABEL}>Who it&rsquo;s for</span>
             {!full && (
               <p className="mb-1.5 text-xs text-[#777]">
-                As a {L.coordinatorLower}, you can post to the {L.servantsLower} of your classes or to your fellow {L.coordinatorsLower}.
+                As a {L.coordinatorLower}, you can post to the {L.servantsLower} and the youths of the classes you coordinate.
               </p>
             )}
             <div className="flex flex-wrap gap-1.5">
@@ -348,15 +357,25 @@ export function AnnouncementsInteractive({
               ))}
             </div>
             <label className="mt-2 flex items-center gap-2 text-sm text-[#333]">
-              <input type="checkbox" checked={draft.includeYouth} onChange={(e) => setDraft({ ...draft, includeYouth: e.target.checked })} />
-              Also show to youths on the check-in page
+              <input
+                type="checkbox"
+                checked={draft.includeYouth}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    includeYouth: e.target.checked,
+                    groups: full || e.target.checked || draft.roles.includes("servant") ? draft.groups : [],
+                  })
+                }
+              />
+              {full ? "Also show to youths on the check-in page" : "The youths of my classes (on the check-in page)"}
             </label>
           </div>
 
           {showGroups && (
             <div className="rounded-md border border-[#eee] p-3">
               <span className={LABEL}>
-                {full ? `Group ${L.servants} & ${L.coordinators}` : `Which classes’ ${L.servants}`}{" "}
+                {full ? `Group ${L.servants} & ${L.coordinators}` : "Which classes"}{" "}
                 <span className="font-normal text-[#999]">(none picked = {full ? "every class" : "all your classes"})</span>
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -370,8 +389,13 @@ export function AnnouncementsInteractive({
             </div>
           )}
           <p className="text-xs text-[#777]">
-            {count === null ? "Counting…" : `Reaches ${count} ${count === 1 ? "person" : "people"}`}
-            {draft.includeYouth ? ", plus youths after they check in." : "."}
+            {!full && draft.roles.length === 0
+              ? draft.includeYouth
+                ? "No one in the app: only the youths of these classes, after they check in."
+                : ""
+              : `${count === null ? "Counting…" : `Reaches ${count} ${count === 1 ? "person" : "people"} in the app`}${
+                  draft.includeYouth ? ", plus youths after they check in (not counted)." : "."
+                }`}
           </p>
 
           <div>

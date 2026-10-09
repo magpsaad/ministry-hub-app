@@ -58,15 +58,17 @@ export function roleChips(L: RoleLabels): { role: AnnouncementRole; label: strin
   ];
 }
 
-/** "Everyone", or "Servants of Gr12 Boys St. John; Coordinators" -- who an
- * announcement is for, in this ministry's words. */
+/** "Everyone", "Servants of Gr12 Boys St. John; Coordinators", or "Youths
+ * only" -- who in the app an announcement is for, in this ministry's
+ * words. Youths at check-in are added separately (youthSummary): they
+ * aren't app users and are never part of a people count. */
 export function audienceSummary(
   a: Pick<AnnouncementRow, "roles" | "servant_group_ids" | "coordinator_group_ids" | "include_youth">,
   groupName: (id: string) => string,
   L: RoleLabels,
 ): string {
-  const youth = a.include_youth ? " (and youths at check-in)" : "";
-  if (!a.roles) return `Everyone${youth}`;
+  if (!a.roles) return "Everyone";
+  if (a.roles.length === 0) return "Youths only";
   const names = (ids: string[] | null) => (ids && ids.length ? ` of ${ids.map(groupName).join(", ")}` : "");
   const parts = roleChips(L)
     .filter((c) => a.roles!.includes(c.role))
@@ -77,5 +79,16 @@ export function audienceSummary(
           ? `${c.label}${names(a.coordinator_group_ids)}`
           : c.label,
     );
-  return `${parts.join("; ")}${youth}`;
+  return parts.join("; ");
+}
+
+/** "youths at check-in" / "youths of Gr12 Boys St. John at check-in", or ""
+ * when youths aren't included. */
+export function youthSummary(
+  a: Pick<AnnouncementRow, "servant_group_ids" | "include_youth">,
+  groupName: (id: string) => string,
+): string {
+  if (!a.include_youth) return "";
+  const ids = a.servant_group_ids;
+  return ids && ids.length ? `youths of ${ids.map(groupName).join(", ")} at check-in` : "youths at check-in";
 }
