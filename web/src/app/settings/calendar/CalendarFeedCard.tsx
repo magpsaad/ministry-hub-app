@@ -108,6 +108,11 @@ export function CalendarFeedCard({ feedUrl, calendarName }: { feedUrl: string | 
               Your calendar app decides how often it checks for changes: Apple and Outlook about every hour, Google
               sometimes only once or twice a day.
             </li>
+            {/* Owner-requested (9 Oct 2026): Google adds a new calendar unticked. */}
+            <li>
+              Google Calendar: after adding it, look under &ldquo;Other calendars&rdquo; on the left and make sure the
+              calendar is ticked, or its events won&rsquo;t show.
+            </li>
             <li>It shows each event&rsquo;s name, date, time and place. Descriptions and attachments stay in the app.</li>
             <li>
               This link is yours: please don&rsquo;t share it. If you think someone else has it, make a new one (the old
