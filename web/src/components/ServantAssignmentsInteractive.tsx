@@ -11,8 +11,17 @@ import {
   countAssignmentsInGroupAction,
   revokeRoleGrantAction,
   grantServantRoleAction,
+  grantCoordinatorScopeAction,
   type AddableRole,
 } from "@/app/servant-assignments/actions";
+import {
+  parseSectionKey,
+  sectionLabel,
+  sectionOfGroup,
+  sectionsFor,
+  type CoordinatorScopeMode,
+  type ScopeRef,
+} from "@/lib/coordinator-scopes";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import type { RoleLabels } from "@/lib/role-labels";
 
@@ -103,6 +112,9 @@ export function ServantAssignmentsInteractive({
   canManageAll,
   myGroupIds,
   groupLabel,
+  coordinatorScope = "group",
+  ladderLabel = "",
+  levelOffset = 0,
 }: {
   people: AssignmentPerson[];
   groups: GroupSummary[];
@@ -112,6 +124,12 @@ export function ServantAssignmentsInteractive({
   myGroupIds: string[];
   /** The ministry's word for a group (Ministry Settings), e.g. "Class". */
   groupLabel: string;
+  /** Migration 0106 (Ministry Settings): Coordinators are assigned to each
+   * group, a grade, or a grade and gender. */
+  coordinatorScope?: CoordinatorScopeMode;
+  /** The level word and number offset, for "Gr9 Girls". */
+  ladderLabel?: string;
+  levelOffset?: number;
 }) {
   const L = useRoleLabels();
   const ROLE_LABELS = roleChipLabels(L);
@@ -149,6 +167,14 @@ export function ServantAssignmentsInteractive({
     () => (canManageAll ? sortedGroups : sortedGroups.filter((g) => myGroupIds.includes(g.id))),
     [canManageAll, sortedGroups, myGroupIds],
   );
+  // Grade-level Coordinators (0106): the grades (or grade + gender) to pick.
+  const byGrade = coordinatorScope !== "group";
+  const sections = useMemo(
+    () => sectionsFor(sortedGroups, coordinatorScope, ladderLabel, levelOffset),
+    [sortedGroups, coordinatorScope, ladderLabel, levelOffset],
+  );
+  const groupWord = groupLabel.toLowerCase();
+  const scopeLabel = (s: ScopeRef) => sectionLabel(s.ladder_position, s.gender_label, sortedGroups, ladderLabel, levelOffset);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -192,7 +218,12 @@ export function ServantAssignmentsInteractive({
   }
 
   function handleRevoke(personId: string, grant: RoleGrant) {
-    if (!confirm(`Remove ${ROLE_LABELS[grant.role]}${grant.group_name ? ` — ${grant.group_name}` : ""}?`)) return;
+    // Part of a grade-level grant (0106): removing it removes the whole grade.
+    const scope = grant.scope ?? null;
+    const question = scope
+      ? `Remove ${ROLE_LABELS[grant.role]} of ${scopeLabel(scope)}? This takes them off all its ${groupWord}s.`
+      : `Remove ${ROLE_LABELS[grant.role]}${grant.group_name ? ` — ${grant.group_name}` : ""}?`;
+    if (!confirm(question)) return;
     setError(null);
     startTransition(async () => {
       const res = await revokeRoleGrantAction(grant.id);
@@ -200,7 +231,28 @@ export function ServantAssignmentsInteractive({
         setError(res.error);
         return;
       }
-      patchGrant(personId, grant.id, null);
+      if (scope) {
+        setRoster((prev) =>
+          prev.map((p) => (p.id === personId ? { ...p, grants: p.grants.filter((g) => g.scope?.id !== scope.id) } : p)),
+        );
+      } else {
+        patchGrant(personId, grant.id, null);
+      }
+      router.refresh();
+    });
+  }
+
+  /** Grade-level Coordinator (0106): one grant for a grade (or grade +
+   * gender); the database adds each group there. */
+  function grantGrade(userId: string, ladderPosition: number, gender: string | null, done: () => void) {
+    setError(null);
+    startTransition(async () => {
+      const res = await grantCoordinatorScopeAction(userId, ladderPosition, gender);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      done();
       router.refresh();
     });
   }
@@ -224,6 +276,18 @@ export function ServantAssignmentsInteractive({
   }
 
   function handleAddRole(person: AssignmentPerson) {
+    if (byGrade && addRole === "sub_coordinator") {
+      if (!addGroupId) {
+        setError("Pick a grade for this role.");
+        return;
+      }
+      const s = parseSectionKey(addGroupId);
+      grantGrade(person.id, s.ladder_position, s.gender_label, () => {
+        setAddingForPerson(null);
+        setAddGroupId("");
+      });
+      return;
+    }
     if ((addRole !== "servant" || !canManageAll) && !addGroupId) {
       setError("Pick a group for this role.");
       return;
@@ -258,6 +322,15 @@ export function ServantAssignmentsInteractive({
   function handleBringSomeoneNew(groupId: string) {
     if (!bringUserId) {
       setError("Pick a person first.");
+      return;
+    }
+    const group = sortedGroups.find((x) => x.id === groupId);
+    const section = group ? sectionOfGroup(group, coordinatorScope) : null;
+    if (section && bringRole === "sub_coordinator") {
+      grantGrade(bringUserId, section.ladder_position, section.gender_label, () => {
+        setAddingForGroup(null);
+        setBringUserId("");
+      });
       return;
     }
     setError(null);
@@ -422,12 +495,26 @@ export function ServantAssignmentsInteractive({
           ))}
         </select>
         <select value={addGroupId} onChange={(e) => setAddGroupId(e.target.value)} className="min-w-0 max-w-full overflow-hidden text-clip rounded-md border border-[#ddd] px-1.5 py-1 text-[11px]">
-          <option value="">{addRole === "servant" && canManageAll ? "Unassigned" : "Select a group…"}</option>
-          {myGroups.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
+          {byGrade && addRole === "sub_coordinator" ? (
+            <>
+              <option value="">Select a grade…</option>
+              {sections.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label} ({s.groupIds.length} {groupWord}
+                  {s.groupIds.length === 1 ? "" : "s"})
+                </option>
+              ))}
+            </>
+          ) : (
+            <>
+              <option value="">{addRole === "servant" && canManageAll ? "Unassigned" : "Select a group…"}</option>
+              {myGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </>
+          )}
         </select>
         <button type="button" disabled={pending} onClick={() => handleAddRole(person)} className="rounded-md bg-brand px-2 py-1 text-[11px] font-semibold text-white hover:bg-brand-dark disabled:opacity-60">
           Add
@@ -443,14 +530,41 @@ export function ServantAssignmentsInteractive({
    * ("Coordinator Gr12 Girls") instead of one per class (owner-requested,
    * 9 Oct 2026); its x removes them all. */
   function renderAlphabeticalChips(person: AssignmentPerson) {
-    const coord = person.grants.filter((g) => g.role === "sub_coordinator" && g.group_name);
-    if (coord.length < 2) return person.grants.map((g) => renderChip(person, g, true));
+    // Grade-level grants (0106): one chip per grade, e.g. "Steward Gr9 Girls".
     const { bg, text } = chipColor("sub_coordinator");
+    const scopeChips: React.ReactNode[] = [];
+    const seen = new Set<string>();
+    for (const g of person.grants) {
+      if (!g.scope || seen.has(g.scope.id)) continue;
+      seen.add(g.scope.id);
+      const label = `${ROLE_LABELS.sub_coordinator} ${scopeLabel(g.scope)}`;
+      scopeChips.push(
+        <span key={`scope-${g.scope.id}`} title={label} className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
+          <span className={CLIP}>{label}</span>
+          {canManageAll && (
+            <button type="button" disabled={pending} onClick={() => handleRevoke(person.id, g)} aria-label={`Remove ${label}`} className="shrink-0 leading-none disabled:opacity-60">
+              ×
+            </button>
+          )}
+        </span>,
+      );
+    }
+    const others = person.grants.filter((g) => !g.scope);
+    const coord = others.filter((g) => g.role === "sub_coordinator" && g.group_name);
+    if (coord.length < 2) {
+      return (
+        <>
+          {scopeChips}
+          {others.map((g) => renderChip(person, g, true))}
+        </>
+      );
+    }
     const label = `${ROLE_LABELS.sub_coordinator} ${combinedClassName(coord.map((g) => g.group_name!))}`;
     const full = coord.map((g) => g.group_name).join(", ");
     return (
       <>
-        {person.grants.filter((g) => !coord.includes(g)).map((g) => renderChip(person, g, true))}
+        {scopeChips}
+        {others.filter((g) => !coord.includes(g)).map((g) => renderChip(person, g, true))}
         <span key="coord" title={full} className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
           <span className={CLIP}>{label}</span>
           {canManageAll && (
@@ -577,6 +691,15 @@ export function ServantAssignmentsInteractive({
                     onSubmit={() => handleBringSomeoneNew(bucket.groupId)}
                     pending={pending}
                     roles={addableRoles}
+                    coordinatorNote={
+                      byGrade
+                        ? (() => {
+                            const g = sortedGroups.find((x) => x.id === bucket.groupId);
+                            const s = g ? sectionOfGroup(g, coordinatorScope) : null;
+                            return s ? `All of ${sectionLabel(s.ladder_position, s.gender_label, sortedGroups, ladderLabel, levelOffset)}` : undefined;
+                          })()
+                        : undefined
+                    }
                   />
                 )}
               </div>
@@ -668,6 +791,7 @@ function BringSomeoneNew({
   onSubmit,
   pending,
   roles,
+  coordinatorNote,
 }: {
   open: boolean;
   onOpen: () => void;
@@ -681,6 +805,8 @@ function BringSomeoneNew({
   pending: boolean;
   /** The roles this person may give (Coordinators: Servant only). */
   roles: readonly AddableRole[];
+  /** Grade-level Coordinators (0106): "All of Gr9 Girls". */
+  coordinatorNote?: string;
 }) {
   const L = useRoleLabels();
   const ROLE_LABELS = roleChipLabels(L);
@@ -708,6 +834,7 @@ function BringSomeoneNew({
           </option>
         ))}
       </select>
+      {bringRole === "sub_coordinator" && coordinatorNote && <span className="text-[11px] text-[#666]">{coordinatorNote}</span>}
       <button type="button" disabled={pending} onClick={onSubmit} className="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60">
         Add
       </button>

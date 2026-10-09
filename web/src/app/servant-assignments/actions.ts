@@ -61,6 +61,47 @@ export async function revokeRoleGrantAction(roleId: string) {
   return { error: null };
 }
 
+/** Migration 0106: make someone Coordinator of a grade (or grade + gender)
+ * -- one grant, which the database keeps in step with the groups there.
+ * General Coordinators/Admins only (grant_coordinator_scope checks). Also
+ * used by Access Maintenance. */
+export async function grantCoordinatorScopeAction(userId: string, ladderPosition: number, gender: string | null) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { error } = await supabase.rpc("grant_coordinator_scope", {
+    p_user_id: userId,
+    p_ladder_position: ladderPosition,
+    p_gender: gender,
+  });
+  if (error) return { error: await roleWords(error.message) };
+
+  await logAudit(user.id, "SERVANT_GROUP_UPDATED", { details: { action: "grant_grade", userId, ladderPosition, gender } });
+  revalidatePath("/servant-assignments");
+  revalidatePath("/admin/access-maintenance");
+  return { error: null };
+}
+
+/** Removes a grade-level Coordinator grant and all its groups' grants. */
+export async function revokeCoordinatorScopeAction(scopeId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { error } = await supabase.rpc("revoke_coordinator_scope", { p_scope_id: scopeId });
+  if (error) return { error: await roleWords(error.message) };
+
+  await logAudit(user.id, "SERVANT_GROUP_UPDATED", { details: { action: "revoke_grade", scopeId } });
+  revalidatePath("/servant-assignments");
+  revalidatePath("/admin/access-maintenance");
+  return { error: null };
+}
+
 /** Adds another Servant/Sub-Coordinator/Read-Only grant to someone who
  * already holds at least one grant (grant_servant_role itself refuses
  * otherwise -- a brand-new person's first grant stays Access Maintenance's

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { roleWords } from "@/lib/role-labels-server";
+import type { ScopeRef } from "@/lib/coordinator-scopes";
 
 export type AccessProfile = { id: string; full_name: string; email: string | null; deactivated_at: string | null };
 
@@ -13,6 +14,8 @@ export type AccessRoleRow = {
   role: "admin" | "general_coordinator" | "sub_coordinator" | "servant" | "read_only";
   group_id: string | null;
   group_name: string | null;
+  /** Migration 0106: part of a grade-level Coordinator grant. */
+  scope?: ScopeRef | null;
 };
 
 export async function getAllProfilesAction(): Promise<AccessProfile[]> {
@@ -23,13 +26,16 @@ export async function getAllProfilesAction(): Promise<AccessProfile[]> {
 
 export async function getAllRoleRowsAction(): Promise<AccessRoleRow[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("user_roles").select("id, user_id, role, group_id, groups(name)");
+  const { data } = await supabase
+    .from("user_roles")
+    .select("id, user_id, role, group_id, scope_id, groups(name), coordinator_scopes(id, ladder_position, gender_label)");
   return (data ?? []).map((r) => ({
     id: r.id,
     user_id: r.user_id,
     role: r.role,
     group_id: r.group_id,
     group_name: (r.groups as unknown as { name: string } | null)?.name ?? null,
+    scope: (r.coordinator_scopes as unknown as ScopeRef | null) ?? null,
   }));
 }
 

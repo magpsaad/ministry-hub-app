@@ -16,7 +16,10 @@ import {
   setPersonDeactivatedAction,
   resetAuthenticatorAction,
   resetUnlockDevicesAction,
+  getAllRoleRowsAction,
 } from "@/app/admin/access-maintenance/actions";
+import { grantCoordinatorScopeAction, revokeCoordinatorScopeAction } from "@/app/servant-assignments/actions";
+import { parseSectionKey, sectionLabel, sectionsFor, type CoordinatorScopeMode, type ScopeRef } from "@/lib/coordinator-scopes";
 
 function roleLabelsFor(L: RoleLabels): Record<AccessRoleRow["role"], string> {
   return {
@@ -55,10 +58,18 @@ export function AccessMaintenanceInteractive({
   profiles: initialProfiles,
   initialRoles,
   groups,
+  coordinatorScope = "group",
+  ladderLabel = "",
+  levelOffset = 0,
 }: {
   profiles: AccessProfile[];
   initialRoles: AccessRoleRow[];
   groups: GroupSummary[];
+  /** Migration 0106 (Ministry Settings): Coordinators are assigned to each
+   * group, a grade, or a grade and gender. */
+  coordinatorScope?: CoordinatorScopeMode;
+  ladderLabel?: string;
+  levelOffset?: number;
 }) {
   const timeZone = useTimezone();
   const L = useRoleLabels();
@@ -128,10 +139,31 @@ export function AccessMaintenanceInteractive({
 
   const selectedProfile = profiles.find((p) => p.id === selectedProfileId) ?? null;
   const selectedRoles = roles.filter((r) => r.user_id === selectedProfileId);
+  // Grade-level Coordinators (0106): one line per grade, not per group.
+  const byGrade = coordinatorScope !== "group";
+  const sections = useMemo(() => sectionsFor(groups, coordinatorScope, ladderLabel, levelOffset), [groups, coordinatorScope, ladderLabel, levelOffset]);
+  const scopeLabel = (s: ScopeRef) => sectionLabel(s.ladder_position, s.gender_label, groups, ladderLabel, levelOffset);
+  const shownRoles = selectedRoles.filter((r, i) => !r.scope || selectedRoles.findIndex((x) => x.scope?.id === r.scope!.id) === i);
 
   function handleGrant() {
     if (!selectedProfileId) return;
     setError(null);
+    if (byGrade && newRole === "sub_coordinator") {
+      if (!newGroupId) {
+        setError("Pick a grade for this role.");
+        return;
+      }
+      const s = parseSectionKey(newGroupId);
+      startTransition(async () => {
+        const res = await grantCoordinatorScopeAction(selectedProfileId, s.ladder_position, s.gender_label);
+        if (res.error) {
+          setError(res.error);
+          return;
+        }
+        setRoles(await getAllRoleRowsAction());
+      });
+      return;
+    }
     const groupId = ROLES_ALLOWING_GROUP.includes(newRole) && newGroupId ? newGroupId : null;
     if (ROLES_REQUIRING_GROUP.includes(newRole) && !groupId) {
       setError("This role requires a group.");
@@ -157,6 +189,21 @@ export function AccessMaintenanceInteractive({
   }
 
   function handleRevoke(roleRowId: string) {
+    const row = roles.find((r) => r.id === roleRowId);
+    const scope = row?.scope ?? null;
+    if (scope) {
+      if (!confirm(`Revoke ${ROLE_LABELS.sub_coordinator} of ${scopeLabel(scope)}? This takes them off all its groups.`)) return;
+      setError(null);
+      startTransition(async () => {
+        const res = await revokeCoordinatorScopeAction(scope.id);
+        if (res.error) {
+          setError(res.error);
+          return;
+        }
+        setRoles((prev) => prev.filter((r) => r.scope?.id !== scope.id));
+      });
+      return;
+    }
     if (!confirm("Revoke this role grant?")) return;
     setError(null);
     startTransition(async () => {
@@ -501,11 +548,13 @@ export function AccessMaintenanceInteractive({
             )}
 
             <div className="divide-y divide-[#f0f0f0] mb-4">
-              {selectedRoles.map((r) => (
+              {shownRoles.map((r) => (
                 <div key={r.id} className="py-2 flex items-center justify-between text-sm">
                   <span className="text-[#333]">
                     {ROLE_LABELS[r.role]}
-                    {r.group_name && ` — ${r.group_name}`}
+                    {r.scope
+                      ? ` — ${scopeLabel(r.scope)} (${selectedRoles.filter((x) => x.scope?.id === r.scope!.id).length} groups)`
+                      : r.group_name && ` — ${r.group_name}`}
                   </span>
                   <button
                     type="button"
@@ -540,12 +589,25 @@ export function AccessMaintenanceInteractive({
                   onChange={(e) => setNewGroupId(e.target.value)}
                   className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
                 >
-                  <option value="">{newRole === "servant" ? "Unassigned" : "Select a group..."}</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
+                  {byGrade && newRole === "sub_coordinator" ? (
+                    <>
+                      <option value="">Select a grade...</option>
+                      {sections.map((s) => (
+                        <option key={s.key} value={s.key}>
+                          {s.label} ({s.groupIds.length} {s.groupIds.length === 1 ? "group" : "groups"})
+                        </option>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <option value="">{newRole === "servant" ? "Unassigned" : "Select a group..."}</option>
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
               )}
               <button

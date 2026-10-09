@@ -18,6 +18,8 @@ export type GroupSummary = {
   display_order: number;
   kind: GroupKind;
   is_terminal: boolean;
+  /** "Girls" / "Boys" where the ministry splits by gender (High School). */
+  gender_label?: string | null;
 };
 
 /**
@@ -30,7 +32,7 @@ export async function getAccessibleGroups(): Promise<GroupSummary[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("groups")
-    .select("id, name, ladder_position, display_order, kind")
+    .select("id, name, ladder_position, display_order, kind, gender_label")
     .eq("is_archived", false)
     .order("display_order");
 

@@ -437,6 +437,26 @@ export function ActionsNeededConfigInteractive({
         />
         {L.coordinators} automatically become {L.servants}
       </label>
+      {/* Owner-approved (9 Oct 2026, migration 0106): a High School Steward
+          looks after a whole grade (or grade and gender), granted once. */}
+      <label className="block text-sm text-[#333] mb-1" htmlFor="coordinator-scope">
+        {L.coordinators} are assigned to
+      </label>
+      <select
+        id="coordinator-scope"
+        value={appSettings.coordinator_scope}
+        onChange={(e) => updateAppField("coordinator_scope", e.target.value as AppSettingsFormInput["coordinator_scope"])}
+        className="mb-1 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+      >
+        <option value="group">a {appSettings.group_label.toLowerCase()}</option>
+        <option value="grade">a grade</option>
+        <option value="grade_gender">a grade and gender</option>
+      </select>
+      <p className="text-xs text-[#888] mb-3">
+        With a grade, making someone {L.coordinator} of e.g. Grade 9 Girls covers every {appSettings.group_label.toLowerCase()}{" "}
+        there, including ones added later, and they move up with their {appSettings.group_label.toLowerCase()}s each year.
+        Existing {L.coordinatorLower} grants are left as they are.
+      </p>
       <div className="flex items-center gap-3">
         <button
           type="button"

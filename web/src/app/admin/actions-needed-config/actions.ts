@@ -326,6 +326,9 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
       return { error: `The ${name} label must be 2-30 letters (spaces, hyphens and apostrophes allowed).` };
     }
   }
+  if (!["group", "grade", "grade_gender"].includes(input.coordinator_scope)) {
+    return { error: "Choose what Coordinators are assigned to." };
+  }
   if (!["gc", "gc_admin", "none"].includes(input.message_oversight)) {
     return { error: "Choose who can read every conversation in Messages." };
   }
@@ -370,6 +373,7 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     show_parent_contacts: input.show_parent_contacts,
     idle_lock_minutes: input.idle_lock_minutes,
     message_oversight: input.message_oversight,
+    coordinator_scope: input.coordinator_scope,
   };
   // Saved by this ministry's code (the settings table has one row per
   // ministry now, MULTI_TENANT_PLAN.md §2.5 #1); the security rule would

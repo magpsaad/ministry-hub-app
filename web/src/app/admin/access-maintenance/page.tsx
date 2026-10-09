@@ -54,7 +54,14 @@ export default async function AccessMaintenancePage() {
         <HeaderWordmark />
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
-        <AccessMaintenanceInteractive profiles={profiles} initialRoles={roles} groups={servingGroups} />
+        <AccessMaintenanceInteractive
+          profiles={profiles}
+          initialRoles={roles}
+          groups={servingGroups}
+          coordinatorScope={settings.coordinator_scope}
+          ladderLabel={settings.ladder_position_label}
+          levelOffset={settings.level_number_offset}
+        />
       </main>
     </div>
   );
