@@ -90,3 +90,13 @@ export function zoneMidnightUtcIso(dateStr: string, timeZone: string): string {
   guess = naiveUtc - offsetMinutesAt(new Date(guess), timeZone) * 60000;
   return new Date(guess).toISOString();
 }
+
+/** The UTC instant of a local date and time ("YYYY-MM-DD", "HH:MM[:SS]") in
+ * `timeZone`, DST-aware (same two-step correction as zoneMidnightUtcIso). */
+export function zoneLocalToUtc(dateStr: string, time: string, timeZone: string): Date {
+  const hhmmss = time.length === 5 ? `${time}:00` : time.slice(0, 8);
+  const naiveUtc = new Date(`${dateStr}T${hhmmss}.000Z`).getTime();
+  let guess = naiveUtc - offsetMinutesAt(new Date(naiveUtc), timeZone) * 60000;
+  guess = naiveUtc - offsetMinutesAt(new Date(guess), timeZone) * 60000;
+  return new Date(guess);
+}

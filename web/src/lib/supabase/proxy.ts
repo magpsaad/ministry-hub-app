@@ -29,6 +29,11 @@ const AGREEMENT_EXEMPT_PREFIXES = ["/login", "/auth", "/checkin", SECURITY_PREFI
  * (migration 0095), which has no session either. */
 const PUBLIC_ASSET_PATHS = ["/manifest.webmanifest", "/sw.js", "/api/push/tick"];
 
+/** Private Service Calendar links (migration 0107), fetched by Google /
+ * Apple / Outlook Calendar with no session: the long random code in the
+ * address is the key, checked by the database. */
+const PUBLIC_PREFIXES = ["/api/calendar/"];
+
 /** MULTI_TENANT_PLAN.md §3.2 -- the two plain status pages. Neither makes a
  * single data call. */
 export const NOT_SET_UP_PATH = "/address-not-set-up";
@@ -81,7 +86,7 @@ export async function updateSession(request: NextRequest) {
 
   // Public assets never need a session -- return before any other work.
   // (manifest.ts itself copes with any kind of address.)
-  if (PUBLIC_ASSET_PATHS.includes(pathname)) {
+  if (PUBLIC_ASSET_PATHS.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
     return response;
   }
 
