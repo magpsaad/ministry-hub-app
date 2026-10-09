@@ -58,4 +58,9 @@ export async function ensureProfile(user: User): Promise<void> {
   if (user.email) {
     await supabase.rpc("link_approved_pending_servant", { p_email: user.email });
   }
+
+  // Migration 0108: the first time someone opens the app after being
+  // approved -- Pending Servants shows "hasn't opened the app yet" until
+  // then. Sets it once; a no-op for everyone else.
+  await supabase.rpc("note_first_visit");
 }

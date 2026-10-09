@@ -11,21 +11,34 @@ export type PendingServant = {
   submitted_at: string;
   approved_at: string | null;
   checkInCount: number;
+  /** Migration 0108 -- approved but not fully onboarded yet: hasn't opened
+   * the app since approval, or hasn't signed the current agreement. */
+  stage?: "not_opened" | "agreement" | null;
+  approved_by_name?: string | null;
 };
 
 /** Self-registered servants (0014_servant_self_registration.sql) awaiting
- * Admin/General Coordinator review -- not yet linked to a real account. */
+ * Admin/General Coordinator review, and (owner-requested 9 Oct 2026,
+ * migration 0108) approved ones who aren't fully onboarded yet: they stay
+ * listed until they've opened the app and signed the agreement. */
 export async function getPendingServants(): Promise<PendingServant[]> {
   const supabase = await createClient();
-  const { data: pending } = await supabase
-    .from("pending_servants")
-    .select(
-      "id, full_name, phone, email, father_of_confession, gender, registration_comments, submitted_at, approved_at",
-    )
-    .is("resulting_profile_id", null)
-    .order("submitted_at", { ascending: false });
+  const [{ data: pending }, { data: onboarding }] = await Promise.all([
+    supabase
+      .from("pending_servants")
+      .select(
+        "id, full_name, phone, email, father_of_confession, gender, registration_comments, submitted_at, approved_at",
+      )
+      .is("resulting_profile_id", null)
+      .is("approved_at", null)
+      .order("submitted_at", { ascending: false }),
+    supabase.rpc("pending_onboarding"),
+  ]);
 
-  const rows = pending ?? [];
+  const rows = [
+    ...(pending ?? []).map((r) => ({ ...r, stage: null, approved_by_name: null })),
+    ...((onboarding ?? []) as Omit<PendingServant, "checkInCount">[]),
+  ].sort((a, b) => b.submitted_at.localeCompare(a.submitted_at));
   if (rows.length === 0) return [];
 
   const { data: attendance } = await supabase

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { PendingServant } from "@/lib/pending-servants";
 import { approvePendingServantAction, removePendingServantAction } from "@/app/admin/pending-servants/actions";
 import { useTimezone } from "@/components/TimezoneProvider";
@@ -8,8 +9,11 @@ import { formatDateTimeInZone } from "@/lib/timezone";
 
 export function PendingServantRow({ servant }: { servant: PendingServant }) {
   const timeZone = useTimezone();
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [approved, setApproved] = useState(!!servant.approved_at);
+  // Migration 0108: approved, not fully onboarded yet.
+  const stage = servant.stage ?? (approved ? "not_opened" : null);
   const [removed, setRemoved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,6 +26,7 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
         return;
       }
       setApproved(true);
+      router.refresh();
     });
   }
 
@@ -55,12 +60,23 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
           First registered {formatDateTimeInZone(servant.submitted_at, timeZone, { year: "numeric", month: "short", day: "numeric" })} · checked in {servant.checkInCount}{" "}
           time{servant.checkInCount === 1 ? "" : "s"}
         </p>
+        {approved && (
+          <p className="text-xs text-[#888] mt-1">
+            {servant.approved_at
+              ? `Approved ${formatDateTimeInZone(servant.approved_at, timeZone, { month: "short", day: "numeric" })}${servant.approved_by_name ? ` by ${servant.approved_by_name}` : ""}. `
+              : "Approved. "}
+            {stage === "agreement"
+              ? "They'll leave this list once they sign the Confidentiality Agreement."
+              : "They'll leave this list the first time they open the app."}
+          </p>
+        )}
         {error && <p className="text-xs text-[#dc3545] mt-1">{error}</p>}
       </div>
       <div className="shrink-0 flex items-center gap-2">
         {approved ? (
-          <span className="rounded-full bg-[#d4edda] text-[#155724] text-xs font-semibold px-3 py-1.5">
-            Approved — waiting for them to sign in
+          // Owner-chosen wording (9 Oct 2026): subtle, not a call to action.
+          <span className="rounded-full bg-[#f0f0f0] text-[#555] text-xs font-semibold px-3 py-1.5">
+            {stage === "agreement" ? "Opened the app – agreement not signed yet" : "Approved – hasn't opened the app yet"}
           </span>
         ) : (
           <button
@@ -72,6 +88,7 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
             {pending ? "Approving…" : "Approve"}
           </button>
         )}
+        {!approved && (
         <button
           type="button"
           onClick={handleRemove}
@@ -80,6 +97,7 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
         >
           Remove
         </button>
+        )}
       </div>
     </div>
   );
