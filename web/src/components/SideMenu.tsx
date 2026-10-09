@@ -146,6 +146,15 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
                   )}
                 </span>,
               )}
+              {link(
+                "/messages",
+                <span className="flex items-center gap-2">
+                  Messages
+                  {data.unreadMessages > 0 && (
+                    <span className="rounded-full bg-[#dc3545] text-white text-[11px] px-2 py-0.5">{data.unreadMessages}</span>
+                  )}
+                </span>,
+              )}
               {link("/servants-directory", `${L.servant} Directory`)}
               {link("/calendar", "Service Calendar")}
               {link("/qr-codes", "Checkin - QR Codes")}

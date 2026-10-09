@@ -491,6 +491,39 @@ export function ActionsNeededConfigInteractive({
     {/* Owner-requested (6 Oct 2026, migration 0096). */}
     <NotificationDefaultsCard rows={notificationDefaults} />
 
+    {/* Owner-approved (8 Oct 2026, migration 0102): who may read every
+        conversation in Messages. */}
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+      <h2 className="text-lg font-bold text-brand mb-1">Messages</h2>
+      <p className="text-sm text-[#666] mb-3">
+        Who can read every conversation in this ministry, not just their own. They can read them but only write in
+        the ones they&rsquo;re part of. Everyone sees a line on the Messages page saying who can read them.
+      </p>
+      <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
+        Can read all messages:
+        <select
+          value={appSettings.message_oversight}
+          onChange={(e) => updateAppField("message_oversight", e.target.value as AppSettingsFormInput["message_oversight"])}
+          className="rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+        >
+          <option value="gc">{L.generalCoordinators}</option>
+          <option value="gc_admin">{L.generalCoordinators} and System Admins</option>
+          <option value="none">No one</option>
+        </select>
+      </label>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
+
     {/* Owner-requested (4 Oct 2026, migration 0087): for ministries that
         keep parents' details, e.g. High School and Sunday School. */}
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">

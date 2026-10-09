@@ -9,6 +9,8 @@ export type MenuData = {
   pendingServantsCount: number;
   /** Announcements for me showing now that I haven't opened (0099). */
   unreadAnnouncements: number;
+  /** Conversations with a message I haven't read (0102). */
+  unreadMessages: number;
   universityLabel: string;
   groupLabel: string;
   appVersion: string;

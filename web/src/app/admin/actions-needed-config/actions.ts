@@ -326,6 +326,9 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
       return { error: `The ${name} label must be 2-30 letters (spaces, hyphens and apostrophes allowed).` };
     }
   }
+  if (!["gc", "gc_admin", "none"].includes(input.message_oversight)) {
+    return { error: "Choose who can read every conversation in Messages." };
+  }
   if (input.idle_lock_minutes !== null && !(LOCK_MINUTE_CHOICES as readonly number[]).includes(input.idle_lock_minutes)) {
     return { error: "Choose how many minutes before the screen locks, or Off." };
   }
@@ -366,6 +369,7 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     sub_coordinator_auto_servant: input.sub_coordinator_auto_servant,
     show_parent_contacts: input.show_parent_contacts,
     idle_lock_minutes: input.idle_lock_minutes,
+    message_oversight: input.message_oversight,
   };
   // Saved by this ministry's code (the settings table has one row per
   // ministry now, MULTI_TENANT_PLAN.md §2.5 #1); the security rule would
