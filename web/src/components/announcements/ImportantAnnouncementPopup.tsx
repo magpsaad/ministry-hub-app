@@ -11,7 +11,12 @@ import type { CurrentAnnouncement } from "@/lib/announcements";
  * poster, GCs and Admins see in the read list). One at a time. Never on the
  * sign-in, check-in, onboarding or security pages, nor on the console. It
  * covers the screen, so it's shown regardless of the bottom suggestions
- * (notifications, Face ID) -- they wait underneath until "Got it". */
+ * (notifications, Face ID) -- they wait underneath until "Got it".
+ * Owner-reported (8 Oct 2026): a browser tab left open never looked again
+ * after it first loaded, so a later Important announcement didn't appear
+ * until a full refresh. It now looks again on every page change and when
+ * the tab or app comes back to the front, at most once a minute. */
+const RECHECK_MS = 60_000;
 
 const EXCLUDED = ["/login", "/auth", "/checkin", "/security", "/register", "/console", "/address-not-set-up", "/ministry-inactive"];
 
@@ -19,25 +24,34 @@ export function ImportantAnnouncementPopup() {
   const pathname = usePathname();
   const excluded = EXCLUDED.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const [queue, setQueue] = useState<CurrentAnnouncement[]>([]);
-  const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const working = useRef(false);
+  const lastCheck = useRef(0);
+  const showing = queue.length > 0;
 
   useEffect(() => {
-    if (excluded || checked) return;
+    if (excluded || showing) return;
     let cancelled = false;
-    currentAnnouncementsAction()
-      .then((all) => {
-        if (cancelled) return;
-        setChecked(true);
-        const important = all.filter((a) => a.importance === "important");
-        if (important.length > 0) setQueue(important);
-      })
-      .catch(() => {});
+    const look = () => {
+      if (document.visibilityState !== "visible" || Date.now() - lastCheck.current < RECHECK_MS) return;
+      lastCheck.current = Date.now();
+      currentAnnouncementsAction()
+        .then((all) => {
+          if (cancelled) return;
+          const important = all.filter((a) => a.importance === "important");
+          if (important.length > 0) setQueue(important);
+        })
+        .catch(() => {});
+    };
+    look();
+    document.addEventListener("visibilitychange", look);
+    window.addEventListener("focus", look);
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", look);
+      window.removeEventListener("focus", look);
     };
-  }, [excluded, checked]);
+  }, [excluded, showing, pathname]);
 
   if (excluded || queue.length === 0) return null;
   const a = queue[0];

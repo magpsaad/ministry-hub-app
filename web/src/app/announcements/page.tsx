@@ -15,9 +15,9 @@ import { AnnouncementsInteractive } from "@/components/announcements/Announcemen
 import type { AnnouncementRow } from "@/lib/announcements";
 
 /** Servant Corner -> Announcements (owner-approved design 8 Oct 2026,
- * migration 0099): everyone reads here; Coordinators, General Coordinators
- * and System Admins also post (Coordinators only to their classes'
- * Servants or to fellow Coordinators). */
+ * migration 0099): everyone reads here; System Admins and General
+ * Coordinators post to anyone, Coordinators to the Servants and youths of
+ * their classes (0100), Servants to the youths of their class (0101). */
 export default async function AnnouncementsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -31,7 +31,9 @@ export default async function AnnouncementsPage() {
   ]);
   const full = access.isAdmin || access.isGeneralCoordinator;
   const myClassIds = access.roles.filter((r) => r.role === "sub_coordinator" && r.group_id).map((r) => r.group_id!);
-  const canPost = full || myClassIds.length > 0;
+  const servedIds = access.roles.filter((r) => r.role === "servant" && r.group_id).map((r) => r.group_id!);
+  const servantOnly = !full && myClassIds.length === 0 && servedIds.length > 0;
+  const canPost = full || myClassIds.length > 0 || servantOnly;
   const classes = groups.filter((g) => g.kind === "regular").map((g) => ({ id: g.id, name: g.name }));
   const today = todayInZone(settings.timezone);
 
@@ -57,7 +59,8 @@ export default async function AnnouncementsPage() {
           rows={(data ?? []) as AnnouncementRow[]}
           canPost={canPost}
           full={full}
-          classes={full ? classes : classes.filter((c) => myClassIds.includes(c.id))}
+          servantOnly={servantOnly}
+          classes={full ? classes : classes.filter((c) => (servantOnly ? servedIds : myClassIds).includes(c.id))}
           allClasses={classes}
           today={today}
           defaultEnd={shiftDateKey(today, { days: 7 })}

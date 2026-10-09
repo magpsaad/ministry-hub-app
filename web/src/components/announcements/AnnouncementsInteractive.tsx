@@ -49,11 +49,13 @@ type Draft = {
 /** Announcements page body (migration 0099): the list for everyone; the
  * New / Edit form, Take down and the "Got it" list for those who post.
  * Coordinators (`full` false) post only to the Servants and/or the youths
- * of the classes they coordinate (0100) -- no "Everyone" chip for them. */
+ * of the classes they coordinate (0100) -- no "Everyone" chip for them.
+ * Servants (`servantOnly`) post only to the youths of their class (0101). */
 export function AnnouncementsInteractive({
   rows,
   canPost,
   full,
+  servantOnly,
   classes,
   allClasses,
   today,
@@ -63,6 +65,8 @@ export function AnnouncementsInteractive({
   canPost: boolean;
   /** System Admins and General Coordinators (and the Church Admin). */
   full: boolean;
+  /** A Servant (no Coordinator role): youths of their class only. */
+  servantOnly: boolean;
   /** The classes this person can pick (a Coordinator: theirs). */
   classes: { id: string; name: string }[];
   allClasses: { id: string; name: string }[];
@@ -77,9 +81,9 @@ export function AnnouncementsInteractive({
     body: "",
     link: "",
     importance: "normal",
-    roles: full ? [] : ["servant"],
+    roles: full || servantOnly ? [] : ["servant"],
     groups: [],
-    includeYouth: false,
+    includeYouth: servantOnly,
     startsOn: today,
     endsOn: defaultEnd,
   });
@@ -123,7 +127,11 @@ export function AnnouncementsInteractive({
   // A Coordinator's class choice applies to their Servants and their youths.
   const showGroups =
     !!draft &&
-    (full ? draft.roles.includes("servant") || draft.roles.includes("sub_coordinator") : draft.roles.includes("servant") || draft.includeYouth);
+    (servantOnly
+      ? classes.length > 1
+      : full
+        ? draft.roles.includes("servant") || draft.roles.includes("sub_coordinator")
+        : draft.roles.includes("servant") || draft.includeYouth);
 
   function toggleRole(role: AnnouncementRole | "everyone") {
     setDraft((d) => {
@@ -336,6 +344,15 @@ export function AnnouncementsInteractive({
             <input id="ann-link" type="url" placeholder="https://" value={draft.link} onChange={(e) => setDraft({ ...draft, link: e.target.value })} className={INPUT} />
           </div>
 
+          {servantOnly ? (
+            <div>
+              <span className={LABEL}>Who it&rsquo;s for</span>
+              <p className="text-sm text-[#333]">
+                The youths of your {classes.length === 1 ? `class (${classes[0]?.name ?? ""})` : "classes"}. They see it on the check-in page
+                after they check in.
+              </p>
+            </div>
+          ) : (
           <div>
             <span className={LABEL}>Who it&rsquo;s for</span>
             {!full && (
@@ -371,6 +388,7 @@ export function AnnouncementsInteractive({
               {full ? "Also show to youths on the check-in page" : "The youths of my classes (on the check-in page)"}
             </label>
           </div>
+          )}
 
           {showGroups && (
             <div className="rounded-md border border-[#eee] p-3">
@@ -389,7 +407,7 @@ export function AnnouncementsInteractive({
             </div>
           )}
           <p className="text-xs text-[#777]">
-            {!full && draft.roles.length === 0
+            {servantOnly || (!full && draft.roles.length === 0)
               ? draft.includeYouth
                 ? "No one in the app: only the youths of these classes, after they check in."
                 : ""
@@ -398,6 +416,7 @@ export function AnnouncementsInteractive({
                 }`}
           </p>
 
+          {!servantOnly && (
           <div>
             <span className={LABEL}>Importance</span>
             <div className="flex flex-wrap gap-1.5">
@@ -409,6 +428,7 @@ export function AnnouncementsInteractive({
               </button>
             </div>
           </div>
+          )}
 
           <div className="flex flex-wrap gap-4">
             <div>
