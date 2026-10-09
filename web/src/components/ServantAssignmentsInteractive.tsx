@@ -271,14 +271,19 @@ export function ServantAssignmentsInteractive({
       // their groups, and only to Unassigned or one of their groups.
       const movable = canManageAll || (coordinatorOnly && (grant.group_id === null || isMine(grant.group_id)));
       const choices = canManageAll || !movable ? sortedGroups : sortedGroups.filter((g) => isMine(g.id) || g.id === grant.group_id);
+      // Owner-reported (9 Oct 2026, HSY on a phone): a drop-down is as wide
+      // as its longest class name, so long class names pushed the chip past
+      // the page's right edge. The chip now stops at the row's width and the
+      // class name is cut short with "..." instead.
       return (
-        <span key={grant.id} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
-          {showGroupInLabel ? L.servant : label}
+        <span key={grant.id} className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
+          <span className="shrink-0">{showGroupInLabel ? L.servant : label}</span>
           <select
             value={grant.group_id ?? ""}
             disabled={!movable || pending}
             onChange={(e) => handleReassign(person.id, grant, e.target.value)}
-            className="bg-transparent text-[11px] font-semibold border-none focus:outline-none disabled:opacity-60"
+            title={grant.group_name ?? "Unassigned"}
+            className="min-w-0 max-w-full truncate bg-transparent text-[11px] font-semibold border-none focus:outline-none disabled:opacity-60"
             style={{ color: text }}
           >
             <option value="">Unassigned</option>
@@ -294,22 +299,22 @@ export function ServantAssignmentsInteractive({
 
     if (grant.role === "general_coordinator") {
       return (
-        <span key={grant.id} className="inline-flex items-center rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
-          {label}
+        <span key={grant.id} title={label} className="inline-flex max-w-full min-w-0 items-center rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
+          <span className="truncate">{label}</span>
         </span>
       );
     }
 
     return (
-      <span key={grant.id} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
-        {label}
+      <span key={grant.id} title={label} className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
+        <span className="truncate">{label}</span>
         {canManageAll && (
           <button
             type="button"
             disabled={pending}
             onClick={() => handleRevoke(person.id, grant)}
             aria-label={`Remove ${label}`}
-            className="leading-none disabled:opacity-60"
+            className="shrink-0 leading-none disabled:opacity-60"
           >
             ×
           </button>
@@ -338,15 +343,15 @@ export function ServantAssignmentsInteractive({
       );
     }
     return (
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <select value={addRole} onChange={(e) => setAddRole(e.target.value as AddableRole)} className="rounded-md border border-[#ddd] px-1.5 py-1 text-[11px]">
+      <div className="flex min-w-0 max-w-full items-center gap-1.5 flex-wrap">
+        <select value={addRole} onChange={(e) => setAddRole(e.target.value as AddableRole)} className="min-w-0 max-w-full rounded-md border border-[#ddd] px-1.5 py-1 text-[11px]">
           {addableRoles.map((r) => (
             <option key={r} value={r}>
               {ROLE_LABELS[r]}
             </option>
           ))}
         </select>
-        <select value={addGroupId} onChange={(e) => setAddGroupId(e.target.value)} className="rounded-md border border-[#ddd] px-1.5 py-1 text-[11px]">
+        <select value={addGroupId} onChange={(e) => setAddGroupId(e.target.value)} className="min-w-0 max-w-full truncate rounded-md border border-[#ddd] px-1.5 py-1 text-[11px]">
           <option value="">{addRole === "servant" && canManageAll ? "Unassigned" : "Select a group…"}</option>
           {myGroups.map((g) => (
             <option key={g.id} value={g.id}>
@@ -377,7 +382,7 @@ export function ServantAssignmentsInteractive({
             here (w-32 shrink-0), with the chips span now flex-1 so IT
             absorbs the remaining space and wraps, not the name. */}
         <span className="w-32 shrink-0 font-semibold text-[#333] truncate">{person.full_name}</span>
-        <span className="flex-1 flex items-center gap-1.5 flex-wrap justify-end">
+        <span className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap justify-end">
           {grants.map((g) => renderChip(person, g, false))}
           {renderAddRoleControl(person)}
         </span>
@@ -492,7 +497,7 @@ export function ServantAssignmentsInteractive({
             <div key={person.id} className="py-2.5 flex items-center gap-3">
               <Avatar person={person} />
               <span className="w-32 shrink-0 font-semibold text-[#333] truncate">{person.full_name}</span>
-              <span className="flex-1 flex items-center gap-1.5 flex-wrap">
+              <span className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
                 {person.grants.map((g) => renderChip(person, g, true))}
                 {renderAddRoleControl(person)}
               </span>
@@ -540,7 +545,7 @@ function BucketCard({
             <Avatar person={person} />
             {/* Same fixed-width name column fix as renderPersonRow above. */}
             <span className="w-32 shrink-0 font-semibold text-[#333] truncate">{person.full_name}</span>
-            <span className="flex-1 flex items-center gap-1.5 flex-wrap justify-end">
+            <span className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap justify-end">
               {grants.map((g) => renderChip(person, g, false))}
               {label !== L.generalCoordinators && renderAddRoleControl(person)}
             </span>
