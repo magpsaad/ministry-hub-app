@@ -160,16 +160,10 @@ export function ServantsAttendanceInteractive({
           <thead>
             <tr className="bg-[#f5f5f5] text-left text-[#666]">
               <SortableHeader label={L.servant} sortKey="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-              <SortableHeader label="Group" sortKey="group" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
               <SortableHeader label="Attendance %" sortKey="attendance" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-              <SortableHeader
-                label="Status"
-                sortKey="status"
-                activeKey={sortKey}
-                dir={sortDir}
-                onSort={handleSort}
-                align="right"
-              />
+              <SortableHeader label="Status" sortKey="status" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              {/* Owner-requested (10 Oct 2026): Group last. */}
+              <SortableHeader label="Group" sortKey="group" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
@@ -178,7 +172,6 @@ export function ServantsAttendanceInteractive({
               return (
                 <tr key={m.id}>
                   <td className="px-4 py-2.5 font-medium text-[#333]">{m.full_name}</td>
-                  <td className="px-4 py-2.5 text-[#666]">{m.groupLabel}</td>
                   <td className="px-4 py-2.5 text-[#666]">
                     {m.averageAttendance === null ? (
                       "N/A"
@@ -192,7 +185,7 @@ export function ServantsAttendanceInteractive({
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className="px-4 py-2.5">
                     <button
                       type="button"
                       disabled={togglingId === m.id}
@@ -208,6 +201,7 @@ export function ServantsAttendanceInteractive({
                       {status}
                     </button>
                   </td>
+                  <td className="px-4 py-2.5 text-[#666]">{m.groupLabel}</td>
                 </tr>
               );
             })}
