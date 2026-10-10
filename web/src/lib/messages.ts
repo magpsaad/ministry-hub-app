@@ -128,6 +128,8 @@ export type ConversationDetail = {
   due_on: string | null;
   mode: "direct" | "group";
   batch_id: string;
+  /** Optional link added when it was sent (0112). */
+  link_url: string | null;
   created_at: string;
   member: boolean;
   i_sent: boolean;

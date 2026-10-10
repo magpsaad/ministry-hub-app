@@ -55,6 +55,7 @@ export function MessageComposer({
   const [mode, setMode] = useState<"private" | "group">("private");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [link, setLink] = useState("");
   const [isTask, setIsTask] = useState(false);
   const [dueOn, setDueOn] = useState("");
   const [busy, setBusy] = useState(false);
@@ -91,6 +92,7 @@ export function MessageComposer({
         isTask,
         dueOn,
         mode: several ? mode : "private",
+        link,
       });
       if (res.error || res.ids.length === 0) {
         setError(res.error ?? "Something went wrong. Please try again.");
@@ -210,6 +212,22 @@ export function MessageComposer({
           Message
         </label>
         <textarea id="msg-body" rows={5} value={body} maxLength={4000} onChange={(e) => setBody(e.target.value)} className={INPUT} />
+      </div>
+      {/* Owner-requested (10 Oct 2026, migration 0112): like announcements. */}
+      <div>
+        <label className={LABEL} htmlFor="msg-link">
+          Link (optional)
+        </label>
+        <input
+          id="msg-link"
+          type="url"
+          inputMode="url"
+          placeholder="https://"
+          value={link}
+          maxLength={2000}
+          onChange={(e) => setLink(e.target.value)}
+          className={INPUT}
+        />
       </div>
 
       <div>

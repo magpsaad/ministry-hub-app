@@ -19,6 +19,8 @@ export type SendInput = {
   dueOn: string;
   /** 'private' = each replies only to me; 'group' = one conversation. */
   mode: "private" | "group";
+  /** Optional link, like an announcement's (0112). */
+  link: string;
 };
 
 export async function sendMessageAction(input: SendInput): Promise<{ error: string | null; ids: string[] }> {
@@ -34,6 +36,7 @@ export async function sendMessageAction(input: SendInput): Promise<{ error: stri
     p_is_task: input.isTask,
     p_due_on: input.isTask && input.dueOn ? input.dueOn : null,
     p_mode: input.mode,
+    p_link: input.link.trim() || null,
   });
   if (error) return { error: await roleWords(error.message), ids: [] };
   after(dispatchPush);

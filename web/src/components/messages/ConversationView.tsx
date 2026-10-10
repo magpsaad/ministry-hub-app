@@ -91,6 +91,16 @@ export function ConversationView({ conv, timeZone, today }: { conv: Conversation
             </>
           )}
         </p>
+        {conv.link_url && (
+          <a
+            href={conv.link_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-block text-sm font-semibold text-brand underline"
+          >
+            Open link
+          </a>
+        )}
         {conv.is_task && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
             <span className="rounded bg-[#e8f0fe] px-1.5 py-0.5 text-[#1a56db]">Task</span>
