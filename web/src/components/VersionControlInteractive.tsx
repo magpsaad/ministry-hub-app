@@ -98,6 +98,44 @@ export function VersionControlInteractive({ initial, canManage }: { initial: App
       </p>
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 
+      {/* Owner-requested (10 Oct 2026): at the top, so adding a release
+          needs no scrolling past the history. */}
+      {canManage && (
+        <div className="mb-4 border-b border-[#f0f0f0] pb-4 space-y-2">
+          <h3 className="text-sm font-bold text-brand">Add a Release</h3>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Version (e.g. 4.2)"
+              value={newVersion}
+              onChange={(e) => setNewVersion(e.target.value)}
+              className="w-28 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
+            />
+            <input
+              type="date"
+              value={newReleasedOn}
+              onChange={(e) => setNewReleasedOn(e.target.value)}
+              className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
+            />
+          </div>
+          <textarea
+            placeholder="What's in this release?"
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+            rows={2}
+            className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={pending}
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          >
+            Add
+          </button>
+        </div>
+      )}
+
       <div className="divide-y divide-[#f0f0f0] mb-4">
         {releases.map((r) => (
           <div key={r.id} className="py-3 text-sm">
@@ -160,41 +198,6 @@ export function VersionControlInteractive({ initial, canManage }: { initial: App
         {releases.length === 0 && <p className="py-2 text-sm text-[#666]">No releases logged yet.</p>}
       </div>
 
-      {canManage && (
-        <div className="border-t border-[#f0f0f0] pt-3 space-y-2">
-          <h3 className="text-sm font-bold text-brand">Add a Release</h3>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Version (e.g. 4.2)"
-              value={newVersion}
-              onChange={(e) => setNewVersion(e.target.value)}
-              className="w-28 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
-            />
-            <input
-              type="date"
-              value={newReleasedOn}
-              onChange={(e) => setNewReleasedOn(e.target.value)}
-              className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
-            />
-          </div>
-          <textarea
-            placeholder="What's in this release?"
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            rows={2}
-            className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={pending}
-            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-          >
-            Add
-          </button>
-        </div>
-      )}
     </div>
   );
 }
