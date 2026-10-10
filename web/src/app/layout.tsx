@@ -10,6 +10,7 @@ import { RoleLabelsProvider } from "@/components/RoleLabelsProvider";
 import { ScreenLock } from "@/components/ScreenLock";
 import { NotificationsPrompt } from "@/components/notifications/NotificationsPrompt";
 import { ImportantAnnouncementPopup } from "@/components/announcements/ImportantAnnouncementPopup";
+import { HomeIconTracker } from "@/components/HomeIconTracker";
 import "./globals.css";
 
 const inter = Inter({
@@ -170,6 +171,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ImportantAnnouncementPopup />
         {/* Phone notifications (0092): asked once per device. */}
         <NotificationsPrompt />
+        {/* Opened from the home screen icon (0110): for Audit Logs -> Device setup. */}
+        <HomeIconTracker />
       </body>
     </html>
   );

@@ -9,10 +9,14 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { AuditLogsInteractive } from "@/components/admin/AuditLogsInteractive";
+import { DeviceSetupTable, type DeviceSetupRow } from "@/components/admin/DeviceSetupTable";
+import { createClient } from "@/lib/supabase/server";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
 
-/** REQUIREMENTS.md §6.14/§6.1/§3.11 -- Admin Corner, Admins only. */
-export default async function AuditLogsPage({ searchParams }: { searchParams: Promise<{ action?: string }> }) {
+/** REQUIREMENTS.md §6.14/§6.1/§3.11 -- Admin Corner, Admins only. Two views
+ * (owner-approved 10 Oct 2026, migration 0110): Activity (the log) and
+ * Device setup (?view=devices -- home icon, notifications, Face ID). */
+export default async function AuditLogsPage({ searchParams }: { searchParams: Promise<{ action?: string; view?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -27,14 +31,19 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Pr
 
   // Opened from the Dashboard's check-in alert (?action=CHECKIN_REGISTRATION):
   // start on that action. Only a known action type is used.
-  const { action } = await searchParams;
+  const { action, view } = await searchParams;
+  const devices = view === "devices";
   const config = await getAuditConfigAction();
   const initialActionType = action && config.some((c) => c.action_type === action) ? action : "";
-  const [settings, logs, users] = await Promise.all([
+  const supabase = await createClient();
+  const [settings, logs, users, deviceRows] = await Promise.all([
     getAppSettings(),
-    getAuditLogsAction(initialActionType ? { actionType: initialActionType } : {}),
-    getAuditLogUsersAction(),
+    devices ? Promise.resolve([]) : getAuditLogsAction(initialActionType ? { actionType: initialActionType } : {}),
+    devices ? Promise.resolve([]) : getAuditLogUsersAction(),
+    devices ? supabase.rpc("device_setup").then((r) => (r.data ?? []) as DeviceSetupRow[]) : Promise.resolve([] as DeviceSetupRow[]),
   ]);
+  const tab = (on: boolean) =>
+    `px-4 py-1.5 text-sm font-semibold ${on ? "bg-brand text-white" : "bg-white text-[#333] hover:bg-[#f5f5f5]"}`;
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -53,14 +62,26 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Pr
         <p className="mt-1 text-sm opacity-90">Audit Logs</p>
         <HeaderWordmark />
       </header>
-      <main className="max-w-4xl mx-auto px-4 py-6">
-        <AuditLogsInteractive
-          initialLogs={logs}
-          actionTypes={config.map((c) => c.action_type)}
-          users={users}
-          initialConfig={config}
-          initialActionType={initialActionType}
-        />
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+        <div className="inline-flex overflow-hidden rounded-md border border-[#ddd]">
+          <Link href="/admin/audit-logs" className={tab(!devices)}>
+            Activity
+          </Link>
+          <Link href="/admin/audit-logs?view=devices" className={tab(devices)}>
+            Device setup
+          </Link>
+        </div>
+        {devices ? (
+          <DeviceSetupTable rows={deviceRows} />
+        ) : (
+          <AuditLogsInteractive
+            initialLogs={logs}
+            actionTypes={config.map((c) => c.action_type)}
+            users={users}
+            initialConfig={config}
+            initialActionType={initialActionType}
+          />
+        )}
       </main>
     </div>
   );
