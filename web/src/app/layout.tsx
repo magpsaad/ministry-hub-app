@@ -11,6 +11,7 @@ import { ScreenLock } from "@/components/ScreenLock";
 import { NotificationsPrompt } from "@/components/notifications/NotificationsPrompt";
 import { ImportantAnnouncementPopup } from "@/components/announcements/ImportantAnnouncementPopup";
 import { HomeIconTracker } from "@/components/HomeIconTracker";
+import { NavigationSpinner } from "@/components/NavigationSpinner";
 import "./globals.css";
 
 const inter = Inter({
@@ -173,6 +174,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <NotificationsPrompt />
         {/* Opened from the home screen icon (0110): for Audit Logs -> Device setup. */}
         <HomeIconTracker />
+        {/* A spinner while the next page loads (owner-requested, 10 Oct 2026). */}
+        <NavigationSpinner />
       </body>
     </html>
   );

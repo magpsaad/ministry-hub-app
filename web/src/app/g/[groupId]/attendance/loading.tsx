@@ -1,4 +1,5 @@
 import { Skeleton, CardSkeleton, RowSkeleton } from "@/components/Skeleton";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export default function AttendanceLoading() {
   return (
@@ -14,6 +15,7 @@ export default function AttendanceLoading() {
           ))}
         </div>
       </CardSkeleton>
+      <LoadingSpinner />
     </div>
   );
 }

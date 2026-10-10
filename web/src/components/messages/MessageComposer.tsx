@@ -7,6 +7,7 @@ import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { sendMessageAction } from "@/app/messages/actions";
 import type { RoleLabels } from "@/lib/role-labels";
 import type { PersonOption } from "@/lib/messages";
+import { startNavigationSpinner } from "@/components/NavigationSpinner";
 
 const CARD = "rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4";
 const INPUT =
@@ -98,6 +99,7 @@ export function MessageComposer({
         return;
       }
       // Stays locked until the conversation opens.
+      startNavigationSpinner();
       router.push(`/messages/${res.ids[0]}`);
     } catch {
       setError("Something went wrong. Please try again.");

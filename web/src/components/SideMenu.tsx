@@ -11,6 +11,7 @@ import { MinistryHubLogo, MinistryHubName } from "@/components/MinistryHubBrand"
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { LAST_GROUP_COOKIE } from "@/lib/allCohorts";
 import type { MenuData } from "@/lib/menu-types";
+import { startNavigationSpinner } from "@/components/NavigationSpinner";
 
 // Owner-requested: entries indented under their corner heading.
 const ITEM = "block w-full text-left pl-9 pr-5 py-2.5 text-sm text-[#333] hover:bg-[#f5f5f5] disabled:opacity-60";
@@ -59,6 +60,7 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
       document.cookie = `${LAST_GROUP_COOKIE}=${id}; path=/; max-age=31536000; samesite=lax; secure`;
       void logGroupSelectedAction(id);
     }
+    startNavigationSpinner();
     router.push(`/g/${id}/dashboard`);
   }
 

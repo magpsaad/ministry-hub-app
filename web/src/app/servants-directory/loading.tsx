@@ -1,4 +1,5 @@
 import { Skeleton, HeaderSkeleton, CardSkeleton, RowSkeleton } from "@/components/Skeleton";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export default function ServantsDirectoryLoading() {
   return (
@@ -15,6 +16,7 @@ export default function ServantsDirectoryLoading() {
           </div>
         </CardSkeleton>
       </main>
+      <LoadingSpinner />
     </div>
   );
 }

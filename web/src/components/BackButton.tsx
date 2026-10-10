@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon } from "@/components/icons";
+import { startNavigationSpinner } from "@/components/NavigationSpinner";
 
 /**
  * Owner-requested: sits below the Menu button in every page header, where
@@ -16,7 +17,10 @@ export function BackButton() {
 
   function handleClick() {
     if (window.history.length > 1) router.back();
-    else router.push("/");
+    else {
+      startNavigationSpinner();
+      router.push("/");
+    }
   }
 
   return (

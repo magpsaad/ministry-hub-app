@@ -1,4 +1,5 @@
 import { Skeleton, CardSkeleton, RowSkeleton } from "@/components/Skeleton";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export default function OutreachLoading() {
   return (
@@ -16,6 +17,7 @@ export default function OutreachLoading() {
           ))}
         </div>
       </CardSkeleton>
+      <LoadingSpinner />
     </div>
   );
 }

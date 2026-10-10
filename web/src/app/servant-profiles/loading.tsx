@@ -1,4 +1,5 @@
 import { Skeleton, HeaderSkeleton, CardSkeleton, RowSkeleton } from "@/components/Skeleton";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export default function ServantProfilesLoading() {
   return (
@@ -14,6 +15,7 @@ export default function ServantProfilesLoading() {
           </div>
         </CardSkeleton>
       </main>
+      <LoadingSpinner />
     </div>
   );
 }

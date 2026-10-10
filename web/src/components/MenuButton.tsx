@@ -10,6 +10,7 @@ import {
   refreshMenuData,
   subscribeMenuData,
 } from "@/components/menuStore";
+import { startNavigationSpinner } from "@/components/NavigationSpinner";
 
 const loadSideMenu = () => import("@/components/SideMenu").then((m) => m.SideMenu);
 const SideMenu = dynamic(loadSideMenu, { ssr: false });
@@ -50,6 +51,7 @@ export function MenuButton() {
       // old Home button, which sent them on to sign-in.
       if (result === "signed-out") {
         setOpen(false);
+        startNavigationSpinner();
         router.push("/");
       }
     });

@@ -1,4 +1,5 @@
 import { Skeleton, HeaderSkeleton, CardSkeleton } from "@/components/Skeleton";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 /** Shown while the Home page (and any other screen without its own
  * loading.tsx -- the admin screens, QR Codes, Export Lists, Version
@@ -22,6 +23,7 @@ export default function RootLoading() {
           </div>
         </CardSkeleton>
       </main>
+      <LoadingSpinner />
     </div>
   );
 }

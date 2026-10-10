@@ -6,6 +6,7 @@ import { submitOwnRegistrationAction, completeOwnProfileAction, type Registratio
 import { BusyLabel } from "@/components/PendingButton";
 import { NotificationsSetupPanel } from "@/components/notifications/NotificationsSetupPanel";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
+import { startNavigationSpinner } from "@/components/NavigationSpinner";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
@@ -79,6 +80,7 @@ export function RegisterInteractive({
     }
     if (hasRole) {
       // Stays locked (spinner on) until the next page is up.
+      startNavigationSpinner();
       router.push("/");
       router.refresh();
     } else {

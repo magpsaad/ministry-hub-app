@@ -1,4 +1,5 @@
 import { Skeleton, StatCardSkeleton, CardSkeleton, RowSkeleton } from "@/components/Skeleton";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 /**
  * REQUIREMENTS.md §8.1 -- the skeleton loading states enhancement had a real
@@ -68,6 +69,7 @@ export default function GroupShellLoading() {
           </CardSkeleton>
         </div>
       </main>
+      <LoadingSpinner />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { Skeleton, RowSkeleton } from "@/components/Skeleton";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export default function MembersLoading() {
   return (
@@ -14,6 +15,7 @@ export default function MembersLoading() {
           </div>
         ))}
       </div>
+      <LoadingSpinner />
     </div>
   );
 }

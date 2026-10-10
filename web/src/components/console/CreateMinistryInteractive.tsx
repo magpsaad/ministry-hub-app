@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createMinistryAction, type CreateMinistryInput } from "@/app/console/actions";
 import { ThemePalettePicker } from "@/components/admin/ThemePalettePicker";
+import { startNavigationSpinner } from "@/components/NavigationSpinner";
 
 // ISO weekday numbering (Monday=1..Sunday=7), matching app_settings.service_weekday.
 const WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -94,6 +95,7 @@ export function CreateMinistryInteractive({
       // Owner-reported: the next steps used to show here and vanish almost
       // at once. The ministry's own page now shows them until dismissed
       // (SetupChecklist).
+      startNavigationSpinner();
       router.push(`/console/ministries/${res.code}?created=1`);
     });
   }

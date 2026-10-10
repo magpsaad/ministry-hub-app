@@ -17,6 +17,7 @@ import {
   hasCoordinatorCombined,
 } from "@/lib/groups";
 import { Skeleton } from "@/components/Skeleton";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { getRandomVerseAction } from "@/app/actions";
 
 /**
@@ -91,7 +92,12 @@ function GroupShellFallback({ groupId, combined }: { groupId: string; combined: 
       </div>
     </GroupNavShell>
   );
-  return <MyAssignedProvider>{shell}</MyAssignedProvider>;
+  return (
+    <MyAssignedProvider>
+      {shell}
+      <LoadingSpinner />
+    </MyAssignedProvider>
+  );
 }
 
 async function GroupLayoutContent({

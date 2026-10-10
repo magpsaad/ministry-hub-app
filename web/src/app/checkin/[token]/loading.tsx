@@ -1,4 +1,5 @@
 import { Skeleton, HeaderSkeleton, CardSkeleton, RowSkeleton } from "@/components/Skeleton";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 /** Shown the moment a QR code is scanned, while the check-in list loads --
  * a phone on a slow connection used to see a blank page until then. */
@@ -16,6 +17,7 @@ export default function CheckInLoading() {
           </div>
         </CardSkeleton>
       </main>
+      <LoadingSpinner />
     </div>
   );
 }
