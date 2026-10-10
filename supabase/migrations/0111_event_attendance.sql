@@ -77,17 +77,17 @@ begin
     if new.audience = 'all' then
       new.audience_levels := '{}'; new.audience_group_ids := '{}';
     elsif new.audience = 'grade' then
-      if cardinality(new.audience_levels) = 0 then raise exception 'Choose at least one grade.'; end if;
+      if cardinality(new.audience_levels) = 0 then raise exception 'Choose who the event is for.'; end if;
       new.audience_group_ids := array(select g.id from groups g
                                       where g.ministry_id = new.ministry_id and g.kind::text = 'regular' and not g.is_archived
                                         and g.ladder_position = any(new.audience_levels) order by g.display_order);
-      if cardinality(new.audience_group_ids) = 0 then raise exception 'There are no classes in that grade.'; end if;
+      if cardinality(new.audience_group_ids) = 0 then raise exception 'No groups are at that level yet.'; end if;
     else
       new.audience_levels := '{}';
-      if cardinality(new.audience_group_ids) = 0 then raise exception 'Choose at least one class.'; end if;
+      if cardinality(new.audience_group_ids) = 0 then raise exception 'Choose who the event is for.'; end if;
       if exists (select 1 from unnest(new.audience_group_ids) x
                  where not exists (select 1 from groups g where g.id = x and g.ministry_id = new.ministry_id)) then
-        raise exception 'Class not found';
+        raise exception 'That group was not found.';
       end if;
     end if;
   end if;

@@ -53,7 +53,11 @@ export default async function ServantsAttendancePage() {
         <HeaderWordmark />
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
-        <ServantsAttendanceInteractive bundle={bundle} dayName={weekdayName(windowSettings.service_weekday)} />
+        <ServantsAttendanceInteractive
+          bundle={bundle}
+          dayName={weekdayName(windowSettings.service_weekday)}
+          groupLabel={settings.group_label}
+        />
       </main>
     </div>
   );

@@ -32,6 +32,8 @@ export default async function ServiceCalendarPage() {
   const regular = groups.filter((g) => g.kind === "regular");
   const attendance = {
     canSet: access.isAdmin || access.isCoordinator,
+    positionLabel: settings.ladder_position_label,
+    groupLabel: settings.group_label,
     grades: sectionsFor(regular, "grade", settings.ladder_position_label, settings.level_number_offset).map((s) => ({
       level: s.ladder_position,
       label: s.label,

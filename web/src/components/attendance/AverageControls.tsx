@@ -54,16 +54,17 @@ export function useAvgChoice(key: string, today: string): [AvgChoice, (c: AvgCho
 const dateInput =
   "min-w-0 appearance-none rounded-md border border-[#ddd] bg-white px-2 py-1.5 text-sm focus:border-brand focus:outline-none";
 
-/** "Average attendance of [Service | Events | Both] for period: [Last 12
- * months]" on one line, read as a sentence; From/To only for Custom. */
+/** "Average attendance of: [Service | Events | Both]" and "For period:
+ * [Last 12 months]", each label above its control, side by side; From/To
+ * only for Custom. */
 export function AverageControls({ choice, onChange }: { choice: AvgChoice; onChange: (c: AvgChoice) => void }) {
   return (
     <div className="space-y-2">
-      {/* Two halves of one sentence, a space apart; on a narrow phone the
-          second half moves under the first, each kept whole. */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-[#333]">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">Average attendance of</span>
+      {/* Owner's layout (10 Oct 2026): each label above its control, the two
+          side by side with a space between. */}
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2 text-sm text-[#333]">
+        <div>
+          <span className="mb-1 block text-xs font-semibold text-[#555]">Average attendance of:</span>
           <div role="group" aria-label="Average attendance of" className="inline-flex overflow-hidden rounded-md border border-[#ddd]">
             {AVG_MODES.map((m) => (
               <button
@@ -71,7 +72,7 @@ export function AverageControls({ choice, onChange }: { choice: AvgChoice; onCha
                 type="button"
                 aria-pressed={choice.mode === m.value}
                 onClick={() => onChange({ ...choice, mode: m.value as AvgMode })}
-                className={`px-3 py-1.5 text-sm font-semibold transition-colors ${
+                className={`px-2.5 py-1.5 text-sm font-semibold transition-colors ${
                   choice.mode === m.value ? "bg-brand text-white" : "bg-white text-[#555] hover:bg-[#f5f5f5]"
                 }`}
               >
@@ -80,10 +81,12 @@ export function AverageControls({ choice, onChange }: { choice: AvgChoice; onCha
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">For period:</span>
+        <div>
+          <label htmlFor="average-period" className="mb-1 block text-xs font-semibold text-[#555]">
+            For period:
+          </label>
           <select
-            aria-label="For period"
+            id="average-period"
             value={choice.period}
             onChange={(e) => onChange({ ...choice, period: e.target.value as AvgPeriodKind })}
             className="rounded-md border border-[#ddd] bg-white px-2 py-1.5 text-sm focus:border-brand focus:outline-none"

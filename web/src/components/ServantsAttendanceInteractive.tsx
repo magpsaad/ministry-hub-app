@@ -11,7 +11,15 @@ import { useRoleLabels } from "@/components/RoleLabelsProvider";
 /** REQUIREMENTS.md §6.13 -- same Present/Absent/"Never Attended" pattern as
  * the member Attendance tab (§6.5), applied to servants across the whole
  * ministry (not scoped to one group). */
-export function ServantsAttendanceInteractive({ bundle, dayName }: { bundle: ServantAttendanceBundle; dayName: string }) {
+export function ServantsAttendanceInteractive({
+  bundle,
+  dayName,
+  groupLabel,
+}: {
+  bundle: ServantAttendanceBundle;
+  dayName: string;
+  groupLabel: string;
+}) {
   const L = useRoleLabels();
   const [attendanceByServant, setAttendanceByServant] = useState(bundle.attendanceByServant);
   const [eventsByServant, setEventsByServant] = useState(bundle.eventsByServant);
@@ -176,8 +184,8 @@ export function ServantsAttendanceInteractive({ bundle, dayName }: { bundle: Ser
       <AverageControls choice={avgChoice} onChange={setAvgChoice} />
 
       <p className="text-xs text-[#666]">
-        Service counts {dayName}s only. Events count the ones for the {L.servantsLower}&rsquo; own classes and the whole
-        ministry. Nothing counts from before someone joined.
+        Service counts {dayName}s only. Events count the ones for each {L.servantLower}&rsquo;s own{" "}
+        {groupLabel.toLowerCase()}s and the whole ministry. Nothing counts from before someone joined.
       </p>
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden overflow-x-auto">

@@ -7,6 +7,7 @@ import type { EventAudience } from "@/lib/calendar-types";
 import { calendarBucket, ministryFilePath } from "@/lib/storage";
 import { getActiveMinistry } from "@/lib/ministry-context";
 import { checkUpload, isUuid } from "@/lib/upload-check";
+import { roleWords } from "@/lib/role-labels-server";
 
 export type EventInput = {
   title: string;
@@ -67,7 +68,7 @@ export async function createEventAction(input: EventInput) {
     .insert({ ...eventFields(input), created_by: user.id })
     .select("id")
     .single();
-  if (error) return { error: error.message, id: null };
+  if (error) return { error: await roleWords(error.message), id: null };
 
   revalidatePath("/calendar");
   return { error: null, id: data.id as string };
@@ -76,7 +77,7 @@ export async function createEventAction(input: EventInput) {
 export async function updateEventAction(eventId: string, input: EventInput) {
   const supabase = await createClient();
   const { data, error } = await supabase.from("service_calendar_events").update(eventFields(input)).eq("id", eventId).select("id");
-  if (error) return { error: error.message };
+  if (error) return { error: await roleWords(error.message) };
   if (!data || data.length === 0) return { error: "You don't have permission to change this event." };
 
   revalidatePath("/calendar");

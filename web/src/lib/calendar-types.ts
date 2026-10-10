@@ -32,6 +32,10 @@ export const ATTENDANCE_EVENT_TYPES: CalendarEventType[] = ["Event", "Trip", "Ou
  * and classes to choose from. */
 export type EventAttendanceOptions = {
   canSet: boolean;
+  /** The ministry's own words (owner-requested): the level word ("Yr",
+   * "Gr") and the group word ("Cohort", "Group"). */
+  positionLabel: string;
+  groupLabel: string;
   grades: { level: number; label: string }[];
   classes: { id: string; name: string }[];
 };

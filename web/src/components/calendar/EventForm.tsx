@@ -29,11 +29,6 @@ const chipClass = (on: boolean) =>
     on ? "border-brand bg-brand text-white" : "border-[#ddd] bg-white text-[#555] hover:bg-[#f5f5f5]"
   }`;
 
-const AUDIENCES: { value: EventAudience; label: string }[] = [
-  { value: "all", label: "Whole ministry" },
-  { value: "grade", label: "Grade" },
-  { value: "class", label: "Class" },
-];
 
 /** REQUIREMENTS.md §6.8 -- auto-template suggestions for Speaker Session /
  * Group Discussion, only applied when the description is still empty (a
@@ -79,6 +74,15 @@ export function EventForm({
     audience_group_ids: event?.audience_group_ids ?? [],
   });
   const canTakeAttendance = ATTENDANCE_EVENT_TYPES.includes(form.event_type);
+  // Owner-requested (10 Oct 2026): the ministry's own words -- Position is
+  // "Yr" (SAY) / "Gr" (HSY), Group is "Cohort" / "Group".
+  const position = attendance.positionLabel.trim() || "Level";
+  const group = attendance.groupLabel;
+  const audiences: { value: EventAudience; label: string }[] = [
+    { value: "all", label: "Whole ministry" },
+    { value: "grade", label: position },
+    { value: "class", label: group },
+  ];
   const [attachmentPath, setAttachmentPath] = useState(event?.attachment_url ?? null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pending, startTransition] = useTransition();
@@ -131,11 +135,11 @@ export function EventForm({
     }
     const takes = !!form.take_attendance && canTakeAttendance;
     if (attendance.canSet && takes && form.audience === "grade" && (form.audience_levels ?? []).length === 0) {
-      setError("Choose at least one grade.");
+      setError(`Choose at least one ${position}.`);
       return;
     }
     if (attendance.canSet && takes && form.audience === "class" && (form.audience_group_ids ?? []).length === 0) {
-      setError("Choose at least one class.");
+      setError(`Choose at least one ${group.toLowerCase()}.`);
       return;
     }
     // Only people who may set attendance send it (the event otherwise keeps
@@ -322,7 +326,7 @@ export function EventForm({
                 <div className="mt-2">
                   <span className="block font-semibold mb-1">Who it&rsquo;s for</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {AUDIENCES.map((a) => (
+                    {audiences.map((a) => (
                       <button
                         key={a.value}
                         type="button"
@@ -377,8 +381,8 @@ export function EventForm({
                     {form.audience === "all"
                       ? "Counts toward everyone's Events %."
                       : form.audience === "grade"
-                        ? "Counts toward the Events % of every class in the chosen grades only."
-                        : "Counts toward the Events % of the chosen classes only."}
+                        ? `Counts toward the Events % of every ${group.toLowerCase()} in the ${position} chosen above only.`
+                        : `Counts toward the Events % of the ${group.toLowerCase()}s chosen above only.`}
                   </p>
                 </div>
               )}

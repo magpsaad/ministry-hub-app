@@ -39,10 +39,11 @@ const PROXIMITY_BADGE: Record<string, string> = {
   Unknown: "bg-[#e2e3e5] text-[#383d41]",
 };
 
-const STATUS_RANK: Record<"Present" | "Absent" | "Never Attended", number> = {
+const STATUS_RANK: Record<"Present" | "Absent" | "Never Attended" | "Not invited", number> = {
   Present: 0,
   Absent: 1,
   "Never Attended": 2,
+  "Not invited": 3,
 };
 
 type SortKey = "name" | "proximity" | "status";
@@ -142,7 +143,15 @@ export function AttendanceInteractive({
       : (attendanceByMember[memberId] ?? []).includes(date);
   }
 
-  function statusLabel(memberId: string): "Present" | "Absent" | "Never Attended" {
+  // Owner-requested (10 Oct 2026): an event's sheet still lists everyone,
+  // with the groups it isn't for greyed out and no toggle.
+  function notInvited(m: { id: string; group_id: string }): boolean {
+    return !!selectedEvent && !eventIsFor(selectedEvent, [m.group_id]) && !isPresent(m.id);
+  }
+
+  function statusLabel(m: { id: string; group_id: string }): "Present" | "Absent" | "Never Attended" | "Not invited" {
+    if (notInvited(m)) return "Not invited";
+    const memberId = m.id;
     if (isPresent(memberId)) return "Present";
     const ever = (attendanceByMember[memberId] ?? []).length > 0 || (eventsByMember[memberId] ?? []).length > 0;
     return ever ? "Absent" : "Never Attended";
@@ -183,13 +192,11 @@ export function AttendanceInteractive({
       hydrated && myAssignedOnly ? bundle.members.filter((m) => m.assigned_servant_id === currentUserId) : bundle.members;
     if (cohort.isFiltered) filtered = filtered.filter((m) => cohort.matches(m.group_id));
     if (excludeVisitors) filtered = filtered.filter((m) => !m.is_visitor);
-    // An event lists only the classes it's for (and anyone already marked).
-    if (selectedEvent) filtered = filtered.filter((m) => eventIsFor(selectedEvent, [m.group_id]) || isPresent(m.id));
     const sorted = [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "proximity") cmp = a.proximity.localeCompare(b.proximity);
-      else cmp = STATUS_RANK[statusLabel(a.id)] - STATUS_RANK[statusLabel(b.id)];
+      else cmp = STATUS_RANK[statusLabel(a)] - STATUS_RANK[statusLabel(b)];
       return sortDesc ? -cmp : cmp;
     });
     return sorted;
@@ -263,16 +270,19 @@ export function AttendanceInteractive({
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
             {visible.map((m) => {
-              const status = statusLabel(m.id);
+              const status = statusLabel(m);
+              const greyed = status === "Not invited";
               const avgPercent = averageOf(m).percent;
               const statusClass =
                 status === "Present"
                   ? "bg-[#d4edda] text-[#155724]"
                   : status === "Absent"
                     ? "bg-[#f8d7da] text-[#721c24]"
-                    : "bg-[#fff3cd] text-[#856404]";
+                    : greyed
+                      ? "bg-[#e9ecef] text-[#888]"
+                      : "bg-[#fff3cd] text-[#856404]";
               return (
-                <tr key={m.id}>
+                <tr key={m.id} className={greyed ? "bg-[#fafafa] opacity-50" : undefined}>
                   <td className="px-4 py-2.5">
                     {/* Owner-requested: the name opens the youth's details, as on the Dashboard. */}
                     <MemberDetailLink
@@ -319,7 +329,14 @@ export function AttendanceInteractive({
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    {canToggle(m.group_id) ? (
+                    {greyed ? (
+                      <span
+                        title={`This event isn't for their ${memberRecord.groupLabel.toLowerCase()}`}
+                        className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}
+                      >
+                        {status}
+                      </span>
+                    ) : canToggle(m.group_id) ? (
                       <button
                         type="button"
                         disabled={togglingId === m.id}
