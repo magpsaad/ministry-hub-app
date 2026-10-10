@@ -78,6 +78,7 @@ export async function getCombinedDashboardData(groupIds: string[]): Promise<Comb
         .from("attendance_records")
         .select("member_id, service_date, member:members!inner(group_id, status)")
         .eq("attendee_type", "member")
+        .is("event_id", null) // service days only (event attendance, 0111)
         .in("member.group_id", groupIds)
         .eq("member.status", "active")
         .order("service_date", { ascending: false })

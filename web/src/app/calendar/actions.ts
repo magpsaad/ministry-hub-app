@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { CalendarEventType } from "@/lib/calendar";
+import type { EventAudience } from "@/lib/calendar-types";
 import { calendarBucket, ministryFilePath } from "@/lib/storage";
 import { getActiveMinistry } from "@/lib/ministry-context";
 import { checkUpload, isUuid } from "@/lib/upload-check";
@@ -17,6 +18,12 @@ export type EventInput = {
   start_time: string | null;
   end_time: string | null;
   location: string | null;
+  /** Sent only by people who may set them (the database also checks,
+   * 0111); left out, the event keeps what it has. */
+  take_attendance?: boolean;
+  audience?: EventAudience;
+  audience_levels?: number[];
+  audience_group_ids?: string[];
 };
 
 /** REQUIREMENTS.md §6.8 -- event creation/editing/deletion is open to all
@@ -37,6 +44,14 @@ function eventFields(input: EventInput): EventInput {
     start_time: input.start_time,
     end_time: input.end_time,
     location: input.location,
+    ...(input.take_attendance === undefined
+      ? {}
+      : {
+          take_attendance: input.take_attendance,
+          audience: input.audience ?? "all",
+          audience_levels: input.audience_levels ?? [],
+          audience_group_ids: input.audience_group_ids ?? [],
+        }),
   };
 }
 

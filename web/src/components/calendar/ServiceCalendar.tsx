@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CalendarEvent } from "@/lib/calendar-types";
+import type { CalendarEvent, EventAttendanceOptions } from "@/lib/calendar-types";
 import { EVENT_TYPE_COLORS, contrastText } from "@/lib/calendar-types";
 import { EventForm } from "./EventForm";
 import { useTimezone } from "@/components/TimezoneProvider";
@@ -172,10 +172,12 @@ export function ServiceCalendar({
   events,
   serviceWeekdayLabel,
   serviceWeekday,
+  attendance,
 }: {
   events: CalendarEvent[];
   serviceWeekdayLabel: string;
   serviceWeekday: number;
+  attendance: EventAttendanceOptions;
 }) {
   const timeZone = useTimezone();
   const router = useRouter();
@@ -334,6 +336,7 @@ export function ServiceCalendar({
         <EventForm
           event={editingEvent === "new" ? null : editingEvent}
           defaultDate={newEventDate}
+          attendance={attendance}
           onClose={() => setEditingEvent(null)}
           onSaved={() => router.refresh()}
         />

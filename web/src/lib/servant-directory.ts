@@ -98,6 +98,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
       .from("attendance_records")
       .select("servant_id, service_date")
       .eq("attendee_type", "servant")
+      .is("event_id", null) // service days only (event attendance, 0111)
       .in("servant_id", userIds)
       .order("id")
       .range(from, to);

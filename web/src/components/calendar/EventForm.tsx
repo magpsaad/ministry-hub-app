@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { CalendarEvent, CalendarEventType } from "@/lib/calendar-types";
-import { EVENT_TYPES } from "@/lib/calendar-types";
+import type { CalendarEvent, CalendarEventType, EventAttendanceOptions, EventAudience } from "@/lib/calendar-types";
+import { ATTENDANCE_EVENT_TYPES, EVENT_TYPES } from "@/lib/calendar-types";
 import { calendarAttachmentUrl } from "@/lib/storage";
 import {
   createEventAction,
@@ -14,9 +14,26 @@ import {
 } from "@/app/calendar/actions";
 import { todayInZone } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
+import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
+// Owner-reported (10 Oct 2026): on phones the start/end date and time boxes
+// overlapped and the end one ran off the screen -- the phone's date/time
+// boxes have a built-in minimum width wider than half the form. Letting
+// them shrink (and the grid columns too) keeps each in its half.
+const dateTimeClass = `${inputClass} block min-w-0 appearance-none bg-white`;
+
+const chipClass = (on: boolean) =>
+  `rounded-full border px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-60 ${
+    on ? "border-brand bg-brand text-white" : "border-[#ddd] bg-white text-[#555] hover:bg-[#f5f5f5]"
+  }`;
+
+const AUDIENCES: { value: EventAudience; label: string }[] = [
+  { value: "all", label: "Whole ministry" },
+  { value: "grade", label: "Grade" },
+  { value: "class", label: "Class" },
+];
 
 /** REQUIREMENTS.md §6.8 -- auto-template suggestions for Speaker Session /
  * Group Discussion, only applied when the description is still empty (a
@@ -34,15 +51,18 @@ const DESCRIPTION_TEMPLATES: Partial<Record<CalendarEventType, string>> = {
 export function EventForm({
   event,
   defaultDate,
+  attendance,
   onClose,
   onSaved,
 }: {
   event: CalendarEvent | null;
   defaultDate?: string;
+  attendance: EventAttendanceOptions;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const timeZone = useTimezone();
+  const L = useRoleLabels();
   const [form, setForm] = useState<EventInput>({
     title: event?.title ?? "",
     description: event?.description ?? "",
@@ -53,7 +73,12 @@ export function EventForm({
     start_time: event?.start_time ?? null,
     end_time: event?.end_time ?? null,
     location: event?.location ?? null,
+    take_attendance: event?.take_attendance ?? false,
+    audience: event?.audience ?? "all",
+    audience_levels: event?.audience_levels ?? [],
+    audience_group_ids: event?.audience_group_ids ?? [],
   });
+  const canTakeAttendance = ATTENDANCE_EVENT_TYPES.includes(form.event_type);
   const [attachmentPath, setAttachmentPath] = useState(event?.attachment_url ?? null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pending, startTransition] = useTransition();
@@ -91,6 +116,10 @@ export function EventForm({
     });
   }
 
+  function toggleIn<T>(list: T[], value: T): T[] {
+    return list.includes(value) ? list.filter((x) => x !== value) : [...list, value];
+  }
+
   function handleSave() {
     if (!form.title.trim()) {
       setError("Please enter a title.");
@@ -100,18 +129,32 @@ export function EventForm({
       setError("End date can't be before the start date.");
       return;
     }
+    const takes = !!form.take_attendance && canTakeAttendance;
+    if (attendance.canSet && takes && form.audience === "grade" && (form.audience_levels ?? []).length === 0) {
+      setError("Choose at least one grade.");
+      return;
+    }
+    if (attendance.canSet && takes && form.audience === "class" && (form.audience_group_ids ?? []).length === 0) {
+      setError("Choose at least one class.");
+      return;
+    }
+    // Only people who may set attendance send it (the event otherwise keeps
+    // what it has); off for types that can't take it.
+    const input: EventInput = attendance.canSet
+      ? { ...form, take_attendance: takes }
+      : { ...form, take_attendance: undefined, audience: undefined, audience_levels: undefined, audience_group_ids: undefined };
     setError(null);
     startTransition(async () => {
       let eventId: string | null;
       if (event) {
-        const result = await updateEventAction(event.id, form);
+        const result = await updateEventAction(event.id, input);
         if (result.error) {
           setError(result.error);
           return;
         }
         eventId = event.id;
       } else {
-        const result = await createEventAction(form);
+        const result = await createEventAction(input);
         if (result.error) {
           setError(result.error);
           return;
@@ -136,7 +179,10 @@ export function EventForm({
 
   function handleDelete() {
     if (!event) return;
-    if (!confirm(`Delete "${event.title}"? This cannot be undone.`)) return;
+    const message = event.take_attendance
+      ? `Delete "${event.title}"? Its attendance will be deleted too. This cannot be undone.`
+      : `Delete "${event.title}"? This cannot be undone.`;
+    if (!confirm(message)) return;
     startTransition(async () => {
       const result = await deleteEventAction(event.id);
       if (result.error) {
@@ -202,25 +248,25 @@ export function EventForm({
               className={inputClass}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+            <div className="min-w-0">
               <label className="block font-semibold mb-1">Start Date *</label>
               <input
                 type="date"
                 required
                 value={form.start_date}
                 onChange={(e) => field("start_date", e.target.value)}
-                className={inputClass}
+                className={dateTimeClass}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block font-semibold mb-1">End Date *</label>
               <input
                 type="date"
                 required
                 value={form.end_date}
                 onChange={(e) => field("end_date", e.target.value)}
-                className={inputClass}
+                className={dateTimeClass}
               />
             </div>
           </div>
@@ -234,25 +280,108 @@ export function EventForm({
             All Day
           </label>
           {!form.all_day && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+              <div className="min-w-0">
                 <label className="block font-semibold mb-1">Start Time</label>
                 <input
                   type="time"
                   value={form.start_time ?? ""}
                   onChange={(e) => field("start_time", e.target.value || null)}
-                  className={inputClass}
+                  className={dateTimeClass}
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block font-semibold mb-1">End Time</label>
                 <input
                   type="time"
                   value={form.end_time ?? ""}
                   onChange={(e) => field("end_time", e.target.value || null)}
-                  className={inputClass}
+                  className={dateTimeClass}
                 />
               </div>
+            </div>
+          )}
+          {/* Owner-approved (10 Oct 2026, migration 0111): attendance at
+              Events, Trips and Outings, set by Coordinators. */}
+          {canTakeAttendance && (attendance.canSet || form.take_attendance) && (
+            <div className="border-t border-[#f0f0f0] pt-3">
+              <label className="flex items-center gap-2 font-semibold">
+                <input
+                  type="checkbox"
+                  checked={!!form.take_attendance}
+                  disabled={!attendance.canSet}
+                  onChange={(e) => field("take_attendance", e.target.checked)}
+                  className="accent-brand"
+                />
+                Take attendance
+              </label>
+              <p className="ml-6 text-xs text-[#888]">
+                {L.coordinators} only. QR check-in opens during the event&rsquo;s hours.
+              </p>
+              {form.take_attendance && (
+                <div className="mt-2">
+                  <span className="block font-semibold mb-1">Who it&rsquo;s for</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AUDIENCES.map((a) => (
+                      <button
+                        key={a.value}
+                        type="button"
+                        disabled={!attendance.canSet}
+                        aria-pressed={form.audience === a.value}
+                        onClick={() => field("audience", a.value)}
+                        className={chipClass(form.audience === a.value)}
+                      >
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                  {form.audience === "grade" && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {attendance.grades.map((g) => {
+                        const on = (form.audience_levels ?? []).includes(g.level);
+                        return (
+                          <button
+                            key={g.level}
+                            type="button"
+                            disabled={!attendance.canSet}
+                            aria-pressed={on}
+                            onClick={() => field("audience_levels", toggleIn(form.audience_levels ?? [], g.level))}
+                            className={chipClass(on)}
+                          >
+                            {g.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {form.audience === "class" && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {attendance.classes.map((c) => {
+                        const on = (form.audience_group_ids ?? []).includes(c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            disabled={!attendance.canSet}
+                            aria-pressed={on}
+                            onClick={() => field("audience_group_ids", toggleIn(form.audience_group_ids ?? [], c.id))}
+                            className={chipClass(on)}
+                          >
+                            {c.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="mt-1.5 text-xs text-[#888]">
+                    {form.audience === "all"
+                      ? "Counts toward everyone's Events %."
+                      : form.audience === "grade"
+                        ? "Counts toward the Events % of every class in the chosen grades only."
+                        : "Counts toward the Events % of the chosen classes only."}
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <div>

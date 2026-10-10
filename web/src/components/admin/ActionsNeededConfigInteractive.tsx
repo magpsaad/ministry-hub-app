@@ -322,13 +322,24 @@ export function ActionsNeededConfigInteractive({
             className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           />
         </label>
+        {/* Owner-approved (10 Oct 2026, migration 0111). */}
+        <label className="text-xs text-[#666]">
+          Using the app since
+          <input
+            type="date"
+            value={appSettings.using_app_since ?? ""}
+            onChange={(e) => updateAppField("using_app_since", e.target.value || null)}
+            className="mt-1 block w-full min-w-0 appearance-none rounded-md border border-[#ddd] bg-white px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+          />
+        </label>
       </div>
       <p className="text-xs text-[#666] mb-3">
         Service Day drives self-check-in gating and which dates count toward average attendance %. The Cutoff Time
         and Timezone together control when &ldquo;Today&rdquo; becomes available in the Attendance tab — it opens as
         soon as either someone has checked in, or the cutoff time passes, whichever comes first. The QR check-in
         page only lets people find their name and check in on the Service Day, between Check-in opens and Check-in
-        closes (00:00 to 23:59 = the whole day). All of these take effect immediately, everywhere.
+        closes (00:00 to 23:59 = the whole day). Attendance averages never count from before Using the app since.
+        All of these take effect immediately, everywhere.
       </p>
       <div className="flex items-center gap-3">
         <button

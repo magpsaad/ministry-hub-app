@@ -1,18 +1,15 @@
 "use client";
 
 import { createPortal } from "react-dom";
-
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
+import { formatSheetDate } from "@/lib/attendance-average";
 
 /** Owner-requested: clicking someone's average-attendance-% opens this --
  * every service-weekday date counted in that percentage (their own
  * join_date onward, capped by the configured rolling window), each marked
  * Present/Absent, most recent first. Shared between the youth Attendance
  * tab and the Servant Attendance screen since both compute the same shape
- * of data (see lib/attendance.ts / lib/servant-attendance.ts). */
+ * of data (see lib/attendance.ts / lib/servant-attendance.ts). An event
+ * (migration 0111) shows its name after the date. */
 export function AttendanceHistoryModal({
   fullName,
   title,
@@ -24,10 +21,10 @@ export function AttendanceHistoryModal({
    * screens pass a link back to that youth's record (owner-requested); the
    * Servant Attendance screen leaves it out and shows the plain name. */
   title?: React.ReactNode;
-  dates: { date: string; present: boolean }[];
+  dates: { date: string; present: boolean; label?: string }[];
   onClose: () => void;
 }) {
-  const descending = [...dates].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const descending = [...dates].sort((a, b) => (a.date === b.date ? (a.label ? 1 : -1) : a.date < b.date ? 1 : -1));
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -42,14 +39,17 @@ export function AttendanceHistoryModal({
           </button>
         </div>
         {descending.length === 0 ? (
-          <p className="text-sm text-[#666]">No tracked service dates yet.</p>
+          <p className="text-sm text-[#666]">Nothing counted in this period yet.</p>
         ) : (
           <div className="divide-y divide-[#f0f0f0]">
             {descending.map((d) => (
-              <div key={d.date} className="flex items-center justify-between py-2 text-sm">
-                <span className="text-[#333]">{formatDate(d.date)}</span>
+              <div key={`${d.date}|${d.label ?? ""}`} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0 text-[#333]">
+                  {formatSheetDate(d.date)}
+                  {d.label && ` – ${d.label}`}
+                </span>
                 <span
-                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
                     d.present ? "bg-[#d4edda] text-[#155724]" : "bg-[#f8d7da] text-[#721c24]"
                   }`}
                 >

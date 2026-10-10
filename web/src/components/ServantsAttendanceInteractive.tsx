@@ -2,32 +2,22 @@
 
 import { useMemo, useState, useTransition } from "react";
 import type { ServantAttendanceBundle } from "@/lib/servant-attendance";
-import { resolveAttendanceSince } from "@/lib/attendance-window";
+import { AVG_MODES, averageFor, formatSheetDate } from "@/lib/attendance-average";
 import { setServantAttendanceAction } from "@/app/servants-attendance/actions";
 import { AttendanceHistoryModal } from "@/components/attendance/AttendanceHistoryModal";
-import { useTimezone } from "@/components/TimezoneProvider";
+import { AverageControls, useAvgChoice } from "@/components/attendance/AverageControls";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
-
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
 
 /** REQUIREMENTS.md §6.13 -- same Present/Absent/"Never Attended" pattern as
  * the member Attendance tab (§6.5), applied to servants across the whole
  * ministry (not scoped to one group). */
-export function ServantsAttendanceInteractive({
-  bundle,
-  windowWeeks,
-  dayName,
-}: {
-  bundle: ServantAttendanceBundle;
-  windowWeeks: number | null;
-  dayName: string;
-}) {
+export function ServantsAttendanceInteractive({ bundle, dayName }: { bundle: ServantAttendanceBundle; dayName: string }) {
   const L = useRoleLabels();
-  const timeZone = useTimezone();
   const [attendanceByServant, setAttendanceByServant] = useState(bundle.attendanceByServant);
+  const [eventsByServant, setEventsByServant] = useState(bundle.eventsByServant);
+  // Owner-approved (10 Oct 2026, migration 0111): Service / Events / Both
+  // over a period, remembered on this device.
+  const [avgChoice, setAvgChoice] = useAvgChoice("servants", bundle.todayDate);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
@@ -35,12 +25,27 @@ export function ServantsAttendanceInteractive({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [historyMember, setHistoryMember] = useState<{ id: string; full_name: string } | null>(null);
 
-  function historyFor(servantId: string, joinDate: string | null) {
-    const since = resolveAttendanceSince(joinDate, bundle.windowWeeks, timeZone);
-    if (!since) return [];
-    const presentSet = new Set(attendanceByServant[servantId] ?? []);
-    return bundle.serviceWeekdayDates.filter((d) => d >= since).map((d) => ({ date: d, present: presentSet.has(d) }));
+  // An event counts once it's over or someone was there (incl. marked here).
+  const events = useMemo(() => {
+    const attended = new Set(Object.values(eventsByServant).flat());
+    return bundle.events.map((e) => (e.held || attended.has(e.id) ? { ...e, held: true } : e));
+  }, [bundle.events, eventsByServant]);
+
+  // Their events: the classes they serve, plus whole-ministry ones.
+  function averageOf(m: { id: string; join_date: string | null; groupIds: string[] }) {
+    return averageFor({
+      choice: avgChoice,
+      today: bundle.todayDate,
+      joinDate: m.join_date,
+      usingAppSince: bundle.usingAppSince,
+      groupIds: m.groupIds,
+      serviceDates: bundle.serviceWeekdayDates,
+      presentDates: new Set(attendanceByServant[m.id] ?? []),
+      events,
+      presentEvents: new Set(eventsByServant[m.id] ?? []),
+    });
   }
+  const percentById = new Map(bundle.members.map((m) => [m.id, averageOf(m).percent]));
 
   function handleSort(key: typeof sortKey) {
     if (key === sortKey) {
@@ -51,41 +56,57 @@ export function ServantsAttendanceInteractive({
     }
   }
 
+  // "Date" (owner-approved): service days show the date, events the date
+  // and the event's name. Values: "d:<date>" or "e:<event id>".
   const dateOptions = useMemo(() => {
     const options = bundle.trackedDates.map((d) => ({
-      value: d,
-      label: d === bundle.todayDate ? `${formatDate(d)} (Today)` : formatDate(d),
+      value: `d:${d}`,
+      date: d,
+      label: d === bundle.todayDate ? `${formatSheetDate(d)} (Today)` : formatSheetDate(d),
     }));
     if (bundle.todayAvailable && !bundle.trackedDates.includes(bundle.todayDate)) {
-      options.unshift({ value: bundle.todayDate, label: `${formatDate(bundle.todayDate)} (Today)` });
+      options.push({ value: `d:${bundle.todayDate}`, date: bundle.todayDate, label: `${formatSheetDate(bundle.todayDate)} (Today)` });
     }
-    return options;
-  }, [bundle.trackedDates, bundle.todayDate, bundle.todayAvailable]);
+    for (const e of bundle.events) options.push({ value: `e:${e.id}`, date: e.date, label: `${formatSheetDate(e.date)} – ${e.title}` });
+    return options.sort((a, b) => (a.date === b.date ? a.value.localeCompare(b.value) : a.date < b.date ? 1 : -1));
+  }, [bundle.trackedDates, bundle.todayDate, bundle.todayAvailable, bundle.events]);
 
-  const [date, setDate] = useState(dateOptions[0]?.value ?? bundle.todayDate);
+  const [selected, setSelected] = useState(dateOptions[0]?.value ?? `d:${bundle.todayDate}`);
+  const selectedEvent = selected.startsWith("e:") ? (bundle.events.find((e) => e.id === selected.slice(2)) ?? null) : null;
+  const date = selectedEvent ? selectedEvent.date : selected.slice(2);
+  const selectedLabel = dateOptions.find((o) => o.value === selected)?.label ?? date;
+
+  function isPresent(servantId: string): boolean {
+    return selectedEvent
+      ? (eventsByServant[servantId] ?? []).includes(selectedEvent.id)
+      : (attendanceByServant[servantId] ?? []).includes(date);
+  }
 
   function statusLabel(servantId: string): "Present" | "Absent" | "Never Attended" {
-    const dates = attendanceByServant[servantId] ?? [];
-    if (dates.includes(date)) return "Present";
-    return dates.length > 0 ? "Absent" : "Never Attended";
+    if (isPresent(servantId)) return "Present";
+    const ever = (attendanceByServant[servantId] ?? []).length > 0 || (eventsByServant[servantId] ?? []).length > 0;
+    return ever ? "Absent" : "Never Attended";
   }
 
   function handleToggle(servantId: string, fullName: string) {
-    const isPresent = (attendanceByServant[servantId] ?? []).includes(date);
-    const nextPresent = !isPresent;
-    if (!confirm(`Mark ${fullName} as ${nextPresent ? "present" : "absent"} for ${date}?`)) return;
+    const nextPresent = !isPresent(servantId);
+    if (!confirm(`Mark ${fullName} as ${nextPresent ? "present" : "absent"} for ${selectedLabel}?`)) return;
+    const event = selectedEvent;
     setTogglingId(servantId);
     startTransition(async () => {
-      const result = await setServantAttendanceAction(servantId, date, nextPresent);
+      const result = await setServantAttendanceAction(servantId, date, nextPresent, event?.id ?? null);
       setTogglingId(null);
       if (result.error) {
         alert(result.error);
         return;
       }
-      setAttendanceByServant((prev) => {
-        const dates = prev[servantId] ?? [];
-        return { ...prev, [servantId]: nextPresent ? [...dates, date] : dates.filter((d) => d !== date) };
-      });
+      const key = event ? event.id : date;
+      const update = (prev: Record<string, string[]>) => {
+        const list = prev[servantId] ?? [];
+        return { ...prev, [servantId]: nextPresent ? [...list, key] : list.filter((x) => x !== key) };
+      };
+      if (event) setEventsByServant(update);
+      else setAttendanceByServant(update);
     });
   }
 
@@ -102,7 +123,7 @@ export function ServantsAttendanceInteractive({
           cmp = a.groupLabel.localeCompare(b.groupLabel);
           break;
         case "attendance":
-          cmp = (a.averageAttendance ?? -1) - (b.averageAttendance ?? -1);
+          cmp = (percentById.get(a.id) ?? -1) - (percentById.get(b.id) ?? -1);
           break;
         case "status":
           cmp = statusRank[statusLabel(a.id)] - statusRank[statusLabel(b.id)];
@@ -114,12 +135,12 @@ export function ServantsAttendanceInteractive({
       return dir * (cmp || a.full_name.localeCompare(b.full_name));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bundle.members, search, sortKey, sortDir, date, attendanceByServant]);
+  }, [bundle.members, search, sortKey, sortDir, selected, attendanceByServant, eventsByServant, avgChoice]);
 
   if (dateOptions.length === 0) {
     return (
       <div className="mt-4 rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6 text-center text-sm text-[#666]">
-        No service dates are tracked yet for {L.servantsLower}, and today isn&rsquo;t open for attendance until the configured
+        No dates are tracked yet for {L.servantsLower}, and today isn&rsquo;t open for attendance until the configured
         cutoff time.
       </div>
     );
@@ -128,11 +149,14 @@ export function ServantsAttendanceInteractive({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm font-semibold text-[#333]">Service Date</label>
+        <label htmlFor="servants-attendance-date" className="text-sm font-semibold text-[#333]">
+          Date
+        </label>
         <select
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
+          id="servants-attendance-date"
+          value={selected}
+          onChange={(e) => setSelected(e.target.value)}
+          className="min-w-0 max-w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         >
           {dateOptions.map((d) => (
             <option key={d.value} value={d.value}>
@@ -149,10 +173,11 @@ export function ServantsAttendanceInteractive({
         />
       </div>
 
+      <AverageControls choice={avgChoice} onChange={setAvgChoice} />
+
       <p className="text-xs text-[#666]">
-        {windowWeeks === null
-          ? `Attendance % is calculated over each ${L.servantLower}'s entire history since their Join Date, counting only ${dayName}s.`
-          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
+        Service counts {dayName}s only. Events count the ones for the {L.servantsLower}&rsquo; own classes and the whole
+        ministry. Nothing counts from before someone joined.
       </p>
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden overflow-x-auto">
@@ -160,7 +185,9 @@ export function ServantsAttendanceInteractive({
           <thead>
             <tr className="bg-[#f5f5f5] text-left text-[#666]">
               <SortableHeader label={L.servant} sortKey="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-              <SortableHeader label="Attendance %" sortKey="attendance" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHeader
+                label={AVG_MODES.find((x) => x.value === avgChoice.mode)?.column ?? "Attendance %"}
+                sortKey="attendance" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
               <SortableHeader label="Status" sortKey="status" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
               {/* Owner-requested (10 Oct 2026): Group last. */}
               <SortableHeader label="Group" sortKey="group" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
@@ -169,11 +196,12 @@ export function ServantsAttendanceInteractive({
           <tbody className="divide-y divide-[#f0f0f0]">
             {visible.map((m) => {
               const status = statusLabel(m.id);
+              const percent = percentById.get(m.id) ?? null;
               return (
                 <tr key={m.id}>
                   <td className="px-4 py-2.5 font-medium text-[#333]">{m.full_name}</td>
                   <td className="px-4 py-2.5 text-[#666]">
-                    {m.averageAttendance === null ? (
+                    {percent === null ? (
                       "N/A"
                     ) : (
                       <button
@@ -181,7 +209,7 @@ export function ServantsAttendanceInteractive({
                         onClick={() => setHistoryMember({ id: m.id, full_name: m.full_name })}
                         className="text-brand font-semibold hover:underline"
                       >
-                        {m.averageAttendance}%
+                        {percent}%
                       </button>
                     )}
                   </td>
@@ -225,7 +253,10 @@ export function ServantsAttendanceInteractive({
       {historyMember && (
         <AttendanceHistoryModal
           fullName={historyMember.full_name}
-          dates={historyFor(historyMember.id, bundle.members.find((m) => m.id === historyMember.id)?.join_date ?? null)}
+          dates={(() => {
+            const m = bundle.members.find((x) => x.id === historyMember.id);
+            return m ? averageOf(m).rows : [];
+          })()}
           onClose={() => setHistoryMember(null)}
         />
       )}

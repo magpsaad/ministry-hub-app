@@ -19,6 +19,7 @@ export async function getMemberPresentDatesAction(memberId: string): Promise<str
     .from("attendance_records")
     .select("service_date")
     .eq("attendee_type", "member")
+    .is("event_id", null) // service days only (event attendance, 0111)
     .eq("member_id", memberId);
   return (data ?? []).map((r) => r.service_date as string);
 }

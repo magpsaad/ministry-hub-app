@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAppSettings, getAttendanceWindowSettings, isOnServiceWeekday, resolveAttendanceSince } from "@/lib/app-settings";
+import { getAppSettings, getAttendanceWindowSettings, isOnServiceWeekday } from "@/lib/app-settings";
+import type { AttendanceEvent } from "@/lib/attendance-average";
 import { nowInZone } from "@/lib/timezone";
 import { fetchAllRows } from "@/lib/pagination";
 
@@ -11,20 +12,23 @@ export type AttendanceMemberBase = {
   assigned_servant_id: string | null;
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
   join_date: string | null;
-  avgAttendancePercent: number | null;
 };
 
 export type AttendanceBundle = {
   members: AttendanceMemberBase[];
-  /** member id -> every service_date they were present for */
+  /** member id -> every service day they were present for */
   attendanceByMember: Record<string, string[]>;
-  trackedDates: string[]; // descending, most recent first
-  /** Ascending, service-weekday-only dates -- the same set the average-%
-   * calculation below uses, and what the click-to-view weekly-breakdown
-   * modal (owner-requested) lists per person, floored at their own
-   * join_date and the configured rolling window client-side. */
+  /** member id -> every attendance event they were at (migration 0111) */
+  eventsByMember: Record<string, string[]>;
+  /** Attendance-taking events for these groups that have started,
+   * oldest first. */
+  events: AttendanceEvent[];
+  trackedDates: string[]; // service days, descending, most recent first
+  /** Ascending, service-weekday-only dates -- the service days the
+   * average % counts (lib/attendance-average.ts, worked out in the browser
+   * for the chosen switch and period). */
   serviceWeekdayDates: string[];
-  windowWeeks: number | null;
+  usingAppSince: string | null;
   todayDate: string;
   todayAvailable: boolean;
 };
@@ -57,7 +61,8 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
   // its sibling tabs, this one included, all fetch every active member the
   // same unpaged way -- see lib/members.ts's getGroupMembers for the full
   // story). `id` breaks ties on full_name so paging can't skip/duplicate a row.
-  const [settings, memberRows, windowSettings, attendance] = await Promise.all([
+  const groupIds = Array.isArray(groupId) ? groupId : [groupId];
+  const [settings, memberRows, windowSettings, attendance, { data: eventRows }] = await Promise.all([
     getAppSettings(),
     fetchAllRows((from, to) => {
       let q = supabase
@@ -79,7 +84,7 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
     fetchAllRows((from, to) => {
       let q = supabase
         .from("attendance_records")
-        .select("member_id, service_date, member:members!inner(group_id, status)")
+        .select("member_id, service_date, event_id, member:members!inner(group_id, status)")
         .eq("attendee_type", "member")
         .eq("member.status", "active")
         .order("id")
@@ -87,6 +92,11 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
       q = Array.isArray(groupId) ? q.in("member.group_id", groupId) : q.eq("member.group_id", groupId);
       return q;
     }),
+    supabase
+      .from("service_calendar_events")
+      .select("id, title, start_date, end_date, audience, audience_group_ids")
+      .eq("take_attendance", true)
+      .order("start_date"),
   ]);
 
   const cutoff = settings.same_day_cutoff_time;
@@ -99,20 +109,39 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
     is_visitor: m.is_visitor,
     assigned_servant_id: m.assigned_servant_id,
     join_date: m.join_date,
-    avgAttendancePercent: null,
     proximity: ((m.university as unknown as { proximity?: string } | null)?.proximity ??
       "Unknown") as AttendanceMemberBase["proximity"],
   }));
 
   const attendanceByMember: Record<string, string[]> = {};
+  const eventsByMember: Record<string, string[]> = {};
   const trackedDatesSet = new Set<string>();
+  const eventsWithRows = new Set<string>();
 
   if (members.length > 0) {
     for (const row of attendance) {
+      if (row.event_id) {
+        (eventsByMember[row.member_id] ??= []).push(row.event_id);
+        eventsWithRows.add(row.event_id);
+        continue;
+      }
       (attendanceByMember[row.member_id] ??= []).push(row.service_date);
       trackedDatesSet.add(row.service_date);
     }
   }
+
+  // Events for these groups (or the whole ministry) that have started.
+  const events: AttendanceEvent[] = (eventRows ?? [])
+    .filter((e) => e.start_date <= todayDate)
+    .filter((e) => e.audience === "all" || (e.audience_group_ids as string[]).some((g) => groupIds.includes(g)))
+    .map((e) => ({
+      id: e.id,
+      date: e.start_date,
+      endDate: e.end_date,
+      title: e.title,
+      groupIds: e.audience === "all" ? null : (e.audience_group_ids as string[]),
+      held: e.end_date < todayDate || eventsWithRows.has(e.id),
+    }));
 
   const trackedDates = Array.from(trackedDatesSet).sort((a, b) => (a < b ? 1 : -1));
   const todayHasRows = trackedDatesSet.has(todayDate);
@@ -129,24 +158,14 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
     .filter((d) => isOnServiceWeekday(d, windowSettings.service_weekday))
     .sort();
 
-  const membersWithAttendance = members.map((m) => {
-    const since = resolveAttendanceSince(m.join_date, windowSettings.youth_attendance_window_weeks, windowSettings.timezone);
-    if (!since) return m;
-    const trackedInWindow = serviceWeekdayDates.filter((d) => d >= since);
-    const presentSet = new Set(attendanceByMember[m.id] ?? []);
-    const avgAttendancePercent =
-      trackedInWindow.length > 0
-        ? Math.round((trackedInWindow.filter((d) => presentSet.has(d)).length / trackedInWindow.length) * 100)
-        : null;
-    return { ...m, avgAttendancePercent };
-  });
-
   return {
-    members: membersWithAttendance,
+    members,
     attendanceByMember,
+    eventsByMember,
+    events,
     trackedDates,
     serviceWeekdayDates,
-    windowWeeks: windowSettings.youth_attendance_window_weeks,
+    usingAppSince: settings.using_app_since,
     todayDate,
     todayAvailable: todayHasRows || cutoffPassed,
   };

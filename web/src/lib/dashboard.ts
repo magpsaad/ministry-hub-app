@@ -74,6 +74,7 @@ export const getLastServiceDate = cache(async (): Promise<string | null> => {
     .from("attendance_records")
     .select("service_date")
     .eq("attendee_type", "member")
+    .is("event_id", null) // service days only (event attendance, 0111)
     .order("service_date", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -126,6 +127,7 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
             .from("attendance_records")
             .select("member_id")
             .eq("attendee_type", "member")
+            .is("event_id", null) // service days only (event attendance, 0111)
             .in("member_id", memberIds)
             .range(from, to),
         ),
@@ -133,6 +135,7 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
           .from("attendance_records")
           .select("member_id")
           .eq("attendee_type", "member")
+          .is("event_id", null) // service days only (event attendance, 0111)
           .eq("service_date", latestServiceDate)
           .in("member_id", memberIds),
       ]);

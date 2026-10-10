@@ -77,6 +77,7 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
         .from("attendance_records")
         .select("member_id, service_date")
         .eq("attendee_type", "member")
+        .is("event_id", null) // service days only (event attendance, 0111)
         .in("member_id", memberIds)
         .order("service_date", { ascending: false })
         .order("id")

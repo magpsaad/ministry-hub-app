@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAppSettings, weekdayName } from "@/lib/app-settings";
 import { getCalendarEvents } from "@/lib/calendar";
+import { getAccessSummary } from "@/lib/roles";
+import { getAccessibleGroups } from "@/lib/groups";
+import { sectionsFor } from "@/lib/coordinator-scopes";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
@@ -18,7 +21,23 @@ export default async function ServiceCalendarPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [settings, events] = await Promise.all([getAppSettings(), getCalendarEvents()]);
+  const [settings, events, access, groups] = await Promise.all([
+    getAppSettings(),
+    getCalendarEvents(),
+    getAccessSummary(user.id),
+    getAccessibleGroups(),
+  ]);
+  // Owner-approved (10 Oct 2026, migration 0111): Coordinators choose to
+  // take attendance at an event, for the whole ministry, grades or classes.
+  const regular = groups.filter((g) => g.kind === "regular");
+  const attendance = {
+    canSet: access.isAdmin || access.isCoordinator,
+    grades: sectionsFor(regular, "grade", settings.ladder_position_label, settings.level_number_offset).map((s) => ({
+      level: s.ladder_position,
+      label: s.label,
+    })),
+    classes: regular.map((g) => ({ id: g.id, name: g.name })),
+  };
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -47,6 +66,7 @@ export default async function ServiceCalendarPage() {
         events={events}
         serviceWeekday={settings.service_weekday}
         serviceWeekdayLabel={`${weekdayName(settings.service_weekday)}s`}
+        attendance={attendance}
       />
     </div>
   );

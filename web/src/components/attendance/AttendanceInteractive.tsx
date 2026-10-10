@@ -5,13 +5,13 @@ import type { AttendanceBundle } from "@/lib/attendance";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
 import type { GroupSummary } from "@/lib/groups";
-import { resolveAttendanceSince } from "@/lib/attendance-window";
+import { AVG_MODES, averageFor, eventIsFor, formatSheetDate } from "@/lib/attendance-average";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { useCohortFilter } from "@/components/CohortFilter";
 import { MemberDetailLink } from "@/components/members/MemberDetailLink";
 import { setAttendanceAction } from "@/app/g/[groupId]/attendance/actions";
 import { AttendanceHistoryModal } from "./AttendanceHistoryModal";
-import { useTimezone } from "@/components/TimezoneProvider";
+import { AverageControls, useAvgChoice } from "./AverageControls";
 
 /** What the Member Detail modal needs, so the attendance-history popup's
  * name can link back to the youth's record (owner-requested) -- the same
@@ -45,11 +45,6 @@ const STATUS_RANK: Record<"Present" | "Absent" | "Never Attended", number> = {
   "Never Attended": 2,
 };
 
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
-
 type SortKey = "name" | "proximity" | "status";
 
 /** REQUIREMENTS.md §6.5 -- date picker + Present/Absent/"Never Attended"
@@ -74,13 +69,16 @@ export function AttendanceInteractive({
   currentUserId: string;
   memberRecord: AttendanceMemberRecordContext;
 }) {
-  const timeZone = useTimezone();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   // Combined view: the header's cohort checkboxes (CohortFilter). With a
   // single group there's nothing to filter (memberRecord.groups is empty).
   const cohortGroupIds = useMemo(() => memberRecord.groups.map((g) => g.id), [memberRecord.groups]);
   const cohort = useCohortFilter(cohortGroupIds);
   const [attendanceByMember, setAttendanceByMember] = useState(bundle.attendanceByMember);
+  const [eventsByMember, setEventsByMember] = useState(bundle.eventsByMember);
+  // Owner-approved (10 Oct 2026, migration 0111): Service / Events / Both
+  // over a period, remembered on this device.
+  const [avgChoice, setAvgChoice] = useAvgChoice("youth", bundle.todayDate);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
@@ -95,51 +93,59 @@ export function AttendanceInteractive({
     return memberRecord.canEditAll || editableGroups.has(groupIdOfMember);
   }
 
-  // Owner-reported (QA S-5): the % used to wait for the server's refresh
-  // after a change. Recomputed here from the same inputs and the same
-  // formula the server uses (lib/attendance.ts): present service-day dates
-  // over tracked service-day dates since the later of join date and the
-  // rolling window. Marking someone present earlier than their join date
-  // moves their join date back, as the database does.
-  function avgPercentFor(memberId: string, joinDate: string | null, serverPercent: number | null): number | null {
-    // Untouched since the page loaded (same list object the server sent, or
-    // still none at all): show the server's own figure.
-    if (attendanceByMember[memberId] === bundle.attendanceByMember[memberId]) return serverPercent;
-    const dates = attendanceByMember[memberId] ?? [];
-    const earliest = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
-    const effectiveJoin = joinDate && earliest ? (earliest < joinDate ? earliest : joinDate) : (joinDate ?? earliest);
-    const since = resolveAttendanceSince(effectiveJoin, bundle.windowWeeks, timeZone);
-    if (!since) return null;
-    const tracked = bundle.serviceWeekdayDates.filter((d) => d >= since);
-    if (tracked.length === 0) return null;
-    const present = new Set(dates);
-    return Math.round((tracked.filter((d) => present.has(d)).length / tracked.length) * 100);
+  // An event counts toward Events % once it's over or someone was there --
+  // including anyone marked here since the page loaded.
+  const events = useMemo(() => {
+    const attended = new Set(Object.values(eventsByMember).flat());
+    return bundle.events.map((e) => (e.held || attended.has(e.id) ? { ...e, held: true } : e));
+  }, [bundle.events, eventsByMember]);
+
+  // The % for the chosen switch and period (lib/attendance-average.ts),
+  // worked out here so a change shows straight away (owner-reported, QA S-5).
+  function averageOf(m: { id: string; group_id: string; join_date: string | null }) {
+    return averageFor({
+      choice: avgChoice,
+      today: bundle.todayDate,
+      joinDate: m.join_date,
+      usingAppSince: bundle.usingAppSince,
+      groupIds: [m.group_id],
+      serviceDates: bundle.serviceWeekdayDates,
+      presentDates: new Set(attendanceByMember[m.id] ?? []),
+      events,
+      presentEvents: new Set(eventsByMember[m.id] ?? []),
+    });
   }
 
-  function historyFor(memberId: string, joinDate: string | null) {
-    const since = resolveAttendanceSince(joinDate, bundle.windowWeeks, timeZone);
-    if (!since) return [];
-    const presentSet = new Set(attendanceByMember[memberId] ?? []);
-    return bundle.serviceWeekdayDates.filter((d) => d >= since).map((d) => ({ date: d, present: presentSet.has(d) }));
-  }
-
+  // "Date" (owner-approved): service days show the date, events the date
+  // and the event's name. Values: "d:<date>" or "e:<event id>".
   const dateOptions = useMemo(() => {
     const options = bundle.trackedDates.map((d) => ({
-      value: d,
-      label: d === bundle.todayDate ? `${formatDate(d)} (Today)` : formatDate(d),
+      value: `d:${d}`,
+      date: d,
+      label: d === bundle.todayDate ? `${formatSheetDate(d)} (Today)` : formatSheetDate(d),
     }));
     if (bundle.todayAvailable && !bundle.trackedDates.includes(bundle.todayDate)) {
-      options.unshift({ value: bundle.todayDate, label: `${formatDate(bundle.todayDate)} (Today)` });
+      options.push({ value: `d:${bundle.todayDate}`, date: bundle.todayDate, label: `${formatSheetDate(bundle.todayDate)} (Today)` });
     }
-    return options;
-  }, [bundle.trackedDates, bundle.todayDate, bundle.todayAvailable]);
+    for (const e of bundle.events) options.push({ value: `e:${e.id}`, date: e.date, label: `${formatSheetDate(e.date)} – ${e.title}` });
+    return options.sort((a, b) => (a.date === b.date ? a.value.localeCompare(b.value) : a.date < b.date ? 1 : -1));
+  }, [bundle.trackedDates, bundle.todayDate, bundle.todayAvailable, bundle.events]);
 
-  const [date, setDate] = useState(dateOptions[0]?.value ?? bundle.todayDate);
+  const [selected, setSelected] = useState(dateOptions[0]?.value ?? `d:${bundle.todayDate}`);
+  const selectedEvent = selected.startsWith("e:") ? (bundle.events.find((e) => e.id === selected.slice(2)) ?? null) : null;
+  const date = selectedEvent ? selectedEvent.date : selected.slice(2);
+  const selectedLabel = dateOptions.find((o) => o.value === selected)?.label ?? date;
+
+  function isPresent(memberId: string): boolean {
+    return selectedEvent
+      ? (eventsByMember[memberId] ?? []).includes(selectedEvent.id)
+      : (attendanceByMember[memberId] ?? []).includes(date);
+  }
 
   function statusLabel(memberId: string): "Present" | "Absent" | "Never Attended" {
-    const dates = attendanceByMember[memberId] ?? [];
-    if (dates.includes(date)) return "Present";
-    return dates.length > 0 ? "Absent" : "Never Attended";
+    if (isPresent(memberId)) return "Present";
+    const ever = (attendanceByMember[memberId] ?? []).length > 0 || (eventsByMember[memberId] ?? []).length > 0;
+    return ever ? "Absent" : "Never Attended";
   }
 
   function handleSort(key: SortKey) {
@@ -151,24 +157,24 @@ export function AttendanceInteractive({
   }
 
   function handleToggle(memberId: string, fullName: string) {
-    const isPresent = (attendanceByMember[memberId] ?? []).includes(date);
-    const nextPresent = !isPresent;
-    if (!confirm(`Mark ${fullName} as ${nextPresent ? "present" : "absent"} for ${date}?`)) return;
+    const nextPresent = !isPresent(memberId);
+    if (!confirm(`Mark ${fullName} as ${nextPresent ? "present" : "absent"} for ${selectedLabel}?`)) return;
+    const event = selectedEvent;
     setTogglingId(memberId);
     startTransition(async () => {
-      const result = await setAttendanceAction(memberId, groupId, date, nextPresent);
+      const result = await setAttendanceAction(memberId, groupId, date, nextPresent, event?.id ?? null);
       setTogglingId(null);
       if (result.error) {
         alert(result.error);
         return;
       }
-      setAttendanceByMember((prev) => {
-        const dates = prev[memberId] ?? [];
-        return {
-          ...prev,
-          [memberId]: nextPresent ? [...dates, date] : dates.filter((d) => d !== date),
-        };
-      });
+      const key = event ? event.id : date;
+      const update = (prev: Record<string, string[]>) => {
+        const list = prev[memberId] ?? [];
+        return { ...prev, [memberId]: nextPresent ? [...list, key] : list.filter((x) => x !== key) };
+      };
+      if (event) setEventsByMember(update);
+      else setAttendanceByMember(update);
     });
   }
 
@@ -177,6 +183,8 @@ export function AttendanceInteractive({
       hydrated && myAssignedOnly ? bundle.members.filter((m) => m.assigned_servant_id === currentUserId) : bundle.members;
     if (cohort.isFiltered) filtered = filtered.filter((m) => cohort.matches(m.group_id));
     if (excludeVisitors) filtered = filtered.filter((m) => !m.is_visitor);
+    // An event lists only the classes it's for (and anyone already marked).
+    if (selectedEvent) filtered = filtered.filter((m) => eventIsFor(selectedEvent, [m.group_id]) || isPresent(m.id));
     const sorted = [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
@@ -186,7 +194,7 @@ export function AttendanceInteractive({
     });
     return sorted;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bundle.members, hydrated, myAssignedOnly, cohort, excludeVisitors, currentUserId, sortKey, sortDesc, date, attendanceByMember]);
+  }, [bundle.members, hydrated, myAssignedOnly, cohort, excludeVisitors, currentUserId, sortKey, sortDesc, selected, attendanceByMember, eventsByMember]);
 
   function sortIndicator(key: SortKey) {
     return sortKey === key ? (sortDesc ? " ▼" : " ▲") : "";
@@ -195,7 +203,7 @@ export function AttendanceInteractive({
   if (dateOptions.length === 0) {
     return (
       <div className="mt-4 rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6 text-center text-sm text-[#666]">
-        No service dates are tracked yet for this group, and today isn&rsquo;t open for attendance until the
+        No dates are tracked yet for this group, and today isn&rsquo;t open for attendance until the
         configured cutoff time (or until someone checks in via the QR code).
       </div>
     );
@@ -204,11 +212,14 @@ export function AttendanceInteractive({
   return (
     <div className="mt-4 space-y-4">
       <div className="flex items-center gap-2">
-        <label className="text-sm font-semibold text-[#333]">Service Date</label>
+        <label htmlFor="attendance-date" className="text-sm font-semibold text-[#333]">
+          Date
+        </label>
         <select
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
+          id="attendance-date"
+          value={selected}
+          onChange={(e) => setSelected(e.target.value)}
+          className="min-w-0 max-w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         >
           {dateOptions.map((d) => (
             <option key={d.value} value={d.value}>
@@ -216,11 +227,12 @@ export function AttendanceInteractive({
             </option>
           ))}
         </select>
-        <label className="ml-auto flex items-center gap-1.5 text-sm text-[#333]">
+        <label className="ml-auto flex shrink-0 items-center gap-1.5 text-sm text-[#333]">
           <input type="checkbox" checked={excludeVisitors} onChange={(e) => setExcludeVisitors(e.target.checked)} />
           Exclude visitors
         </label>
       </div>
+      <AverageControls choice={avgChoice} onChange={setAvgChoice} />
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
@@ -240,7 +252,7 @@ export function AttendanceInteractive({
                   </button>
                 </th>
               )}
-              <th className="px-4 py-2">Attendance %</th>
+              <th className="px-4 py-2 whitespace-nowrap">{AVG_MODES.find((x) => x.value === avgChoice.mode)?.column}</th>
               <th className="px-4 py-2 text-right">
                 <button type="button" onClick={() => handleSort("status")} className="font-semibold hover:underline">
                   Status
@@ -252,7 +264,7 @@ export function AttendanceInteractive({
           <tbody className="divide-y divide-[#f0f0f0]">
             {visible.map((m) => {
               const status = statusLabel(m.id);
-              const avgPercent = avgPercentFor(m.id, m.join_date, m.avgAttendancePercent);
+              const avgPercent = averageOf(m).percent;
               const statusClass =
                 status === "Present"
                   ? "bg-[#d4edda] text-[#155724]"
@@ -366,7 +378,10 @@ export function AttendanceInteractive({
               {historyMember.full_name}
             </MemberDetailLink>
           }
-          dates={historyFor(historyMember.id, bundle.members.find((m) => m.id === historyMember.id)?.join_date ?? null)}
+          dates={(() => {
+            const m = bundle.members.find((x) => x.id === historyMember.id);
+            return m ? averageOf(m).rows : [];
+          })()}
           onClose={() => setHistoryMember(null)}
         />
       )}

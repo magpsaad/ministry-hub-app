@@ -13,6 +13,27 @@ export type CalendarEvent = {
   location: string | null;
   attachment_url: string | null;
   created_by: string;
+  /** Migration 0111 -- attendance is taken (Events, Trips, Outings), and
+   * for whom: the whole ministry, grades (levels) or chosen classes. The
+   * classes are kept in audience_group_ids either way. */
+  take_attendance: boolean;
+  audience: EventAudience;
+  audience_levels: number[];
+  audience_group_ids: string[];
+};
+
+export type EventAudience = "all" | "grade" | "class";
+
+/** Only these types can take attendance (owner-approved 10 Oct 2026). */
+export const ATTENDANCE_EVENT_TYPES: CalendarEventType[] = ["Event", "Trip", "Outing"];
+
+/** What the event form needs for "Take attendance": whether this person
+ * may set it (Coordinators, General Coordinators, Admins) and the grades
+ * and classes to choose from. */
+export type EventAttendanceOptions = {
+  canSet: boolean;
+  grades: { level: number; label: string }[];
+  classes: { id: string; name: string }[];
 };
 
 /** REQUIREMENTS.md §6.8 -- exact colors pulled from the current app's own

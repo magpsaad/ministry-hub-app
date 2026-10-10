@@ -335,6 +335,9 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   if (input.idle_lock_minutes !== null && !(LOCK_MINUTE_CHOICES as readonly number[]).includes(input.idle_lock_minutes)) {
     return { error: "Choose how many minutes before the screen locks, or Off." };
   }
+  if (input.using_app_since !== null && !/^\d{4}-\d{2}-\d{2}$/.test(input.using_app_since)) {
+    return { error: "Choose the date the ministry started using the app." };
+  }
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: input.timezone });
   } catch {
@@ -374,6 +377,7 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     idle_lock_minutes: input.idle_lock_minutes,
     message_oversight: input.message_oversight,
     coordinator_scope: input.coordinator_scope,
+    using_app_since: input.using_app_since,
   };
   // Saved by this ministry's code (the settings table has one row per
   // ministry now, MULTI_TENANT_PLAN.md §2.5 #1); the security rule would

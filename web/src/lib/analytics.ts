@@ -64,6 +64,7 @@ export async function getAnalyticsRawData(groupId: string | string[]): Promise<A
         .from("attendance_records")
         .select("member_id, service_date, member:members!inner(group_id, status)")
         .eq("attendee_type", "member")
+        .is("event_id", null) // service days only (event attendance, 0111)
         .eq("member.status", "active")
         .order("id")
         .range(from, to);
