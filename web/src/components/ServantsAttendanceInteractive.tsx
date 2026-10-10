@@ -201,7 +201,13 @@ export function ServantsAttendanceInteractive({
                       {status}
                     </button>
                   </td>
-                  <td className="px-4 py-2.5 text-[#666]">{m.groupLabel}</td>
+                  {/* Owner-reported (10 Oct 2026): long HSY class names wrapped over
+                      3-4 lines; at least this wide, they take two at most. (The
+                      width is on an inner block: browsers ignore min-width on a
+                      table cell.) */}
+                  <td className="px-4 py-2.5 text-[#666]">
+                    <div className="min-w-[11rem]">{m.groupLabel}</div>
+                  </td>
                 </tr>
               );
             })}
