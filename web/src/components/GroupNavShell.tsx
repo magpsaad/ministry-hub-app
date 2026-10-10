@@ -11,6 +11,7 @@ import { useMyAssigned } from "@/components/MyAssignedContext";
 import { CohortFilterBar } from "@/components/CohortFilter";
 import type { CohortFilterOption } from "@/lib/group-names";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
+import { HomeLink } from "@/components/HomeLink";
 
 const TABS = (memberLabel: string) => [
   { slug: "dashboard", label: "Dashboard" },
@@ -77,10 +78,10 @@ export function GroupNavShell({
               : "bg-gradient-to-br from-brand to-brand-light"
           }`}
         >
-          <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+          <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
             <AppLogo logoUrl={logoUrl} title={appTitleShort} size={32} circular={false} />
             <h1 className="text-2xl font-bold">{appTitleShort}</h1>
-          </Link>
+          </HomeLink>
           <p className="mt-1 text-sm opacity-90">{groupName}</p>
           {verse && (
             <button

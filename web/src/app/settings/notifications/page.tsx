@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppLogo } from "@/components/AppLogo";
@@ -13,6 +12,7 @@ import { getRoleLabels } from "@/lib/role-labels-server";
 import { relabelRoleWords } from "@/lib/role-labels";
 import { NotificationsCard } from "./NotificationsCard";
 import { NotificationTypesCard, type NotificationTypeRow } from "./NotificationTypesCard";
+import { HomeLink } from "@/components/HomeLink";
 
 /** My Settings -> Notifications (owner-requested 6 Oct 2026, migration
  * 0094): this person's own choices, as opposed to Ministry Settings. This
@@ -52,10 +52,10 @@ export default async function NotificationSettingsPage() {
         <div className="absolute top-2.5 right-4">
           <RefreshButton />
         </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
-        </Link>
+        </HomeLink>
         <p className="mt-1 text-sm opacity-90">Notifications</p>
         <HeaderWordmark />
       </header>

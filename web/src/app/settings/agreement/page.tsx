@@ -10,6 +10,7 @@ import { CARD, PRIMARY_BUTTON } from "@/app/security/shared";
 import { getBranding } from "@/lib/branding";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import { AGREEMENT_PATH, firstGateRow } from "@/lib/agreement";
+import { HomeLink } from "@/components/HomeLink";
 
 /** My Settings -> Confidentiality Agreement (owner-requested 6 Oct 2026;
  * moved here from Account Security -- it isn't a security feature): whether
@@ -47,12 +48,12 @@ export default async function AgreementSettingsPage() {
         <div className="absolute top-2.5 right-4">
           <RefreshButton />
         </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <MinistryHubLogo size={38} onDark />
           <h1>
             <MinistryHubName light className="h-6" />
           </h1>
-        </Link>
+        </HomeLink>
         <p className="mt-1 text-sm opacity-90">Confidentiality Agreement</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">

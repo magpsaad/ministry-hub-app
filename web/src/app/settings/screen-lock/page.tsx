@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppLogo } from "@/components/AppLogo";
@@ -11,6 +10,7 @@ import { getAppSettings } from "@/lib/app-settings";
 import { getAddressContext } from "@/lib/ministry-context";
 import { relyingParty } from "@/lib/screen-lock-server";
 import { FaceIdCard, type UnlockDeviceRow } from "./FaceIdCard";
+import { HomeLink } from "@/components/HomeLink";
 
 /** My Settings -> Screen Lock & Face ID (owner-requested 6 Oct 2026):
  * this ministry's screen lock (set by its Admins in Ministry Settings) and
@@ -48,10 +48,10 @@ export default async function ScreenLockSettingsPage() {
         <div className="absolute top-2.5 right-4">
           <RefreshButton />
         </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
-        </Link>
+        </HomeLink>
         <p className="mt-1 text-sm opacity-90">Screen Lock &amp; Face ID</p>
         <HeaderWordmark />
       </header>

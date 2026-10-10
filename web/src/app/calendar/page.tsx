@@ -12,6 +12,7 @@ import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { ServiceCalendar } from "@/components/calendar/ServiceCalendar";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
+import { HomeLink } from "@/components/HomeLink";
 
 /** REQUIREMENTS.md §6.8 -- the Service Calendar, one ministry-wide calendar
  * (no group). Owner-requested: an ordinary page reached from the side
@@ -51,10 +52,10 @@ export default async function ServiceCalendarPage() {
         <div className="absolute top-2.5 right-4">
           <RefreshButton />
         </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
-        </Link>
+        </HomeLink>
         <p className="mt-1 text-sm opacity-90">Service Calendar</p>
         <HeaderWordmark />
       </header>

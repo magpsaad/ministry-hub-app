@@ -18,4 +18,9 @@ export type MenuData = {
   /** The person's default cohort (where `/` lands them), shown on the
    * menu's cohort row; null when they have none. */
   defaultCohortId: string | null;
+  /** For the header logo (HomeLink), so it goes straight to the Dashboard
+   * `/` would land on, without the stop at `/`: the cohorts the last-opened
+   * one counts from, and where to go when it isn't one of them. */
+  servingCohortIds: string[];
+  fallbackCohortId: string | null;
 };

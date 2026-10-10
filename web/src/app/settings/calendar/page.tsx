@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -10,6 +9,7 @@ import { RefreshButton } from "@/components/RefreshButton";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAddressContext } from "@/lib/ministry-context";
 import { CalendarFeedCard } from "./CalendarFeedCard";
+import { HomeLink } from "@/components/HomeLink";
 
 /** My Settings -> Calendar Sync (owner-approved 9 Oct 2026, migration
  * 0107): a private link that puts this ministry's Service Calendar in my
@@ -39,10 +39,10 @@ export default async function CalendarSyncPage() {
         <div className="absolute top-2.5 right-4">
           <RefreshButton />
         </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
-        </Link>
+        </HomeLink>
         <p className="mt-1 text-sm opacity-90">Calendar Sync</p>
         <HeaderWordmark />
       </header>

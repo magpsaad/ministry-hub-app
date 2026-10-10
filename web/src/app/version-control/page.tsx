@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getReleases } from "@/lib/releases";
@@ -7,6 +6,7 @@ import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { VersionControlInteractive } from "@/components/VersionControlInteractive";
+import { HomeLink } from "@/components/HomeLink";
 
 /** Owner-requested: Servant Corner, viewable by every app user. Read-only
  * in every ministry -- release notes are church-wide and are added/edited
@@ -27,14 +27,14 @@ export default async function VersionControlPage() {
         <div className="absolute top-2.5 right-4">
           <RefreshButton />
         </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           {/* Owner-requested (3 Oct 2026): the release notes are about the
               app itself, so its own logo and name head this page. */}
           <MinistryHubLogo size={38} onDark />
           <h1>
             <MinistryHubName light className="h-6" />
           </h1>
-        </Link>
+        </HomeLink>
         <p className="mt-1 text-sm opacity-90">Release History</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">

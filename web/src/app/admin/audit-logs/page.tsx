@@ -12,6 +12,7 @@ import { AuditLogsInteractive } from "@/components/admin/AuditLogsInteractive";
 import { DeviceSetupTable, type DeviceSetupRow } from "@/components/admin/DeviceSetupTable";
 import { createClient } from "@/lib/supabase/server";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
+import { HomeLink } from "@/components/HomeLink";
 
 /** REQUIREMENTS.md §6.14/§6.1/§3.11 -- Admin Corner, Admins only. Two views
  * (owner-approved 10 Oct 2026, migration 0110): Activity (the log) and
@@ -55,10 +56,10 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Pr
         <div className="absolute top-2.5 right-4">
           <RefreshButton />
         </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
-        </Link>
+        </HomeLink>
         <p className="mt-1 text-sm opacity-90">Audit Logs</p>
         <HeaderWordmark />
       </header>

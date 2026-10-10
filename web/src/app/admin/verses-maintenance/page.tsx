@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
@@ -10,6 +9,7 @@ import { BackButton } from "@/components/BackButton";
 import { RefreshButton } from "@/components/RefreshButton";
 import { VersesMaintenanceInteractive } from "@/components/admin/VersesMaintenanceInteractive";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
+import { HomeLink } from "@/components/HomeLink";
 
 /** REQUIREMENTS.md §6.14/§6.1/§3.13 -- Admin Corner, Admins only. */
 export default async function VersesMaintenancePage() {
@@ -37,10 +37,10 @@ export default async function VersesMaintenancePage() {
         <div className="absolute top-2.5 right-4">
           <RefreshButton />
         </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
-        </Link>
+        </HomeLink>
         <p className="mt-1 text-sm opacity-90">Verses Maintenance</p>
         <HeaderWordmark />
       </header>

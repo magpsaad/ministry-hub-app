@@ -7,6 +7,7 @@ import {
   coordinatorScope,
   getAccessibleGroups,
   LAST_GROUP_COOKIE,
+  getServingGroups,
   pickDefaultGroupId,
 } from "@/lib/groups";
 import type { MenuData } from "@/lib/menu-types";
@@ -60,6 +61,8 @@ export async function GET() {
       coordinatorCombinedName(coordinatorScope(groups, access), settings.ladder_position_label, settings.level_number_offset),
     ),
     defaultCohortId: pickDefaultGroupId(groups, access, cookieStore.get(LAST_GROUP_COOKIE)?.value),
+    servingCohortIds: getServingGroups(groups, access).map((g) => g.id),
+    fallbackCohortId: pickDefaultGroupId(groups, access, undefined),
   };
   // Per person, never shared: no CDN or browser HTTP caching. The browser
   // keeps its own copy for the session instead (menuStore).

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
@@ -14,6 +13,7 @@ import { ServantProfilesInteractive } from "@/components/ServantProfilesInteract
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
 import { createClient } from "@/lib/supabase/server";
 import type { AgreementStatus } from "@/lib/agreement";
+import { HomeLink } from "@/components/HomeLink";
 
 /** Migration 0086: each person's confidentiality agreement status, for
  * Admins and General Coordinators (the database checks that too). */
@@ -59,10 +59,10 @@ export default async function ServantProfilesPage() {
         <div className="absolute top-2.5 right-4">
           <RefreshButton />
         </div>
-        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <HomeLink className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
-        </Link>
+        </HomeLink>
         <p className="mt-1 text-sm opacity-90">{L.servant} Profiles</p>
         <HeaderWordmark />
       </header>
