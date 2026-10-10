@@ -64,7 +64,8 @@ export function EventForm({
     event_type: event?.event_type ?? "Event",
     start_date: event?.start_date ?? defaultDate ?? todayInZone(timeZone),
     end_date: event?.end_date ?? defaultDate ?? todayInZone(timeZone),
-    all_day: event?.all_day ?? true,
+    // Owner-requested (10 Oct 2026): new events start with All Day off.
+    all_day: event?.all_day ?? false,
     start_time: event?.start_time ?? null,
     end_time: event?.end_time ?? null,
     location: event?.location ?? null,
@@ -131,6 +132,11 @@ export function EventForm({
     }
     if (form.end_date < form.start_date) {
       setError("End date can't be before the start date.");
+      return;
+    }
+    // Owner-requested (10 Oct 2026): times are required unless All Day.
+    if (!form.all_day && (!form.start_time || !form.end_time)) {
+      setError("Enter a start and end time, or tick All Day.");
       return;
     }
     const takes = !!form.take_attendance && canTakeAttendance;
@@ -286,7 +292,7 @@ export function EventForm({
           {!form.all_day && (
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
               <div className="min-w-0">
-                <label className="block font-semibold mb-1">Start Time</label>
+                <label className="block font-semibold mb-1">Start Time *</label>
                 <input
                   type="time"
                   value={form.start_time ?? ""}
@@ -295,7 +301,7 @@ export function EventForm({
                 />
               </div>
               <div className="min-w-0">
-                <label className="block font-semibold mb-1">End Time</label>
+                <label className="block font-semibold mb-1">End Time *</label>
                 <input
                   type="time"
                   value={form.end_time ?? ""}

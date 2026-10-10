@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { AttendanceBundle } from "@/lib/attendance";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
 import type { GroupSummary } from "@/lib/groups";
 import { AVG_MODES, averageFor, eventIsFor, formatSheetDate } from "@/lib/attendance-average";
 import { useMyAssigned } from "@/components/MyAssignedContext";
-import { useCohortFilter } from "@/components/CohortFilter";
+import { setCohortFilterEnabledGroups, useCohortFilter } from "@/components/CohortFilter";
 import { MemberDetailLink } from "@/components/members/MemberDetailLink";
 import { setAttendanceAction } from "@/app/g/[groupId]/attendance/actions";
 import { AttendanceHistoryModal } from "./AttendanceHistoryModal";
@@ -39,11 +39,10 @@ const PROXIMITY_BADGE: Record<string, string> = {
   Unknown: "bg-[#e2e3e5] text-[#383d41]",
 };
 
-const STATUS_RANK: Record<"Present" | "Absent" | "Never Attended" | "Not invited", number> = {
+const STATUS_RANK: Record<"Present" | "Absent" | "Never Attended", number> = {
   Present: 0,
   Absent: 1,
   "Never Attended": 2,
-  "Not invited": 3,
 };
 
 type SortKey = "name" | "proximity" | "status";
@@ -143,15 +142,14 @@ export function AttendanceInteractive({
       : (attendanceByMember[memberId] ?? []).includes(date);
   }
 
-  // Owner-requested (10 Oct 2026): an event's sheet still lists everyone,
-  // with the groups it isn't for greyed out and no toggle.
-  function notInvited(m: { id: string; group_id: string }): boolean {
-    return !!selectedEvent && !eventIsFor(selectedEvent, [m.group_id]) && !isPresent(m.id);
-  }
+  // Owner-requested (10 Oct 2026): while an event is picked, the header's
+  // group checkboxes grey out the groups it isn't for.
+  useEffect(() => {
+    setCohortFilterEnabledGroups(selectedEvent?.groupIds ?? null);
+  }, [selectedEvent]);
+  useEffect(() => () => setCohortFilterEnabledGroups(null), []);
 
-  function statusLabel(m: { id: string; group_id: string }): "Present" | "Absent" | "Never Attended" | "Not invited" {
-    if (notInvited(m)) return "Not invited";
-    const memberId = m.id;
+  function statusLabel(memberId: string): "Present" | "Absent" | "Never Attended" {
     if (isPresent(memberId)) return "Present";
     const ever = (attendanceByMember[memberId] ?? []).length > 0 || (eventsByMember[memberId] ?? []).length > 0;
     return ever ? "Absent" : "Never Attended";
@@ -190,13 +188,18 @@ export function AttendanceInteractive({
   const visible = useMemo(() => {
     let filtered =
       hydrated && myAssignedOnly ? bundle.members.filter((m) => m.assigned_servant_id === currentUserId) : bundle.members;
-    if (cohort.isFiltered) filtered = filtered.filter((m) => cohort.matches(m.group_id));
+    // Ticks on greyed-out groups don't count while an event is picked.
+    const event = selectedEvent;
+    const ticked = event ? cohort.selected.filter((id) => eventIsFor(event, [id])) : cohort.selected;
+    if (cohort.isFiltered && ticked.length > 0) filtered = filtered.filter((m) => (event ? ticked.includes(m.group_id) : cohort.matches(m.group_id)));
     if (excludeVisitors) filtered = filtered.filter((m) => !m.is_visitor);
+    // An event lists only the groups it's for (and anyone already marked).
+    if (event) filtered = filtered.filter((m) => eventIsFor(event, [m.group_id]) || isPresent(m.id));
     const sorted = [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "proximity") cmp = a.proximity.localeCompare(b.proximity);
-      else cmp = STATUS_RANK[statusLabel(a)] - STATUS_RANK[statusLabel(b)];
+      else cmp = STATUS_RANK[statusLabel(a.id)] - STATUS_RANK[statusLabel(b.id)];
       return sortDesc ? -cmp : cmp;
     });
     return sorted;
@@ -270,19 +273,16 @@ export function AttendanceInteractive({
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
             {visible.map((m) => {
-              const status = statusLabel(m);
-              const greyed = status === "Not invited";
+              const status = statusLabel(m.id);
               const avgPercent = averageOf(m).percent;
               const statusClass =
                 status === "Present"
                   ? "bg-[#d4edda] text-[#155724]"
                   : status === "Absent"
                     ? "bg-[#f8d7da] text-[#721c24]"
-                    : greyed
-                      ? "bg-[#e9ecef] text-[#888]"
-                      : "bg-[#fff3cd] text-[#856404]";
+                    : "bg-[#fff3cd] text-[#856404]";
               return (
-                <tr key={m.id} className={greyed ? "bg-[#fafafa] opacity-50" : undefined}>
+                <tr key={m.id}>
                   <td className="px-4 py-2.5">
                     {/* Owner-requested: the name opens the youth's details, as on the Dashboard. */}
                     <MemberDetailLink
@@ -329,14 +329,7 @@ export function AttendanceInteractive({
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    {greyed ? (
-                      <span
-                        title={`This event isn't for their ${memberRecord.groupLabel.toLowerCase()}`}
-                        className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}
-                      >
-                        {status}
-                      </span>
-                    ) : canToggle(m.group_id) ? (
+                    {canToggle(m.group_id) ? (
                       <button
                         type="button"
                         disabled={togglingId === m.id}
