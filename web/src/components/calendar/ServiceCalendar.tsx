@@ -184,6 +184,7 @@ export function ServiceCalendar({
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | "new" | null>(null);
   const [newEventDate, setNewEventDate] = useState<string | undefined>(undefined);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
+  const listBoxRef = useRef<HTMLDivElement>(null);
 
   const eventsForDate = useMemo(() => {
     return (dateISO: string) => events.filter((e) => dateISO >= e.start_date && dateISO <= e.end_date);
@@ -228,14 +229,19 @@ export function ServiceCalendar({
   );
 
   // Auto-position List/Fridays to the current week on open/view-switch.
+  // Owner-reported (9 Oct 2026, HSY launch): this used scrollIntoView,
+  // which scrolled the whole page -- the view buttons went off the top and
+  // looked gone. The two lists now scroll in their own box below the
+  // buttons, and only that box moves.
   useEffect(() => {
     if (view !== "list" && view !== "fridays") return;
     const todayISO = todayInZone(timeZone);
     const source = view === "list" ? listDates : fridaysListDates;
     const target = source.find((d) => toISO(d.date) >= todayISO) ?? source[source.length - 1];
-    if (target) {
+    const box = listBoxRef.current;
+    if (target && box) {
       const el = rowRefs.current.get(toISO(target.date));
-      el?.scrollIntoView({ block: "center" });
+      if (el) box.scrollTop = Math.max(0, el.offsetTop - box.clientHeight / 2 + el.offsetHeight / 2);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
@@ -302,7 +308,7 @@ export function ServiceCalendar({
           </div>
         )}
         {(view === "list" || view === "fridays") && (
-          <div className="rounded-lg overflow-hidden border border-[#e0e0e0]">
+          <div ref={listBoxRef} className="relative max-h-[65dvh] overflow-y-auto rounded-lg border border-[#e0e0e0]">
             {(view === "list" ? listDates : fridaysListDates).map(({ date, events: dayEvents }) => (
               <DateRow
                 key={toISO(date)}
