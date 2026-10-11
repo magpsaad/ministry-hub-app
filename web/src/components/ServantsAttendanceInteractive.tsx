@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import type { ServantAttendanceBundle } from "@/lib/servant-attendance";
 import { AVG_MODES, averageFor, formatSheetDate } from "@/lib/attendance-average";
 import { setServantAttendanceAction } from "@/app/servants-attendance/actions";
 import { AttendanceHistoryModal } from "@/components/attendance/AttendanceHistoryModal";
 import { AverageControls, useAvgChoice } from "@/components/attendance/AverageControls";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
+import { UndoBar, type UndoInfo } from "@/components/attendance/UndoBar";
 
 /** REQUIREMENTS.md §6.13 -- same Present/Absent/"Never Attended" pattern as
  * the member Attendance tab (§6.5), applied to servants across the whole
@@ -27,6 +28,10 @@ export function ServantsAttendanceInteractive({
   // over a period, remembered on this device.
   const [avgChoice, setAvgChoice] = useAvgChoice("servants", bundle.todayDate);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  // Owner-approved (11 Oct 2026): Present without asking, Absent still
+  // asks; either way a 4-second Undo bar.
+  const [undo, setUndo] = useState<UndoInfo | null>(null);
+  const closeUndo = useCallback(() => setUndo(null), []);
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
   const [sortKey, setSortKey] = useState<"name" | "group" | "attendance" | "status">("name");
@@ -96,27 +101,45 @@ export function ServantsAttendanceInteractive({
     return ever ? "Absent" : "Never Attended";
   }
 
+  /** Saves one mark and shows it on the sheet; true when it worked. */
+  async function saveMark(
+    servantId: string,
+    present: boolean,
+    target: { event: typeof selectedEvent; date: string },
+  ): Promise<boolean> {
+    const result = await setServantAttendanceAction(servantId, target.date, present, target.event?.id ?? null);
+    if (result.error) {
+      alert(result.error);
+      return false;
+    }
+    const key = target.event ? target.event.id : target.date;
+    const update = (prev: Record<string, string[]>) => {
+      const list = prev[servantId] ?? [];
+      const without = list.filter((x) => x !== key);
+      return { ...prev, [servantId]: present ? [...without, key] : without };
+    };
+    if (target.event) setEventsByServant(update);
+    else setAttendanceByServant(update);
+    return true;
+  }
+
   function handleToggle(servantId: string, fullName: string) {
     const nextPresent = !isPresent(servantId);
-    if (!confirm(`Mark ${fullName} as ${nextPresent ? "present" : "absent"} for ${selectedLabel}?`)) return;
-    const event = selectedEvent;
+    if (!nextPresent && !confirm(`Mark ${fullName} as absent for ${selectedLabel}?`)) return;
+    const target = { event: selectedEvent, date };
     setTogglingId(servantId);
     startTransition(async () => {
-      const result = await setServantAttendanceAction(servantId, date, nextPresent, event?.id ?? null);
+      const ok = await saveMark(servantId, nextPresent, target);
       setTogglingId(null);
-      if (result.error) {
-        alert(result.error);
-        return;
-      }
-      const key = event ? event.id : date;
-      const update = (prev: Record<string, string[]>) => {
-        const list = prev[servantId] ?? [];
-        return { ...prev, [servantId]: nextPresent ? [...list, key] : list.filter((x) => x !== key) };
-      };
-      if (event) setEventsByServant(update);
-      else setAttendanceByServant(update);
+      if (!ok) return;
+      setUndo({
+        id: Date.now(),
+        message: `${fullName} marked ${nextPresent ? "Present" : "Absent"}`,
+        undo: () => saveMark(servantId, !nextPresent, target),
+      });
     });
   }
+
 
   const statusRank: Record<ReturnType<typeof statusLabel>, number> = { Present: 0, Absent: 1, "Never Attended": 2 };
 
@@ -258,6 +281,7 @@ export function ServantsAttendanceInteractive({
         </table>
       </div>
 
+      <UndoBar info={undo} onClose={closeUndo} />
       {historyMember && (
         <AttendanceHistoryModal
           fullName={historyMember.full_name}

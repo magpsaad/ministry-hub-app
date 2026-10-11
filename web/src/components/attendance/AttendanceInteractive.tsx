@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import type { AttendanceBundle } from "@/lib/attendance";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
@@ -12,6 +12,7 @@ import { MemberDetailLink } from "@/components/members/MemberDetailLink";
 import { setAttendanceAction } from "@/app/g/[groupId]/attendance/actions";
 import { AttendanceHistoryModal } from "./AttendanceHistoryModal";
 import { AverageControls, useAvgChoice } from "./AverageControls";
+import { UndoBar, type UndoInfo } from "@/components/attendance/UndoBar";
 
 /** What the Member Detail modal needs, so the attendance-history popup's
  * name can link back to the youth's record (owner-requested) -- the same
@@ -80,6 +81,10 @@ export function AttendanceInteractive({
   // over a period, remembered on this device.
   const [avgChoice, setAvgChoice] = useAvgChoice("youth", bundle.todayDate);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  // Owner-approved (11 Oct 2026): Present without asking, Absent still
+  // asks; either way a 4-second Undo bar.
+  const [undo, setUndo] = useState<UndoInfo | null>(null);
+  const closeUndo = useCallback(() => setUndo(null), []);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
   const [excludeVisitors, setExcludeVisitors] = useState(false);
@@ -163,27 +168,45 @@ export function AttendanceInteractive({
     }
   }
 
+  /** Saves one mark and shows it on the sheet; true when it worked. */
+  async function saveMark(
+    memberId: string,
+    present: boolean,
+    target: { event: typeof selectedEvent; date: string },
+  ): Promise<boolean> {
+    const result = await setAttendanceAction(memberId, groupId, target.date, present, target.event?.id ?? null);
+    if (result.error) {
+      alert(result.error);
+      return false;
+    }
+    const key = target.event ? target.event.id : target.date;
+    const update = (prev: Record<string, string[]>) => {
+      const list = prev[memberId] ?? [];
+      const without = list.filter((x) => x !== key);
+      return { ...prev, [memberId]: present ? [...without, key] : without };
+    };
+    if (target.event) setEventsByMember(update);
+    else setAttendanceByMember(update);
+    return true;
+  }
+
   function handleToggle(memberId: string, fullName: string) {
     const nextPresent = !isPresent(memberId);
-    if (!confirm(`Mark ${fullName} as ${nextPresent ? "present" : "absent"} for ${selectedLabel}?`)) return;
-    const event = selectedEvent;
+    if (!nextPresent && !confirm(`Mark ${fullName} as absent for ${selectedLabel}?`)) return;
+    const target = { event: selectedEvent, date };
     setTogglingId(memberId);
     startTransition(async () => {
-      const result = await setAttendanceAction(memberId, groupId, date, nextPresent, event?.id ?? null);
+      const ok = await saveMark(memberId, nextPresent, target);
       setTogglingId(null);
-      if (result.error) {
-        alert(result.error);
-        return;
-      }
-      const key = event ? event.id : date;
-      const update = (prev: Record<string, string[]>) => {
-        const list = prev[memberId] ?? [];
-        return { ...prev, [memberId]: nextPresent ? [...list, key] : list.filter((x) => x !== key) };
-      };
-      if (event) setEventsByMember(update);
-      else setAttendanceByMember(update);
+      if (!ok) return;
+      setUndo({
+        id: Date.now(),
+        message: `${fullName} marked ${nextPresent ? "Present" : "Absent"}`,
+        undo: () => saveMark(memberId, !nextPresent, target),
+      });
     });
   }
+
 
   const visible = useMemo(() => {
     let filtered =
@@ -361,6 +384,7 @@ export function AttendanceInteractive({
         </table>
       </div>
 
+      <UndoBar info={undo} onClose={closeUndo} />
       {historyMember && (
         <AttendanceHistoryModal
           fullName={historyMember.full_name}
