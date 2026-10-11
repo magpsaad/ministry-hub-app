@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { MenuIcon } from "@/components/icons";
 import {
@@ -27,10 +27,15 @@ const SideMenu = dynamic(loadSideMenu, { ssr: false });
  */
 export function MenuButton() {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const data = useSyncExternalStore(subscribeMenuData, getMenuDataSnapshot, getMenuDataServerSnapshot);
 
   useEffect(() => {
+    // QR check-in pages: most people there aren't signed in, so loading the
+    // menu in the background is a wasted server call (owner-requested,
+    // 11 Oct 2026). It still loads when the button is tapped.
+    if (pathname.startsWith("/checkin")) return;
     const preload = () => {
       void loadSideMenu();
       void refreshMenuData();
@@ -42,7 +47,7 @@ export function MenuButton() {
     }
     const id = setTimeout(preload, 1500);
     return () => clearTimeout(id);
-  }, []);
+  }, [pathname]);
 
   function handleOpen() {
     setOpen(true);

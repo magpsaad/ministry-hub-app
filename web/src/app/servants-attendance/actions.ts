@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 
@@ -38,6 +37,7 @@ export async function setServantAttendanceAction(
       await logAudit(user.id, "ATTENDANCE_REMOVED", { details: { servantId, date, ...(eventId ? { eventId } : {}) } });
   }
 
-  revalidatePath("/servants-attendance");
+  // The sheet already shows the change; revalidating it rebuilt the whole
+  // sheet on the server after every tap (owner-requested, 11 Oct 2026).
   return { error: null };
 }

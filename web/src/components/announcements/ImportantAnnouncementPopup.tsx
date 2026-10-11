@@ -15,8 +15,9 @@ import type { CurrentAnnouncement } from "@/lib/announcements";
  * Owner-reported (8 Oct 2026): a browser tab left open never looked again
  * after it first loaded, so a later Important announcement didn't appear
  * until a full refresh. It now looks again on every page change and when
- * the tab or app comes back to the front, at most once a minute. */
-const RECHECK_MS = 60_000;
+ * the tab or app comes back to the front -- at most every 5 minutes
+ * (was once a minute; owner-requested 11 Oct 2026, free hosting allowance). */
+const RECHECK_MS = 5 * 60_000;
 
 const EXCLUDED = ["/login", "/auth", "/checkin", "/security", "/register", "/console", "/address-not-set-up", "/ministry-inactive"];
 

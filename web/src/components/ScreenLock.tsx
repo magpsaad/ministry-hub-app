@@ -10,6 +10,19 @@ import { claimPromptSlot } from "@/lib/prompt-slot";
 import { ACTIVITY_PING_MS, isLockExempt, type LockStatus, type UnlockMethods } from "@/lib/screen-lock";
 
 const OFFER_KEY = "mh_faceid_offer";
+// Owner-requested (11 Oct 2026, free hosting allowance): while the lock is
+// off for this ministry, this tab asks the server again at most every 10
+// minutes instead of on every page change. Turning the lock on takes effect
+// within 10 minutes (and at once in a new tab).
+const OFF_KEY = "mh_lock_off_until";
+const OFF_RECHECK_MS = 10 * 60_000;
+function lockKnownOff(): boolean {
+  try {
+    return Number(sessionStorage.getItem(OFF_KEY) ?? 0) > Date.now();
+  } catch {
+    return false;
+  }
+}
 
 /** Screen lock (owner-approved 5 Oct 2026, migration 0089). On every
  * signed-in page of a ministry that turned it on (Ministry Settings), the
@@ -34,6 +47,12 @@ export function ScreenLock() {
       const res = await fetch("/api/screen-lock", { method: "POST", cache: "no-store" });
       if (!res.ok) return;
       const status = (await res.json()) as LockStatus;
+      try {
+        if (status.enabled || status.locked) sessionStorage.removeItem(OFF_KEY);
+        else sessionStorage.setItem(OFF_KEY, String(Date.now() + OFF_RECHECK_MS));
+      } catch {
+        // No session storage: it simply asks on each page change, as before.
+      }
       setMinutes(status.enabled ? status.minutes : null);
       if (status.locked) setLocked(true);
     } catch {
@@ -45,6 +64,10 @@ export function ScreenLock() {
   useEffect(() => {
     if (exempt) return;
     lastActivity.current = Date.now();
+    if (lockKnownOff()) return;
+    // On: activity already reports every 20 seconds; a page change soon
+    // after one needn't ask again.
+    if (Date.now() - lastPing.current < ACTIVITY_PING_MS) return;
     const t = window.setTimeout(() => void report(), 0);
     return () => window.clearTimeout(t);
   }, [exempt, pathname, report]);

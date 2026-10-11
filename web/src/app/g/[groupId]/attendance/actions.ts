@@ -56,7 +56,10 @@ export async function setAttendanceAction(
     }
   }
 
-  revalidatePath(`/g/${groupId}/attendance`);
+  // Not the sheet itself (owner-requested, 11 Oct 2026, to stay within the
+  // free hosting allowance): revalidating it rebuilt the whole sheet on the
+  // server after every tap, though the sheet already shows the change. The
+  // Dashboard is only marked to load fresh next time it's opened.
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
 }
