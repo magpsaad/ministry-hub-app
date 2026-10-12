@@ -11,7 +11,18 @@ import {
   uploadEventAttachmentAction,
   removeEventAttachmentAction,
   type EventInput,
+  type SeriesScope,
 } from "@/app/calendar/actions";
+import {
+  MAX_OCCURRENCES,
+  addDays,
+  monthDayLabel,
+  monthWeekdayLabel,
+  occurrenceDates,
+  type Recurrence,
+  type RepeatFreq,
+} from "@/lib/recurrence";
+import { formatDateKey } from "@/lib/timezone";
 import { todayInZone } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
@@ -85,6 +96,19 @@ export function EventForm({
     { value: "class", label: group },
   ];
   const [attachmentPath, setAttachmentPath] = useState(event?.attachment_url ?? null);
+  // Recurring events (owner-approved 11 Oct 2026, migration 0113): one
+  // "Recurring" box; the repeat options show only once it's ticked. An
+  // event already in a series asks, on save or delete, whether it's this
+  // event only or this and all following.
+  const inSeries = !!event?.series_id;
+  const [recurring, setRecurring] = useState(false);
+  const [repeat, setRepeat] = useState<Recurrence>(() => ({
+    freq: "weekly",
+    endType: "until",
+    until: addDays(event?.start_date ?? defaultDate ?? todayInZone(timeZone), 91),
+    count: 10,
+  }));
+  const [askScope, setAskScope] = useState<null | "save" | "delete" | "attachment">(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +149,9 @@ export function EventForm({
     return list.includes(value) ? list.filter((x) => x !== value) : [...list, value];
   }
 
-  function handleSave() {
+  const occurrences = recurring ? occurrenceDates(form.start_date, repeat) : [];
+
+  function handleSave(scope?: SeriesScope) {
     if (!form.title.trim()) {
       setError("Please enter a title.");
       return;
@@ -137,6 +163,18 @@ export function EventForm({
     // Owner-requested (10 Oct 2026): times are required unless All Day.
     if (!form.all_day && (!form.start_time || !form.end_time)) {
       setError("Enter a start and end time, or tick All Day.");
+      return;
+    }
+    if (recurring && repeat.endType === "until" && repeat.until < form.start_date) {
+      setError("The repeat end date can't be before the start date.");
+      return;
+    }
+    if (recurring && occurrences.length < 2) {
+      setError("That repeat gives only one date -- change it or untick Recurring.");
+      return;
+    }
+    if (inSeries && !scope) {
+      setAskScope("save");
       return;
     }
     const takes = !!form.take_attendance && canTakeAttendance;
@@ -157,14 +195,14 @@ export function EventForm({
     startTransition(async () => {
       let eventId: string | null;
       if (event) {
-        const result = await updateEventAction(event.id, input);
+        const result = await updateEventAction(event.id, input, scope ?? "this", !inSeries && recurring ? repeat : null);
         if (result.error) {
           setError(result.error);
           return;
         }
         eventId = event.id;
       } else {
-        const result = await createEventAction(input);
+        const result = await createEventAction(input, recurring ? repeat : null);
         if (result.error) {
           setError(result.error);
           return;
@@ -175,7 +213,9 @@ export function EventForm({
       if (pendingFile && eventId) {
         const formData = new FormData();
         formData.set("attachment", pendingFile);
-        const uploadResult = await uploadEventAttachmentAction(eventId, formData);
+        // A new or newly repeating series shares the file with every occurrence.
+        const uploadScope: SeriesScope = recurring || scope === "following" ? "following" : "this";
+        const uploadResult = await uploadEventAttachmentAction(eventId, formData, uploadScope);
         if (uploadResult.error) {
           setError(uploadResult.error);
           return;
@@ -187,14 +227,20 @@ export function EventForm({
     });
   }
 
-  function handleDelete() {
+  function handleDelete(scope?: SeriesScope) {
     if (!event) return;
-    const message = event.take_attendance
-      ? `Delete "${event.title}"? Its attendance will be deleted too. This cannot be undone.`
-      : `Delete "${event.title}"? This cannot be undone.`;
-    if (!confirm(message)) return;
+    if (inSeries && !scope) {
+      setAskScope("delete");
+      return;
+    }
+    if (!inSeries) {
+      const message = event.take_attendance
+        ? `Delete "${event.title}"? Its attendance will be deleted too. This cannot be undone.`
+        : `Delete "${event.title}"? This cannot be undone.`;
+      if (!confirm(message)) return;
+    }
     startTransition(async () => {
-      const result = await deleteEventAction(event.id);
+      const result = await deleteEventAction(event.id, scope ?? "this");
       if (result.error) {
         setError(result.error);
         return;
@@ -204,10 +250,14 @@ export function EventForm({
     });
   }
 
-  function handleRemoveAttachment() {
+  function handleRemoveAttachment(scope?: SeriesScope) {
     if (!event || !attachmentPath) return;
+    if (inSeries && !scope) {
+      setAskScope("attachment");
+      return;
+    }
     startTransition(async () => {
-      const result = await removeEventAttachmentAction(event.id, attachmentPath);
+      const result = await removeEventAttachmentAction(event.id, attachmentPath, scope ?? "this");
       if (result.error) {
         setError(result.error);
         return;
@@ -218,6 +268,14 @@ export function EventForm({
   }
 
   const attachmentUrl = calendarAttachmentUrl(attachmentPath);
+
+  function chooseScope(scope: SeriesScope) {
+    const what = askScope;
+    setAskScope(null);
+    if (what === "save") handleSave(scope);
+    else if (what === "delete") handleDelete(scope);
+    else if (what === "attachment") handleRemoveAttachment(scope);
+  }
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -309,6 +367,89 @@ export function EventForm({
                   className={dateTimeClass}
                 />
               </div>
+            </div>
+          )}
+          {inSeries ? (
+            <p className="text-xs text-[#666]">
+              &#x21bb; Part of a repeating series. Saving or deleting asks whether it&rsquo;s this event only or this
+              and all following events.
+            </p>
+          ) : (
+            <div>
+              <label className="flex items-center gap-2 font-semibold">
+                <input
+                  type="checkbox"
+                  checked={recurring}
+                  onChange={(e) => setRecurring(e.target.checked)}
+                  className="accent-brand"
+                />
+                Recurring
+              </label>
+              {recurring && (
+                <div className="mt-2 space-y-3 rounded-md bg-[#fafafa] p-3">
+                  <div>
+                    <label className="block font-semibold mb-1">Repeats</label>
+                    <select
+                      value={repeat.freq}
+                      onChange={(e) => setRepeat({ ...repeat, freq: e.target.value as RepeatFreq })}
+                      className={inputClass}
+                    >
+                      <option value="weekly">Every week</option>
+                      <option value="biweekly">Every 2 weeks</option>
+                      <option value="monthly_date">Every month on {monthDayLabel(form.start_date)}</option>
+                      <option value="monthly_weekday">Every month on {monthWeekdayLabel(form.start_date)}</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <span className="block font-semibold">Ends</span>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="repeat-ends"
+                        checked={repeat.endType === "until"}
+                        onChange={() => setRepeat({ ...repeat, endType: "until" })}
+                        className="accent-brand"
+                      />
+                      On
+                      <input
+                        type="date"
+                        value={repeat.until}
+                        min={form.start_date}
+                        onChange={(e) => setRepeat({ ...repeat, endType: "until", until: e.target.value })}
+                        className={`${dateTimeClass} !w-auto`}
+                      />
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="repeat-ends"
+                        checked={repeat.endType === "count"}
+                        onChange={() => setRepeat({ ...repeat, endType: "count" })}
+                        className="accent-brand"
+                      />
+                      After
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={2}
+                        max={MAX_OCCURRENCES}
+                        value={repeat.count}
+                        onChange={(e) => setRepeat({ ...repeat, endType: "count", count: Number(e.target.value) || 0 })}
+                        className={`${inputClass} !w-20`}
+                      />
+                      times
+                    </label>
+                  </div>
+                  <p className="text-xs text-[#666]">
+                    {occurrences.length < 2
+                      ? "That gives only one date."
+                      : `${occurrences.length} events${occurrences.length === MAX_OCCURRENCES ? " (the most allowed)" : ""}, the last on ${formatDateKey(
+                          occurrences[occurrences.length - 1],
+                          { weekday: "short", month: "short", day: "numeric", year: "numeric" },
+                        )}.`}
+                  </p>
+                </div>
+              )}
             </div>
           )}
           {/* Owner-approved (10 Oct 2026, migration 0111): attendance at
@@ -410,7 +551,7 @@ export function EventForm({
                 <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline truncate">
                   View attachment
                 </a>
-                <button type="button" onClick={handleRemoveAttachment} disabled={pending} className="text-xs font-semibold text-[#dc3545] hover:underline">
+                <button type="button" onClick={() => handleRemoveAttachment()} disabled={pending} className="text-xs font-semibold text-[#dc3545] hover:underline">
                   Remove
                 </button>
               </div>
@@ -427,7 +568,7 @@ export function EventForm({
         <div className="mt-5 flex flex-wrap gap-2 justify-between items-center border-t border-[#f0f0f0] pt-4">
           <div className="flex gap-2">
             <button
-              onClick={handleSave}
+              onClick={() => handleSave()}
               disabled={pending}
               className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
@@ -439,7 +580,7 @@ export function EventForm({
           </div>
           {event && (
             <button
-              onClick={handleDelete}
+              onClick={() => handleDelete()}
               disabled={pending}
               className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
@@ -448,6 +589,47 @@ export function EventForm({
           )}
         </div>
       </div>
+      {askScope && (
+        <div
+          className="fixed inset-0 z-[85] flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => {
+            e.stopPropagation();
+            setAskScope(null);
+          }}
+        >
+          <div className="w-full max-w-xs rounded-xl bg-white p-5 shadow-[0_10px_40px_rgba(0,0,0,0.25)]" onClick={(e) => e.stopPropagation()}>
+            <p className="mb-1 font-semibold text-[#333]">
+              {askScope === "save" ? "Save changes to" : askScope === "delete" ? "Delete" : "Remove the attachment from"}
+            </p>
+            {askScope === "delete" && event?.take_attendance && (
+              <p className="mb-2 text-xs text-[#b35900]">Their attendance will be deleted too. This cannot be undone.</p>
+            )}
+            <div className="mt-3 space-y-2">
+              <button
+                type="button"
+                onClick={() => chooseScope("this")}
+                className="w-full rounded-md border border-[#ddd] px-4 py-2 text-left text-sm font-semibold text-[#333] hover:bg-[#f5f5f5]"
+              >
+                This event only
+              </button>
+              <button
+                type="button"
+                onClick={() => chooseScope("following")}
+                className="w-full rounded-md border border-[#ddd] px-4 py-2 text-left text-sm font-semibold text-[#333] hover:bg-[#f5f5f5]"
+              >
+                This and all following events
+              </button>
+              <button
+                type="button"
+                onClick={() => setAskScope(null)}
+                className="w-full rounded-md px-4 py-2 text-sm font-semibold text-[#666] hover:bg-[#f5f5f5]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

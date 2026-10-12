@@ -20,6 +20,8 @@ export type CalendarEvent = {
   audience: EventAudience;
   audience_levels: number[];
   audience_group_ids: string[];
+  /** Migration 0113: the series a recurring event's occurrences share. */
+  series_id: string | null;
 };
 
 export type EventAudience = "all" | "grade" | "class";
