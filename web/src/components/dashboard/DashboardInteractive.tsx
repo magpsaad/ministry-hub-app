@@ -33,6 +33,7 @@ import { dismissFollowUpAction } from "@/app/g/[groupId]/outreach/actions";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { formatDateTimeInZone } from "@/lib/timezone";
+import type { GroupSummary } from "@/lib/groups";
 
 type ActionsNeededConfigRow = {
   proximity: string;
@@ -115,6 +116,8 @@ export function DashboardInteractive({
   currentUserId,
   currentUserName,
   combinedGroupIds,
+  combinedGroups = [],
+  groupLabel = "Group",
   canEditAll = false,
   editableGroupIds = [],
 }: {
@@ -146,6 +149,11 @@ export function DashboardInteractive({
    * every section (CohortFilter), and edit rights and the servants offered
    * are decided per youth's own group. */
   combinedGroupIds?: string[];
+  /** Owner-reported (11 Oct 2026, HSY): a youth opened from the combined
+   * Dashboard showed an empty group -- the record needs the view's groups
+   * (and this ministry's word for them), as the Youth List already passes. */
+  combinedGroups?: GroupSummary[];
+  groupLabel?: string;
   canEditAll?: boolean;
   editableGroupIds?: string[];
 }) {
@@ -201,7 +209,8 @@ export function DashboardInteractive({
   );
   const filteredUnassigned = applyFilter
     ? [] // unassigned members can never be "mine"
-    : unassigned.filter((m) => inCohort(m.group_id));
+    : // Owner-requested (11 Oct 2026): alphabetical.
+      unassigned.filter((m) => inCohort(m.group_id)).sort((a, b) => a.full_name.localeCompare(b.full_name));
 
   const visibleOutreachNeeded = useMemo(
     () => actionsNeeded.filter((m) => inCohort(m.group_id) && (!applyFilter || m.assigned_servant_id === currentUserId)),
@@ -281,6 +290,8 @@ export function DashboardInteractive({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <MemberDetailLink
+                        groups={combinedGroups}
+                        groupLabel={groupLabel}
                         memberId={m.id}
                         groupId={groupId}
                         universities={universities} universityLabel={universityLabel} programLabel={programLabel}
@@ -343,6 +354,8 @@ export function DashboardInteractive({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-1.5 flex-wrap">
                       <MemberDetailLink
+                        groups={combinedGroups}
+                        groupLabel={groupLabel}
                         memberId={m.id}
                         groupId={groupId}
                         universities={universities} universityLabel={universityLabel} programLabel={programLabel}
@@ -417,6 +430,8 @@ export function DashboardInteractive({
                           <Avatar photoUrl={photoUrl} fullName={m.full_name} />
                           <div className="min-w-0 flex-1">
                             <MemberDetailLink
+                              groups={combinedGroups}
+                              groupLabel={groupLabel}
                               memberId={m.id}
                               groupId={groupId}
                               universities={universities} universityLabel={universityLabel} programLabel={programLabel}
@@ -467,6 +482,8 @@ export function DashboardInteractive({
                           <div className="min-w-0 flex-1">
                             <div className="flex items-baseline gap-1.5 flex-wrap">
                               <MemberDetailLink
+                                groups={combinedGroups}
+                                groupLabel={groupLabel}
                                 memberId={m.id}
                                 groupId={groupId}
                                 universities={universities} universityLabel={universityLabel} programLabel={programLabel}
@@ -534,6 +551,8 @@ export function DashboardInteractive({
                               this section -- matched to the same
                               MemberDetailLink pattern they already use. */}
                           <MemberDetailLink
+                            groups={combinedGroups}
+                            groupLabel={groupLabel}
                             memberId={f.member_id}
                             groupId={groupId}
                             universities={universities} universityLabel={universityLabel} programLabel={programLabel}

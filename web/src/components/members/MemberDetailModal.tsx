@@ -96,11 +96,8 @@ export function MemberDetailModal({
   const [assignedServantId, setAssignedServantId] = useState(member.assigned_servant_id);
   const [memberGroupId, setMemberGroupId] = useState(member.group_id);
   // "Load Youth Data for all cohorts" combined view (REQUIREMENTS.md §6.1
-  // addendum) -- owner-reported: reassigning from here isn't safe, since
-  // the servant list shown across a combined member set spans the whole
-  // ministry rather than being scoped to this one member's actual cohort.
-  // Reassignment stays a single-cohort-screen action; this just shows who
-  // it currently is.
+  // addendum): the servant list there spans the whole ministry, so it's
+  // narrowed to this youth's own group below (it used to be locked instead).
   const isCombined = groupId === ALL_COHORTS_GROUP_ID;
 
   // Owner-reported: hard-filter to matching-gender servants, same rule
@@ -111,7 +108,12 @@ export function MemberDetailModal({
   // vanish from its own dropdown, which would either blank the selection
   // or make it look unassigned). A servant with no gender on file still
   // shows up for everyone, same as AssignServantSelect.
+  // Owner-reported (11 Oct 2026, HSY): in the combined view this used to be
+  // locked, because the list held every servant in the ministry. It now
+  // offers just the servants of this youth's own group (as the Dashboard's
+  // quick Assign already does) and can be changed there too.
   const sortedServants = servants
+    .filter((s) => !isCombined || s.groups.some((g) => g.id === member.group_id) || s.id === member.assigned_servant_id)
     .filter((s) => !member.gender || !s.gender || s.gender === member.gender || s.id === member.assigned_servant_id)
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
 
@@ -457,8 +459,8 @@ export function MemberDetailModal({
             <select
               value={assignedServantId ?? ""}
               onChange={(e) => setAssignedServantId(e.target.value || null)}
-              disabled={!editing || isCombined}
-              className={inputClass(editing && !isCombined)}
+              disabled={!editing || memberGroupId !== member.group_id}
+              className={inputClass(editing && memberGroupId === member.group_id)}
             >
               <option value="">Unassigned</option>
               {sortedServants.map((s) => (

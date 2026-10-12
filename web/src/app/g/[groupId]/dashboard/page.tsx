@@ -50,6 +50,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
         <DashboardInteractive
           groupId={groupId}
           combinedGroupIds={ids}
+          combinedGroups={combinedGroups}
+          groupLabel={settings.group_label}
           canEditAll={canEditAll}
           editableGroupIds={editableGroupIds}
           statsData={data.statsData}
