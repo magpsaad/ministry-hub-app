@@ -8,6 +8,9 @@ export type DeviceSetupRow = {
   home_icon: boolean;
   notifications: boolean;
   face_id: boolean;
+  /** Migration 0114: seen opening the app from a link, never from the icon
+   * -- most likely has no home screen icon ("x"). */
+  link_only?: boolean;
 };
 
 type SortKey = "name" | "home_icon" | "notifications" | "face_id";
@@ -29,8 +32,10 @@ export function DeviceSetupTable({ rows }: { rows: DeviceSetupRow[] }) {
     const byName = (a: DeviceSetupRow, b: DeviceSetupRow) => a.full_name.localeCompare(b.full_name);
     return [...rows].sort((a, b) => {
       if (sortKey === "name") return asc ? byName(a, b) : byName(b, a);
-      // Ascending: blanks first (who still needs it), then by name.
-      const diff = Number(a[sortKey]) - Number(b[sortKey]);
+      // Ascending: blanks first (who still needs it), then by name. Home
+      // icon: x (link only) first, then not seen yet, then checked.
+      const rank = (r: DeviceSetupRow) => (sortKey === "home_icon" ? (r.home_icon ? 2 : r.link_only ? 0 : 1) : Number(r[sortKey]));
+      const diff = rank(a) - rank(b);
       return (asc ? diff : -diff) || byName(a, b);
     });
   }, [rows, sortKey, asc]);
@@ -88,6 +93,11 @@ export function DeviceSetupTable({ rows }: { rows: DeviceSetupRow[] }) {
                       <span className="font-bold text-[#28a745]" aria-label="Yes">
                         ✓
                       </span>
+                    ) : c.key === "home_icon" && r.link_only ? (
+                      // Owner-requested (12 Oct 2026): opens the app from a link.
+                      <span className="font-bold text-[#dc3545]" aria-label="Uses a link" title="Opens the app from a link">
+                        ✗
+                      </span>
                     ) : (
                       <span className="sr-only">No</span>
                     )}
@@ -107,7 +117,9 @@ export function DeviceSetupTable({ rows }: { rows: DeviceSetupRow[] }) {
       </div>
 
       <p className="text-xs text-[#888]">
-        Home icon: opened the app from its home screen icon at least once (recorded from 10 Oct 2026). Notifications:
+        Home icon: ✓ opened the app from its home screen icon at least once (recorded from 10 Oct 2026, and it stays);
+        ✗ only seen opening it from a link (recorded from 12 Oct 2026), so most likely no home screen icon; blank:
+        not seen yet. Notifications:
         turned on for this ministry on at least one device. Face ID: also counts fingerprint or device PIN unlock.
       </p>
     </div>
