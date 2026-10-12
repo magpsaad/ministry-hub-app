@@ -17,6 +17,7 @@ import {
   hasCoordinatorCombined,
 } from "@/lib/groups";
 import { Skeleton } from "@/components/Skeleton";
+import { MoveGroupsProvider } from "@/components/members/MoveGroupsContext";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { getRandomVerseAction } from "@/app/actions";
 
@@ -170,7 +171,12 @@ async function GroupLayoutContent({
           )}
           groupLabel={settings.group_label}
         >
-          {children}
+          {/* A Coordinator can move youth between the groups they coordinate. */}
+          <MoveGroupsProvider
+            groupIds={access.roles.filter((r) => r.role === "sub_coordinator" && r.group_id).map((r) => r.group_id as string)}
+          >
+            {children}
+          </MoveGroupsProvider>
         </GroupNavShell>
       </MyAssignedProvider>
     );

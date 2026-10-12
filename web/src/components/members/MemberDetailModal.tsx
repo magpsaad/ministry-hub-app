@@ -25,6 +25,7 @@ import { PhotoCropperModal } from "@/components/PhotoCropperModal";
 import { ErrorModal } from "@/components/ErrorModal";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 import { PARENT_FIELDS, type ParentField } from "@/lib/parent-contacts";
+import { useMoveGroupIds } from "@/components/members/MoveGroupsContext";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -99,6 +100,12 @@ export function MemberDetailModal({
   // addendum): the servant list there spans the whole ministry, so it's
   // narrowed to this youth's own group below (it used to be locked instead).
   const isCombined = groupId === ALL_COHORTS_GROUP_ID;
+  // Who may move this youth to another group, and to which ones: Admins and
+  // General Coordinators to any group (canDelete); a Coordinator (HSY
+  // Steward) between the groups they coordinate (owner-approved 11 Oct 2026).
+  const moveGroupIds = useMoveGroupIds();
+  const moveTargets = canDelete ? groups : groups.filter((g) => moveGroupIds.includes(g.id));
+  const canMove = canEdit && moveTargets.length > 1 && moveTargets.some((g) => g.id === member.group_id);
 
   // Owner-reported: hard-filter to matching-gender servants, same rule
   // AssignServantSelect (the New Registrations quick-assign dropdown)
@@ -439,18 +446,18 @@ export function MemberDetailModal({
               <select
                 value={memberGroupId}
                 onChange={(e) => setMemberGroupId(e.target.value)}
-                disabled={!editing || !canDelete}
-                className={inputClass(editing && canDelete)}
+                disabled={!editing || !canMove}
+                className={inputClass(editing && canMove)}
               >
-                {groups.map((g) => (
+                {(editing && canMove ? moveTargets : groups).map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.name}
                   </option>
                 ))}
               </select>
-              {editing && canDelete && memberGroupId !== member.group_id && (
+              {editing && canMove && memberGroupId !== member.group_id && (
                 <p className="mt-1 text-xs text-[#b35900]">
-                  Moving cohorts will unassign their current {L.servantLower}.
+                  Moving {groupLabel.toLowerCase()}s will unassign their current {L.servantLower}.
                 </p>
               )}
             </FieldRow>
