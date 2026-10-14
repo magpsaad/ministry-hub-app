@@ -624,6 +624,12 @@ export function ServantAssignmentsInteractive({
         </div>
       </div>
 
+      {/* Owner-requested (14 Oct 2026): everyone holding a Servant grant
+          (Coordinators without one aren't counted), as on Servant Profiles. */}
+      <p className="text-sm text-[#555]">
+        Total: <strong>{roster.filter((p) => p.grants.some((g) => g.role === "servant")).length}</strong> {L.servantsLower}
+      </p>
+
       {!canManageServants && <p className="text-xs text-[#666]">Only {L.generalCoordinators}/Admins can grant, reassign, or revoke roles here.</p>}
       {coordinatorOnly && (
         <p className="text-xs text-[#666]">
@@ -657,7 +663,10 @@ export function ServantAssignmentsInteractive({
                         rows.length > 0 && (
                           <div key={kind}>
                             <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">
-                              {genderSubheading(kind, rows.length, L)}
+                              {/* Owner-requested (14 Oct 2026): real Servant
+                                  grants only -- a Coordinator without one is
+                                  listed but not counted. */}
+                              {genderSubheading(kind, rows.filter((r) => r.grants.some((g) => g.role === "servant")).length, L)}
                             </h4>
                             <div className="divide-y divide-[#f0f0f0]">{rows.map(renderPersonRow)}</div>
                           </div>

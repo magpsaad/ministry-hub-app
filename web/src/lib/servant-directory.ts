@@ -13,7 +13,10 @@ export type ServantDirectoryEntry = {
   father_of_confession: string | null;
   join_date: string | null;
   isGeneralCoordinator: boolean;
-  servantGroups: { id: string; name: string; ladder_position: number; display_order: number }[]; // groups this person holds a 'servant' role for
+  // groups this person holds a 'servant' or 'sub_coordinator' role for --
+  // servant / coordinator say which (owner-requested 14 Oct 2026: the
+  // "n Female Servants" counts include only real Servant grants).
+  servantGroups: { id: string; name: string; ladder_position: number; display_order: number; servant: boolean; coordinator: boolean }[];
   isUnassignedServant: boolean; // holds a 'servant' role with no group
   averageAttendance: number | null; // null = never attended, or no tracked dates in the window
 };
@@ -56,7 +59,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
 
   type Accum = {
     isGeneralCoordinator: boolean;
-    servantGroups: { id: string; name: string; ladder_position: number; display_order: number }[];
+    servantGroups: ServantDirectoryEntry["servantGroups"];
     isUnassignedServant: boolean;
   };
   const byUser = new Map<string, Accum>();
@@ -74,13 +77,21 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
         // A person can hold both a Servant and a Sub-Coordinator grant for
         // the same cohort (0036's trigger, or the migration tool, grants
         // both) -- de-duped here so they don't appear twice in one cohort.
-        if (group?.name != null && !acc.servantGroups.some((sg) => sg.id === r.group_id)) {
-          acc.servantGroups.push({
+        let entry = acc.servantGroups.find((sg) => sg.id === r.group_id);
+        if (!entry && group?.name != null) {
+          entry = {
             id: r.group_id,
             name: group.name,
             ladder_position: group.ladder_position,
             display_order: group.display_order,
-          });
+            servant: false,
+            coordinator: false,
+          };
+          acc.servantGroups.push(entry);
+        }
+        if (entry) {
+          if (r.role === "servant") entry.servant = true;
+          else entry.coordinator = true;
         }
       } else if (r.role === "servant") {
         acc.isUnassignedServant = true;

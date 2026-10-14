@@ -58,7 +58,9 @@ export function ServantProfilesInteractive({
     const byLabel = new Map<string, ServantDirectoryEntry[]>();
     const positionByLabel = new Map<string, number>();
     const order: string[] = [];
-    function add(label: string, entry: ServantDirectoryEntry, ladderPosition?: number) {
+    const groupIdByLabel = new Map<string, string>();
+    function add(label: string, entry: ServantDirectoryEntry, ladderPosition?: number, groupId?: string) {
+      if (groupId) groupIdByLabel.set(label, groupId);
       if (!byLabel.has(label)) {
         byLabel.set(label, []);
         order.push(label);
@@ -68,7 +70,7 @@ export function ServantProfilesInteractive({
     }
     const gcLabel = L.generalCoordinators;
     for (const s of filtered) {
-      for (const g of s.servantGroups) add(g.name, s, g.display_order);
+      for (const g of s.servantGroups) add(g.name, s, g.display_order, g.id);
       if (s.isUnassignedServant) add(unassignedLabel, s);
       if (s.isGeneralCoordinator) add(gcLabel, s);
     }
@@ -88,6 +90,7 @@ export function ServantProfilesInteractive({
       // asked for "within each Cohort grouping", same scope as Servant
       // Assignments) -- General Coordinators/Unassigned stay a flat list.
       isCohort: label !== gcLabel && label !== unassignedLabel,
+      groupId: groupIdByLabel.get(label) ?? null,
       entries: byLabel.get(label)!.sort((a, b) => a.full_name.localeCompare(b.full_name)),
     }));
   }, [filtered, L.generalCoordinators, unassignedLabel]);
@@ -134,7 +137,7 @@ export function ServantProfilesInteractive({
             <div key={bucket.label} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <h3 className="text-sm font-bold text-brand mb-3">{bucket.label}</h3>
               {bucket.isCohort ? (
-                <GenderGroupedRows entries={bucket.entries} onSelect={setSelected} agreements={agreements} />
+                <GenderGroupedRows entries={bucket.entries} groupId={bucket.groupId} onSelect={setSelected} agreements={agreements} />
               ) : (
                 <ServantRows entries={bucket.entries} onSelect={setSelected} agreements={agreements} />
               )}
@@ -166,15 +169,23 @@ export function ServantProfilesInteractive({
  * both screens should agree). */
 function GenderGroupedRows({
   entries,
+  groupId,
   onSelect,
   agreements,
 }: {
   entries: ServantDirectoryEntry[];
+  groupId: string | null;
   onSelect: (s: ServantDirectoryEntry) => void;
   agreements: Agreements;
 }) {
   const L = useRoleLabels();
   const { female, male, other } = groupByGender(entries, (e) => e.gender);
+  // Owner-requested (14 Oct 2026): the count is of real Servant grants here
+  // -- a Coordinator (HSY Steward) without one still shows, marked, but
+  // isn't counted. (SAY Coordinators also hold a Servant grant, so SAY's
+  // numbers don't change.)
+  const servantsHere = (rows: ServantDirectoryEntry[]) =>
+    rows.filter((e) => e.servantGroups.some((g) => g.id === groupId && g.servant)).length;
   return (
     <div className="space-y-3">
       {(
@@ -187,8 +198,8 @@ function GenderGroupedRows({
         ([kind, rows]) =>
           rows.length > 0 && (
             <div key={kind}>
-              <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">{genderSubheading(kind, rows.length, L)}</h4>
-              <ServantRows entries={rows} onSelect={onSelect} agreements={agreements} />
+              <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">{genderSubheading(kind, servantsHere(rows), L)}</h4>
+              <ServantRows entries={rows} groupId={groupId} onSelect={onSelect} agreements={agreements} />
             </div>
           ),
       )}
@@ -198,13 +209,17 @@ function GenderGroupedRows({
 
 function ServantRows({
   entries,
+  groupId = null,
   onSelect,
   agreements,
 }: {
   entries: ServantDirectoryEntry[];
+  /** Within a group: the Coordinator chip is for that group's Coordinators. */
+  groupId?: string | null;
   onSelect: (s: ServantDirectoryEntry) => void;
   agreements: Agreements;
 }) {
+  const L = useRoleLabels();
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {entries.map((s) => {
@@ -225,7 +240,15 @@ function ServantRows({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-[#333] truncate">{s.full_name}</p>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <p className="min-w-0 truncate font-semibold text-[#333]">{s.full_name}</p>
+                {/* Owner-requested (14 Oct 2026): "Steward" (HSY) / "Coordinator" (SAY). */}
+                {s.servantGroups.some((g) => g.coordinator && (groupId === null || g.id === groupId)) && (
+                  <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
+                    {L.coordinator}
+                  </span>
+                )}
+              </div>
               <PhoneLink phone={s.phone} className="text-xs" />
               {agreements && !agreements[s.id]?.is_current && (
                 <p className="text-[11px] font-semibold text-[#b45309]">Agreement not signed</p>
