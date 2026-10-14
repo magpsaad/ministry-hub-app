@@ -175,16 +175,12 @@ export function AccessMaintenanceInteractive({
         setError(res.error);
         return;
       }
-      setRoles((prev) => [
-        ...prev,
-        {
-          id: res.id!,
-          user_id: selectedProfileId,
-          role: newRole,
-          group_id: groupId,
-          group_name: groups.find((g) => g.id === groupId)?.name ?? null,
-        },
-      ]);
+      // Owner-reported (14 Oct 2026): a grant can turn an existing
+      // "Unassigned" Servant grant into this one (same row) or remove it, so
+      // the screen reloads the real list -- it used to add a row and keep
+      // the old "Unassigned" one showing, and revoking that phantom removed
+      // the real grant.
+      setRoles(await getAllRoleRowsAction());
     });
   }
 

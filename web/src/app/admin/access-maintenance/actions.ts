@@ -90,12 +90,19 @@ export async function grantRoleAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in", id: null };
 
-  if (role === "servant") {
+  // A Servant grant for a group turns their "Unassigned" Servant grant (if
+  // any) into this one. Any other Servant grant they hold is left alone:
+  // this adds a group, it doesn't move them (owner-reported 14 Oct 2026 --
+  // it used to pick whichever Servant grant came first).
+  if (role === "servant" && groupId) {
     const { data: existing } = await supabase
       .from("user_roles")
       .select("id")
       .eq("user_id", userId)
       .eq("role", "servant")
+      .is("group_id", null)
+      .is("scope_id", null)
+      .limit(1)
       .maybeSingle();
     if (existing) {
       const { error } = await supabase.from("user_roles").update({ group_id: groupId }).eq("id", existing.id);
