@@ -9,6 +9,7 @@ import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import { ServantDetailModal } from "@/components/ServantDetailModal";
 import type { AgreementStatus } from "@/lib/agreement";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
+import { COORDINATOR_CHIP, ServantTotals } from "@/components/ServantTotals";
 
 /** Migration 0086: who still needs to sign the confidentiality agreement
  * (Admins and General Coordinators only; null for everyone else). */
@@ -90,6 +91,7 @@ export function ServantProfilesInteractive({
       // asked for "within each Cohort grouping", same scope as Servant
       // Assignments) -- General Coordinators/Unassigned stay a flat list.
       isCohort: label !== gcLabel && label !== unassignedLabel,
+      isUnassigned: label === unassignedLabel,
       groupId: groupIdByLabel.get(label) ?? null,
       entries: byLabel.get(label)!.sort((a, b) => a.full_name.localeCompare(b.full_name)),
     }));
@@ -97,6 +99,13 @@ export function ServantProfilesInteractive({
 
   const alphabetical = useMemo(() => [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name)), [filtered]);
   const signedCount = agreements ? servants.filter((s) => agreements[s.id]?.is_current).length : 0;
+  // Owner-requested (14 Oct 2026): the same breakdown as Servant Assignments.
+  const isServant = (s: ServantDirectoryEntry) => s.isUnassignedServant || s.servantGroups.some((g) => g.servant);
+  const totals = {
+    servants: servants.filter(isServant).length,
+    coordinators: servants.filter((s) => !isServant(s) && s.servantGroups.some((g) => g.coordinator)).length,
+    generalCoordinators: servants.filter((s) => !isServant(s) && !s.servantGroups.some((g) => g.coordinator) && s.isGeneralCoordinator).length,
+  };
 
   return (
     <div className="space-y-4">
@@ -126,9 +135,10 @@ export function ServantProfilesInteractive({
         </div>
       </div>
 
+      <ServantTotals {...totals} />
       {agreements && (
         <p className="text-sm text-[#555]">
-          Confidentiality agreement: <strong>{signedCount}</strong> of {servants.length} {L.servantsLower} have signed.
+          Confidentiality agreement: <strong>{signedCount}</strong> of {servants.length} have signed.
         </p>
       )}
 
@@ -136,8 +146,14 @@ export function ServantProfilesInteractive({
         ? categorical.map((bucket) => (
             <div key={bucket.label} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <h3 className="text-sm font-bold text-brand mb-3">{bucket.label}</h3>
-              {bucket.isCohort ? (
-                <GenderGroupedRows entries={bucket.entries} groupId={bucket.groupId} onSelect={setSelected} agreements={agreements} />
+              {bucket.isCohort || bucket.isUnassigned ? (
+                <GenderGroupedRows
+                  entries={bucket.entries}
+                  groupId={bucket.groupId}
+                  unassigned={bucket.isUnassigned}
+                  onSelect={setSelected}
+                  agreements={agreements}
+                />
               ) : (
                 <ServantRows entries={bucket.entries} onSelect={setSelected} agreements={agreements} />
               )}
@@ -170,11 +186,14 @@ export function ServantProfilesInteractive({
 function GenderGroupedRows({
   entries,
   groupId,
+  unassigned = false,
   onSelect,
   agreements,
 }: {
   entries: ServantDirectoryEntry[];
   groupId: string | null;
+  /** The "Unassigned to a group" section (owner-requested 14 Oct 2026). */
+  unassigned?: boolean;
   onSelect: (s: ServantDirectoryEntry) => void;
   agreements: Agreements;
 }) {
@@ -185,7 +204,7 @@ function GenderGroupedRows({
   // isn't counted. (SAY Coordinators also hold a Servant grant, so SAY's
   // numbers don't change.)
   const servantsHere = (rows: ServantDirectoryEntry[]) =>
-    rows.filter((e) => e.servantGroups.some((g) => g.id === groupId && g.servant)).length;
+    rows.filter((e) => (unassigned ? e.isUnassignedServant : e.servantGroups.some((g) => g.id === groupId && g.servant))).length;
   return (
     <div className="space-y-3">
       {(
@@ -244,9 +263,7 @@ function ServantRows({
                 <p className="min-w-0 truncate font-semibold text-[#333]">{s.full_name}</p>
                 {/* Owner-requested (14 Oct 2026): "Steward" (HSY) / "Coordinator" (SAY). */}
                 {s.servantGroups.some((g) => g.coordinator && (groupId === null || g.id === groupId)) && (
-                  <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
-                    {L.coordinator}
-                  </span>
+                  <span className={COORDINATOR_CHIP}>{L.coordinator}</span>
                 )}
               </div>
               <PhoneLink phone={s.phone} className="text-xs" />

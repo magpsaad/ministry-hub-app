@@ -6,6 +6,7 @@ import type { AssignmentPerson, RoleGrant } from "@/lib/servant-assignments";
 import type { GroupSummary } from "@/lib/groups";
 import { servantPhotoUrl } from "@/lib/storage";
 import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
+import { ServantTotals } from "@/components/ServantTotals";
 import {
   reassignRoleGroupAction,
   countAssignmentsInGroupAction,
@@ -626,9 +627,19 @@ export function ServantAssignmentsInteractive({
 
       {/* Owner-requested (14 Oct 2026): everyone holding a Servant grant
           (Coordinators without one aren't counted), as on Servant Profiles. */}
-      <p className="text-sm text-[#555]">
-        Total: <strong>{roster.filter((p) => p.grants.some((g) => g.role === "servant")).length}</strong> {L.servantsLower}
-      </p>
+      <ServantTotals
+        servants={roster.filter((p) => p.grants.some((g) => g.role === "servant")).length}
+        coordinators={
+          roster.filter((p) => !p.grants.some((g) => g.role === "servant") && p.grants.some((g) => g.role === "sub_coordinator")).length
+        }
+        generalCoordinators={
+          roster.filter(
+            (p) =>
+              !p.grants.some((g) => g.role === "servant" || g.role === "sub_coordinator") &&
+              p.grants.some((g) => g.role === "general_coordinator"),
+          ).length
+        }
+      />
 
       {!canManageServants && <p className="text-xs text-[#666]">Only {L.generalCoordinators}/Admins can grant, reassign, or revoke roles here.</p>}
       {coordinatorOnly && (
@@ -720,7 +731,13 @@ export function ServantAssignmentsInteractive({
           )}
 
           {categoricalBuckets.unassigned.length > 0 && (
-            <BucketCard label={`Unassigned to a ${groupLabel}`} rows={categoricalBuckets.unassigned} renderChip={renderChip} renderAddRoleControl={renderAddRoleControl} />
+            <BucketCard
+              label={`Unassigned to a ${groupLabel}`}
+              rows={categoricalBuckets.unassigned}
+              renderChip={renderChip}
+              renderAddRoleControl={renderAddRoleControl}
+              byGender
+            />
           )}
         </div>
       ) : (
@@ -761,29 +778,63 @@ function BucketCard({
   rows,
   renderChip,
   renderAddRoleControl,
+  byGender = false,
 }: {
   label: string;
   rows: { person: AssignmentPerson; grants: RoleGrant[] }[];
   renderChip: (person: AssignmentPerson, grant: RoleGrant, showGroupInLabel: boolean) => React.ReactNode;
   renderAddRoleControl: (person: AssignmentPerson) => React.ReactNode;
+  /** "n Female/Male Servants" headings, as in each group (owner-requested
+   * 14 Oct 2026, for Unassigned). */
+  byGender?: boolean;
 }) {
   const L = useRoleLabels();
+  const renderList = (list: typeof rows) => (
+    <div className="divide-y divide-[#f0f0f0]">
+      {list.map(({ person, grants }) => (
+        <div key={person.id} className="py-2.5 flex items-center gap-3">
+          <Avatar person={person} />
+          {/* Same fixed-width name column fix as renderPersonRow above. */}
+          <span className="w-32 shrink-0 font-semibold text-[#333] truncate">{person.full_name}</span>
+          <span className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap justify-end">
+            {grants.map((g) => renderChip(person, g, false))}
+            {label !== L.generalCoordinators && renderAddRoleControl(person)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+  if (byGender) {
+    const { female, male, other } = groupByGender(rows, (r) => r.person.gender);
+    return (
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+        <h3 className="text-sm font-bold text-brand mb-3">{label}</h3>
+        <div className="space-y-3">
+          {(
+            [
+              ["Female", female],
+              ["Male", male],
+              ["Other", other],
+            ] as const
+          ).map(
+            ([kind, part]) =>
+              part.length > 0 && (
+                <div key={kind}>
+                  <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">
+                    {genderSubheading(kind, part.length, L)}
+                  </h4>
+                  {renderList(part)}
+                </div>
+              ),
+          )}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
       <h3 className="text-sm font-bold text-brand mb-3">{label}</h3>
-      <div className="divide-y divide-[#f0f0f0]">
-        {rows.map(({ person, grants }) => (
-          <div key={person.id} className="py-2.5 flex items-center gap-3">
-            <Avatar person={person} />
-            {/* Same fixed-width name column fix as renderPersonRow above. */}
-            <span className="w-32 shrink-0 font-semibold text-[#333] truncate">{person.full_name}</span>
-            <span className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap justify-end">
-              {grants.map((g) => renderChip(person, g, false))}
-              {label !== L.generalCoordinators && renderAddRoleControl(person)}
-            </span>
-          </div>
-        ))}
-      </div>
+      {renderList(rows)}
     </div>
   );
 }
