@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoTip } from "@/components/InfoTip";
 import { useState, useTransition } from "react";
 import type { ActionsNeededConfigRow, AppSettingsFormInput, AdminGroupRow } from "@/app/admin/actions-needed-config/actions";
 import {
@@ -153,8 +154,12 @@ export function ActionsNeededConfigInteractive({
         shown read-only; it's chosen once, when the ministry is created. */}
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] px-5 py-4 flex items-center justify-between gap-3">
       <div>
-        <h2 className="text-sm font-bold text-brand">Ministry Code</h2>
-        <p className="text-xs text-[#666]">Permanent &mdash; it can&rsquo;t be changed.</p>
+        <h2 className="flex items-center gap-1.5 text-sm font-bold text-brand">
+          Ministry Code
+          <InfoTip title="Ministry Code" className="[&_svg]:h-4 [&_svg]:w-4">
+            <p>Permanent &mdash; it can&rsquo;t be changed.</p>
+          </InfoTip>
+        </h2>
       </div>
       <span className="rounded-md bg-[#f0f4f8] px-3 py-1.5 font-mono text-base font-bold tracking-widest text-brand">
         {ministryCode}
@@ -162,12 +167,25 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">App Labels</h2>
-      <p className="text-sm text-[#666] mb-4">
-        The app&rsquo;s names and vocabulary, used everywhere they&rsquo;re displayed &mdash; e.g. Ministry Label
-        &ldquo;High School Ministry&rdquo;, Group Label &ldquo;Grade&rdquo;, Member Label &ldquo;Student&rdquo;
-        &mdash; plus the service day and time settings.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        App Labels
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="App Labels">
+          <p>
+            The app&rsquo;s names and vocabulary, used everywhere they&rsquo;re displayed &mdash; e.g. Ministry Label
+            &ldquo;High School Ministry&rdquo;, Group Label &ldquo;Grade&rdquo;, Member Label &ldquo;Student&rdquo;
+            &mdash; plus the service day and time settings.
+          </p>
+          <p>
+            Service Day drives self-check-in gating and which dates count toward average attendance %. The Cutoff Time
+            and Timezone together control when &ldquo;Today&rdquo; becomes available in the Attendance tab — it opens as
+            soon as either someone has checked in, or the cutoff time passes, whichever comes first. The QR check-in
+            page only lets people find their name and check in on the Service Day, between Check-in opens and Check-in
+            closes (00:00 to 23:59 = the whole day). Attendance averages never count from before Using the app since.
+            All of these take effect immediately, everywhere.
+          </p>
+        </InfoTip>
+      </h2>
       {appSettingsError && <p className="mb-3 text-sm text-[#dc3545]">{appSettingsError}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <label className="text-xs text-[#666]">
@@ -333,14 +351,6 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
       </div>
-      <p className="text-xs text-[#666] mb-3">
-        Service Day drives self-check-in gating and which dates count toward average attendance %. The Cutoff Time
-        and Timezone together control when &ldquo;Today&rdquo; becomes available in the Attendance tab — it opens as
-        soon as either someone has checked in, or the cutoff time passes, whichever comes first. The QR check-in
-        page only lets people find their name and check in on the Service Day, between Check-in opens and Check-in
-        closes (00:00 to 23:59 = the whole day). Attendance averages never count from before Using the app since.
-        All of these take effect immediately, everywhere.
-      </p>
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -355,10 +365,15 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">App Branding</h2>
-      <p className="text-sm text-[#666] mb-4">
-        The app&rsquo;s colours and logo, used on every page. Pick a palette and preview it, then Save.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        App Branding
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="App Branding">
+          <p>
+            The app&rsquo;s colours and logo, used on every page. Pick a palette and preview it, then Save.
+          </p>
+        </InfoTip>
+      </h2>
       {appSettingsError && <p className="mb-3 text-sm text-[#dc3545]">{appSettingsError}</p>}
       <div className="space-y-3 mb-3">
         <ThemePalettePicker
@@ -434,12 +449,22 @@ export function ActionsNeededConfigInteractive({
     />
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">{L.coordinators}</h2>
-      <p className="text-sm text-[#666] mb-3">
-        When on, making someone {L.coordinator} of a {appSettings.group_label.toLowerCase()} also makes them a {L.servant}
-        of that {appSettings.group_label.toLowerCase()} automatically. Changing this only affects grants made from now
-        on; existing roles are left as they are.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        {L.coordinators}
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title={`${L.coordinators}`}>
+          <p>
+            When on, making someone {L.coordinator} of a {appSettings.group_label.toLowerCase()} also makes them a {L.servant}
+            of that {appSettings.group_label.toLowerCase()} automatically. Changing this only affects grants made from now
+            on; existing roles are left as they are.
+          </p>
+          <p>
+            With a grade, making someone {L.coordinator} of e.g. Grade 9 Girls covers every {appSettings.group_label.toLowerCase()}{" "}
+            there, including ones added later, and they move up with their {appSettings.group_label.toLowerCase()}s each year.
+            Existing {L.coordinatorLower} grants are left as they are.
+          </p>
+        </InfoTip>
+      </h2>
       <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
         <input
           type="checkbox"
@@ -457,17 +482,12 @@ export function ActionsNeededConfigInteractive({
         id="coordinator-scope"
         value={appSettings.coordinator_scope}
         onChange={(e) => updateAppField("coordinator_scope", e.target.value as AppSettingsFormInput["coordinator_scope"])}
-        className="mb-1 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+        className="mb-3 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
       >
         <option value="group">a {appSettings.group_label.toLowerCase()}</option>
         <option value="grade">a grade</option>
         <option value="grade_gender">a grade and gender</option>
       </select>
-      <p className="text-xs text-[#888] mb-3">
-        With a grade, making someone {L.coordinator} of e.g. Grade 9 Girls covers every {appSettings.group_label.toLowerCase()}{" "}
-        there, including ones added later, and they move up with their {appSettings.group_label.toLowerCase()}s each year.
-        Existing {L.coordinatorLower} grants are left as they are.
-      </p>
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -483,13 +503,18 @@ export function ActionsNeededConfigInteractive({
 
     {/* Owner-approved (5 Oct 2026, migration 0089): the screen lock. */}
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Screen Lock</h2>
-      <p className="text-sm text-[#666] mb-3">
-        Locks the app on a {L.servantLower}&rsquo;s phone or computer after a few minutes without use, so nobody who picks it up can
-        see {appSettings.member_label.toLowerCase()} details. It also hides the app while it&rsquo;s in the background.
-        {L.servants} unlock it with Face ID, a fingerprint or their device&rsquo;s PIN (once they turn that on in My
-        Settings &rarr; Screen Lock &amp; Face ID), their authenticator code, or by signing in again. Applies to everyone, Admins and {L.gcs} included.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Screen Lock
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="Screen Lock">
+          <p>
+            Locks the app on a {L.servantLower}&rsquo;s phone or computer after a few minutes without use, so nobody who picks it up can
+            see {appSettings.member_label.toLowerCase()} details. It also hides the app while it&rsquo;s in the background.
+            {L.servants} unlock it with Face ID, a fingerprint or their device&rsquo;s PIN (once they turn that on in My
+            Settings &rarr; Screen Lock &amp; Face ID), their authenticator code, or by signing in again. Applies to everyone, Admins and {L.gcs} included.
+          </p>
+        </InfoTip>
+      </h2>
       <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
         Lock after
         <select
@@ -525,11 +550,16 @@ export function ActionsNeededConfigInteractive({
     {/* Owner-approved (8 Oct 2026, migration 0102): who may read every
         conversation in Messages. */}
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Messages</h2>
-      <p className="text-sm text-[#666] mb-3">
-        Who can read every conversation in this ministry, not just their own. They can read them but only write in
-        the ones they&rsquo;re part of. Everyone sees a line on the Messages page saying who can read them.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Messages
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="Messages">
+          <p>
+            Who can read every conversation in this ministry, not just their own. They can read them but only write in
+            the ones they&rsquo;re part of. Everyone sees a line on the Messages page saying who can read them.
+          </p>
+        </InfoTip>
+      </h2>
       <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
         Can read all messages:
         <select
@@ -558,14 +588,19 @@ export function ActionsNeededConfigInteractive({
     {/* Owner-requested (4 Oct 2026, migration 0087): for ministries that
         keep parents' details, e.g. High School and Sunday School. */}
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Parents&rsquo; Contact Details</h2>
-      <p className="text-sm text-[#666] mb-3">
-        When on, each {appSettings.member_label.toLowerCase()}&rsquo;s details include Parent 1 and Parent 2 (name,
-        phone and email), all optional. {L.servants} see and edit them like the other details, the check-in
-        page&rsquo;s registration form asks for them, and after checking in a {appSettings.member_label.toLowerCase()}{" "}
-        is offered to fill in any that are blank. Turning it off hides them everywhere; anything already entered is
-        kept.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Parents&rsquo; Contact Details
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="Parents’ Contact Details">
+          <p>
+            When on, each {appSettings.member_label.toLowerCase()}&rsquo;s details include Parent 1 and Parent 2 (name,
+            phone and email), all optional. {L.servants} see and edit them like the other details, the check-in
+            page&rsquo;s registration form asks for them, and after checking in a {appSettings.member_label.toLowerCase()}{" "}
+            is offered to fill in any that are blank. Turning it off hides them everywhere; anything already entered is
+            kept.
+          </p>
+        </InfoTip>
+      </h2>
       <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
         <input
           type="checkbox"
@@ -588,10 +623,15 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Current Birthdays Window</h2>
-      <p className="text-sm text-[#666] mb-4">
-        How many days before and after today a birthday counts as &ldquo;upcoming&rdquo; on the Dashboard.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Current Birthdays Window
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="Current Birthdays Window">
+          <p>
+            How many days before and after today a birthday counts as &ldquo;upcoming&rdquo; on the Dashboard.
+          </p>
+        </InfoTip>
+      </h2>
       {appSettingsError && <p className="mb-3 text-sm text-[#dc3545]">{appSettingsError}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <label className="text-xs text-[#666]">
@@ -629,17 +669,22 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Attendance Window Settings</h2>
-      <p className="text-sm text-[#666] mb-1">How far back average-attendance % looks, as a rolling number of weeks.</p>
-      <ul className="text-sm text-[#666] mb-4 list-disc pl-5 space-y-0.5">
-        <li>
-          The app calculates it based on the <strong>later</strong> of (today &minus; the rolling window) and each
-          person&rsquo;s Join Date (their earliest attendance record) &mdash; so the window never reaches before they
-          joined.
-        </li>
-        <li>Leave a field blank to calculate over that group&rsquo;s entire attendance history instead, with no rolling cap.</li>
-        <li>{appSettings.member_label}s and {L.servantsLower} are configured independently.</li>
-      </ul>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Attendance Window Settings
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="Attendance Window Settings">
+          <p>How far back average-attendance % looks, as a rolling number of weeks.</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>
+              The app calculates it based on the <strong>later</strong> of (today &minus; the rolling window) and each
+              person&rsquo;s Join Date (their earliest attendance record) &mdash; so the window never reaches before they
+              joined.
+            </li>
+            <li>Leave a field blank to calculate over that group&rsquo;s entire attendance history instead, with no rolling cap.</li>
+            <li>{appSettings.member_label}s and {L.servantsLower} are configured independently.</li>
+          </ul>
+        </InfoTip>
+      </h2>
       {windowError && <p className="mb-3 text-sm text-[#dc3545]">{windowError}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <label className="text-xs text-[#666]">
@@ -687,13 +732,18 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Proximity</h2>
-      <p className="text-sm text-[#666] mb-3">
-        Tags each {appSettings.university_label.toLowerCase()} as Local, Regional or Abroad, so people can be shown,
-        filtered and judged by different Actions Needed thresholds. Turn it off for a group where everyone is local:
-        every {appSettings.member_label.toLowerCase()} is then treated as Local, only one set of thresholds applies, and
-        all proximity badges, filters, columns and charts are hidden.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Proximity
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="Proximity">
+          <p>
+            Tags each {appSettings.university_label.toLowerCase()} as Local, Regional or Abroad, so people can be shown,
+            filtered and judged by different Actions Needed thresholds. Turn it off for a group where everyone is local:
+            every {appSettings.member_label.toLowerCase()} is then treated as Local, only one set of thresholds applies, and
+            all proximity badges, filters, columns and charts are hidden.
+          </p>
+        </InfoTip>
+      </h2>
       <div className="space-y-2 mb-3">
         <label className="flex items-center gap-2 text-sm text-[#333]">
           <input
@@ -729,22 +779,31 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Actions Needed Thresholds</h2>
-      <p className="text-sm text-[#666] mb-2">
-        {appSettings.proximity_enabled ? "Per-proximity thresholds" : "Thresholds"} for the Dashboard&rsquo;s &ldquo;Outreach Needed&rdquo; cards. A member is flagged
-        once, as of today, their current run of consecutive absences has reached the minimum below, and their most
-        recent outreach (or lack of any) is older than the outreach-staleness window.
-      </p>
-      <p className="text-sm text-[#666] mb-4">
-        These cards clear themselves automatically &mdash; no one needs to dismiss them by hand. A card disappears
-        the moment the member shows up again, or as soon as any {L.servantLower} logs a new outreach entry for them.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Actions Needed Thresholds
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="Actions Needed Thresholds">
+          <p>
+            {appSettings.proximity_enabled ? "Per-proximity thresholds" : "Thresholds"} for the Dashboard&rsquo;s &ldquo;Outreach Needed&rdquo; cards. A member is flagged
+            once, as of today, their current run of consecutive absences has reached the minimum below, and their most
+            recent outreach (or lack of any) is older than the outreach-staleness window.
+          </p>
+          <p>
+            These cards clear themselves automatically &mdash; no one needs to dismiss them by hand. A card disappears
+            the moment the member shows up again, or as soon as any {L.servantLower} logs a new outreach entry for them.
+          </p>
+        </InfoTip>
+      </h2>
       <div className="border border-[#f0f0f0] rounded-lg p-4 mb-4">
-        <h3 className="text-sm font-bold text-brand mb-1">Look-back period</h3>
-        <p className="text-xs text-[#666] mb-3">
-          &ldquo;Min. presence count&rdquo; below counts visits over this many most recent months. Someone who
-          hasn&rsquo;t attended at least that many times in this period isn&rsquo;t flagged.
-        </p>
+        <h3 className="flex items-center gap-1.5 text-sm font-bold text-brand mb-3">
+          Look-back period
+          <InfoTip title="Look-back period" className="[&_svg]:h-4 [&_svg]:w-4">
+            <p>
+              &ldquo;Min. presence count&rdquo; below counts visits over this many most recent months. Someone who
+              hasn&rsquo;t attended at least that many times in this period isn&rsquo;t flagged.
+            </p>
+          </InfoTip>
+        </h3>
         {lookbackError && <p className="mb-2 text-sm text-[#dc3545]">{lookbackError}</p>}
         <div className="flex items-end gap-3">
           <label className="text-xs text-[#666]">
@@ -828,11 +887,15 @@ export function ActionsNeededConfigInteractive({
       {/* Owner-requested (15 Oct 2026, migration 0116): the Dashboard's
           My Servants Team cards have their own thresholds. */}
       <div className="border border-[#f0f0f0] rounded-lg p-4 mt-4">
-        <h3 className="text-sm font-bold text-brand mb-1">{L.servants}</h3>
-        <p className="text-xs text-[#666] mb-3">
-          For the Dashboard&rsquo;s &ldquo;My {L.servants} Team&rdquo; cards, seen by {L.coordinatorsLower} and{" "}
-          {L.generalCoordinatorsLower}.
-        </p>
+        <h3 className="flex items-center gap-1.5 text-sm font-bold text-brand mb-3">
+          {L.servants}
+          <InfoTip title={L.servants} className="[&_svg]:h-4 [&_svg]:w-4">
+            <p>
+              For the Dashboard&rsquo;s &ldquo;My {L.servants} Team&rdquo; cards, seen by {L.coordinatorsLower} and{" "}
+              {L.generalCoordinatorsLower}.
+            </p>
+          </InfoTip>
+        </h3>
         {appSettingsError && <p className="mb-2 text-sm text-[#dc3545]">{appSettingsError}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <label className="text-xs text-[#666]">

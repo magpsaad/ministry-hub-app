@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoTip } from "@/components/InfoTip";
 import { useRef, useState } from "react";
 import { setMinistryNotificationDefaultAction } from "@/app/admin/actions-needed-config/actions";
 import { SpinnerIcon } from "@/components/icons";
@@ -51,12 +52,17 @@ export function NotificationDefaultsCard({ rows }: { rows: NotificationDefaultRo
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Notification Defaults</h2>
-      <p className="text-sm text-[#666] mb-3">
-        Whether each phone notification starts on or off for this ministry&rsquo;s {L.servantsLower}. Each person can still turn any
-        of them on or off for themselves in My Settings &rarr; Notifications; anyone who already did keeps their own
-        choice. Changes save straight away.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Notification Defaults
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="Notification Defaults">
+          <p>
+            Whether each phone notification starts on or off for this ministry&rsquo;s {L.servantsLower}. Each person can still turn any
+            of them on or off for themselves in My Settings &rarr; Notifications; anyone who already did keeps their own
+            choice. Changes save straight away.
+          </p>
+        </InfoTip>
+      </h2>
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
       <ul className="divide-y divide-[#f0f0f0]">
         {rows.map((r) => {

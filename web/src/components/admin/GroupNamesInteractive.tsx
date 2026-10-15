@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoTip } from "@/components/InfoTip";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminGroupRow, AddGroupInput } from "@/app/admin/actions-needed-config/actions";
@@ -215,13 +216,18 @@ export function GroupNamesInteractive({
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-brand mb-1">Group Names &amp; QR Code Colors</h2>
-      <p className="text-sm text-[#666] mb-4">
-        Every active group, in the order the side menu lists them. The pre-entry group (first) and the hand-over
-        group (last) are hidden from everyone except Admins. Use ▲/▼ to change the order, and <em>More</em> for a
-        group&rsquo;s level, yearly name pattern and check-in code. Click a colour dot to change that QR code&rsquo;s
-        colour; it saves straight away.
-      </p>
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Group Names &amp; QR Code Colors
+        {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
+        <InfoTip title="Group Names & QR Code Colors">
+          <p>
+            Every active group, in the order the side menu lists them. The pre-entry group (first) and the hand-over
+            group (last) are hidden from everyone except Admins. Use ▲/▼ to change the order, and <em>More</em> for a
+            group&rsquo;s level, yearly name pattern and check-in code. Click a colour dot to change that QR code&rsquo;s
+            colour; it saves straight away.
+          </p>
+        </InfoTip>
+      </h2>
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 
       {/* Q3 -- the default yearly name pattern, at the top. */}

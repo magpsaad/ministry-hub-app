@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoTip } from "@/components/InfoTip";
 import { useMemo, useState } from "react";
 
 export type DeviceSetupRow = {
@@ -53,6 +54,23 @@ export function DeviceSetupTable({ rows }: { rows: DeviceSetupRow[] }) {
 
   return (
     <div className="space-y-4">
+      {/* Owner-requested (15 Oct 2026): the legend sits behind an (i), at the top. */}
+      <p className="flex items-center justify-end gap-1.5 text-xs font-semibold text-[#666]">
+        What the columns mean
+        <InfoTip title="What the columns mean">
+          <p>
+            <strong>Home icon:</strong> ✓ opened the app from its home screen icon at least once (recorded from 10 Oct
+            2026, and it stays); ✗ only seen opening it from a link (recorded from 12 Oct 2026), so most likely no home
+            screen icon; blank: not seen yet.
+          </p>
+          <p>
+            <strong>Notifications:</strong> turned on for this ministry on at least one device.
+          </p>
+          <p>
+            <strong>Face ID:</strong> also counts fingerprint or device PIN unlock.
+          </p>
+        </InfoTip>
+      </p>
       <div className="grid grid-cols-3 gap-3">
         {COLUMNS.map((c) => (
           <div key={c.key} className="rounded-xl bg-white p-3 shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
@@ -116,12 +134,6 @@ export function DeviceSetupTable({ rows }: { rows: DeviceSetupRow[] }) {
         </table>
       </div>
 
-      <p className="text-xs text-[#888]">
-        Home icon: ✓ opened the app from its home screen icon at least once (recorded from 10 Oct 2026, and it stays);
-        ✗ only seen opening it from a link (recorded from 12 Oct 2026), so most likely no home screen icon; blank:
-        not seen yet. Notifications:
-        turned on for this ministry on at least one device. Face ID: also counts fingerprint or device PIN unlock.
-      </p>
     </div>
   );
 }
