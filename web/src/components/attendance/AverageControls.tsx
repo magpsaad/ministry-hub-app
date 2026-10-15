@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AVG_MODES,
   AVG_PERIODS,
@@ -56,42 +56,72 @@ const EARLIEST = "2000-01-01";
 const dateInput =
   "min-w-0 appearance-none rounded-md border border-[#ddd] bg-white px-2 py-1.5 text-sm focus:border-brand focus:outline-none";
 
-/** Owner-reported (15 Oct 2026): a Custom date couldn't be changed -- while a
- * date is being typed the box is briefly empty (or a year like "0002"), and
- * that half-typed value was saved, read back as "no date" and reset to the
- * 12-month default. The box now keeps what's being typed and only passes
- * on a complete date. */
-function DateField({
-  value,
-  min,
-  max,
-  onCommit,
-}: {
-  value: string;
-  min?: string;
-  max?: string;
-  onCommit: (date: string) => void;
-}) {
-  const [draft, setDraft] = useState(value);
-  const [shown, setShown] = useState(value);
-  if (value !== shown) {
-    // Changed from outside (e.g. another sheet's choice): show it.
-    setShown(value);
-    setDraft(value);
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function prettyDate(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** Owner-reported (15 Oct 2026), third pass: a Custom From/To change wasn't
+ * taken at all on the owner's device. The boxes are now left to the browser
+ * (no value pushed back into them while someone is choosing) and only read
+ * when Apply is tapped; a line underneath says which dates are showing. */
+function CustomRange({ from, to, today, onApply }: { from: string; to: string; today: string; onApply: (from: string, to: string) => void }) {
+  const fromRef = useRef<HTMLInputElement>(null);
+  const toRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [updated, setUpdated] = useState(false);
+
+  function apply() {
+    const f = fromRef.current?.value ?? "";
+    const t = toRef.current?.value ?? "";
+    if (!DATE_RE.test(f) || !DATE_RE.test(t) || f < EARLIEST || t < EARLIEST) {
+      setError("Choose both a From and a To date.");
+      return;
+    }
+    if (f > t) {
+      setError("From must be on or before To.");
+      return;
+    }
+    if (t > today) {
+      setError("To can't be after today.");
+      return;
+    }
+    setError(null);
+    onApply(f, t);
+    setUpdated(true);
+    window.setTimeout(() => setUpdated(false), 2500);
   }
+
   return (
-    <input
-      type="date"
-      value={draft}
-      min={min}
-      max={max}
-      onChange={(e) => {
-        const v = e.target.value;
-        setDraft(v);
-        if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v >= "2000-01-01") onCommit(v);
-      }}
-      className={dateInput}
-    />
+    <div className="space-y-1">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-[#333]">
+        <label className="flex items-center gap-1.5">
+          From
+          <input key={`from-${from}`} ref={fromRef} type="date" defaultValue={from} min={EARLIEST} max={today} className={dateInput} />
+        </label>
+        <label className="flex items-center gap-1.5">
+          To
+          <input key={`to-${to}`} ref={toRef} type="date" defaultValue={to} min={EARLIEST} max={today} className={dateInput} />
+        </label>
+        <button
+          type="button"
+          onClick={apply}
+          className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark"
+        >
+          Apply
+        </button>
+      </div>
+      {error ? (
+        <p className="text-xs text-[#dc3545]">{error}</p>
+      ) : (
+        <p className="text-xs text-[#666]">
+          Showing {prettyDate(from)} &ndash; {prettyDate(to)}
+          {updated && <span className="ml-1.5 font-semibold text-[#155724]">✓ Updated</span>}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -152,16 +182,7 @@ export function AverageControls({
         </div>
       </div>
       {choice.period === "custom" && (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-[#333]">
-          <label className="flex items-center gap-1.5">
-            From
-            <DateField value={choice.from} min={EARLIEST} max={choice.to || today} onCommit={(from) => onChange({ ...choice, from })} />
-          </label>
-          <label className="flex items-center gap-1.5">
-            To
-            <DateField value={choice.to} min={choice.from || EARLIEST} max={today} onCommit={(to) => onChange({ ...choice, to })} />
-          </label>
-        </div>
+        <CustomRange from={choice.from} to={choice.to} today={today} onApply={(from, to) => onChange({ ...choice, from, to })} />
       )}
     </div>
   );

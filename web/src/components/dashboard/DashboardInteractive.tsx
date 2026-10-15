@@ -27,6 +27,7 @@ import {
   CalendarCheckIcon,
   CalendarXIcon,
   AlertTriangleIcon,
+  InfoIcon,
 } from "@/components/icons";
 import { dismissNewAssignmentAction } from "@/app/g/[groupId]/members/actions";
 import { dismissFollowUpAction } from "@/app/g/[groupId]/outreach/actions";
@@ -80,6 +81,11 @@ function windowPhrase(days: number) {
     return weeks === 1 ? "1 week" : `${weeks} weeks`;
   }
   return days === 1 ? "1 day" : `${days} days`;
+}
+
+/** "the next 2 weeks" / "the last week" -- no "1 week" after next/last. */
+function spanPhrase(days: number) {
+  return days === 7 ? "week" : days === 1 ? "day" : windowPhrase(days);
 }
 
 function Avatar({ photoUrl, fullName }: { photoUrl: string | null; fullName: string }) {
@@ -194,6 +200,7 @@ export function DashboardInteractive({
   // Only that youth's own group's servants can be assigned to them.
   const servantsFor = (gid: string) => (!combined ? servants : servants.filter((s) => s.groups.some((g) => g.id === gid)));
   const [showHelp, setShowHelp] = useState(false);
+  const [showBirthdayHelp, setShowBirthdayHelp] = useState(false);
   // Owner-requested (15 Oct 2026): clearer panel names, in this ministry's words.
   const panelNames = dashboardPanelNames(memberLabel, L.servants);
   const [viewingEntry, setViewingEntry] = useState<FollowUpDueEntry | null>(null);
@@ -255,6 +262,35 @@ export function DashboardInteractive({
   );
   const totalActionsNeeded = visibleOutreachNeeded.length + visibleNewlyAssigned.length + visibleFollowUps.length;
 
+  // Owner-requested (15 Oct 2026): a summary line under each panel's title,
+  // shown expanded or collapsed, like My Servants Team's.
+  const memberWord = memberLabel.toLowerCase();
+  const members = (n: number) => `${n} ${memberWord}${n === 1 ? "" : "s"}`;
+  const upcomingBirthdays = filteredBirthdays.filter((m) => m.daysFromToday >= 0).length;
+  const recentBirthdays = filteredBirthdays.length - upcomingBirthdays;
+  const birthdaysSummary =
+    `${upcomingBirthdays} birthday${upcomingBirthdays === 1 ? "" : "s"} coming up in the next ${spanPhrase(birthdayWindowDays.after)}` +
+    (recentBirthdays > 0 ? `, and ${recentBirthdays} in the last ${spanPhrase(birthdayWindowDays.before)}` : "");
+  const registrationsSummary = `${members(filteredUnassigned.length)} ${filteredUnassigned.length === 1 ? "has" : "have"} not been assigned to a ${L.servantLower}`;
+  const outreachCount = visibleOutreachNeeded.length;
+  const actionsTop = [`${members(outreachCount)} need${outreachCount === 1 ? "s" : ""} outreach`, `${visibleNewlyAssigned.length} newly assigned`];
+  if (visibleFollowUps.length > 0) actionsTop.push(`${visibleFollowUps.length} follow-up${visibleFollowUps.length === 1 ? "" : "s"} due`);
+  // The second line is just this person's own.
+  const myOutreach = actionsNeeded.filter((m) => inCohort(m.group_id) && m.assigned_servant_id === currentUserId).length;
+  const myNew = newlyAssigned.filter((m) => inCohort(m.group_id) && m.assigned_servant_id === currentUserId).length;
+  const myFollowUps = followUpsDue.filter((x) => inCohort(x.member_group_id) && x.servant_id === currentUserId).length;
+  const firstName = currentUserName.split(" ")[0];
+  const actionsSummary = (
+    <>
+      <div>{actionsTop.join(", ")}</div>
+      <div>
+        {`${firstName}: ${myOutreach} need${myOutreach === 1 ? "s" : ""} your outreach, ${myNew} assigned to you, ${myFollowUps} need${
+          myFollowUps === 1 ? "s" : ""
+        } follow-up${myFollowUps === 1 ? "" : "s"}`}
+      </div>
+    </>
+  );
+
   const actionsNeededByServant = useMemo(() => {
     const groups = new Map<string, ActionsNeededCard[]>();
     const push = (key: string, card: ActionsNeededCard) => {
@@ -309,9 +345,23 @@ export function DashboardInteractive({
         id={`birthdays-${groupId}`}
         signInKey={signInKey}
         defaultOpen={startOpen.birthdays}
+        summary={birthdaysSummary}
         title={
           <span className="flex items-center gap-2">
-            <CakeIcon className="h-5 w-5" /> {panelNames.birthdays}
+            <CakeIcon className="h-5 w-5 shrink-0" /> {panelNames.birthdays}
+            <button
+              type="button"
+              onClick={(e) => {
+                // The title line expands and collapses the panel; this only explains it.
+                e.stopPropagation();
+                setShowBirthdayHelp(true);
+              }}
+              onKeyDown={(e) => e.stopPropagation()}
+              aria-label="Which birthdays show here?"
+              className="shrink-0 text-[#888] hover:text-brand"
+            >
+              <InfoIcon className="h-5 w-5" />
+            </button>
           </span>
         }
       >
@@ -374,6 +424,7 @@ export function DashboardInteractive({
         id={`unassigned-${groupId}`}
         signInKey={signInKey}
         defaultOpen={startOpen.registrations}
+        summary={registrationsSummary}
         title={
           <span className="flex items-center gap-2">
             <UserPlusIcon className="h-5 w-5" /> {panelNames.registrations}
@@ -440,6 +491,7 @@ export function DashboardInteractive({
         id={`actions-needed-${groupId}`}
         signInKey={signInKey}
         defaultOpen={startOpen.actions_needed}
+        summary={actionsSummary}
         title={
           <span className="flex items-center gap-2">
             <AlertTriangleIcon className="h-5 w-5 shrink-0" /> {panelNames.actions_needed}
@@ -452,9 +504,9 @@ export function DashboardInteractive({
               }}
               onKeyDown={(e) => e.stopPropagation()}
               aria-label="What is Actions Needed?"
-              className="h-5 w-5 shrink-0 flex items-center justify-center rounded-full bg-[#f0f0f0] text-[#666] text-xs font-bold hover:bg-[#e0e0e0]"
+              className="shrink-0 text-[#888] hover:text-brand"
             >
-              ?
+              <InfoIcon className="h-5 w-5" />
             </button>
           </span>
         }
@@ -690,6 +742,30 @@ export function DashboardInteractive({
               handleDismissFollowUp(outreachForFollowUp.id);
             }}
           />,
+          document.body,
+        )}
+
+      {showBirthdayHelp &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowBirthdayHelp(false)}>
+            <div
+              className="w-full max-w-md rounded-xl bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.2)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
+                <h2 className="text-lg font-bold text-brand">{panelNames.birthdays}</h2>
+                <button onClick={() => setShowBirthdayHelp(false)} className="text-[#999] hover:text-[#333] text-xl leading-none">
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-[#333]">
+                A {memberWord}&rsquo;s birthday shows here from {windowPhrase(birthdayWindowDays.after)} before it until{" "}
+                {windowPhrase(birthdayWindowDays.before)} after it. So you see the birthdays coming up in the next{" "}
+                {spanPhrase(birthdayWindowDays.after)}, and the ones from the last {spanPhrase(birthdayWindowDays.before)}.
+              </p>
+              <p className="mt-3 text-xs text-[#666]">A System Admin can change these on the Ministry Settings screen.</p>
+            </div>
+          </div>,
           document.body,
         )}
 
