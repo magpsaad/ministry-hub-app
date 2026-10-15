@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoTip } from "@/components/InfoTip";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendTestNotification } from "./actions";
@@ -71,12 +72,17 @@ export function NotificationsCard({
 
   return (
     <div className={CARD}>
-      <h2 className="text-base font-bold text-[#333]">Notifications on this device</h2>
-      <p className="mt-1 text-sm text-[#555]">
-        {hasTypes
-          ? "Get an alert on this phone or computer when something needs you. Choose which ones below."
-          : `Get alerts on this phone or computer from Ministry Hub. More alerts for ${L.servantsLower} are coming.`}
-      </p>
+      <h2 className="flex items-center gap-1.5 text-base font-bold text-[#333]">
+        Notifications on this device
+        {/* Owner-requested (15 Oct 2026): the explanation sits behind an (i). */}
+        <InfoTip title="Notifications on this device">
+          <p>
+            {hasTypes
+              ? "Get an alert on this phone or computer when something needs you. Choose which ones below."
+              : `Get alerts on this phone or computer from Ministry Hub. More alerts for ${L.servantsLower} are coming.`}
+          </p>
+        </InfoTip>
+      </h2>
 
       {support === "checking" && <p className="mt-3 text-sm text-[#888]">One moment&hellip;</p>}
 

@@ -99,7 +99,8 @@ export function MyServantsTeam({
 
   const total = countPeople(rows, absenceWeeks);
   const parts: string[] = [];
-  if (total.lastService && total.counted > 0) parts.push(`${total.present} of ${total.counted} attended last week`);
+  // Owner-requested (15 Oct 2026): never a part that's zero.
+  if (total.lastService && total.present > 0) parts.push(`${total.present} of ${total.counted} attended last week`);
   if (total.absent > 0) parts.push(`${total.absent} absent ${absenceWeeks}+ weeks`);
   if (total.quiet > 0) parts.push(`${total.quiet} quiet`);
   if (total.birthdays > 0) parts.push(plural(total.birthdays, "birthday"));
@@ -204,7 +205,7 @@ export function MyServantsTeam({
             const coordinators = Array.from(new Set(team.rows.filter((r) => r.is_coordinator).map((r) => r.full_name.split(" ")[0])));
             const stats: string[] = [];
             // Owner-requested (15 Oct 2026): spelled out, as in the summary line.
-            if (c.lastService && c.counted > 0) stats.push(`${c.present} of ${c.counted} present last week`);
+            if (c.lastService && c.present > 0) stats.push(`${c.present} of ${c.counted} present last week`);
             if (c.absent > 0) stats.push(`${c.absent} absent ${absenceWeeks}+ weeks`);
             if (c.quiet > 0) stats.push(`${c.quiet} quiet`);
             if (c.birthdays > 0) stats.push(plural(c.birthdays, "birthday"));
@@ -222,7 +223,7 @@ export function MyServantsTeam({
                       {team.name}
                       {coordinators.length > 0 && <span className="font-normal text-[#666]"> ({coordinators.join(", ")})</span>}
                     </p>
-                    <p className="overflow-hidden whitespace-nowrap text-xs text-[#666]">{stats.join(", ") || "No attendance yet"}</p>
+                    <p className="overflow-hidden whitespace-nowrap text-xs text-[#666]">{stats.join(", ") || "Nothing needs attention"}</p>
                   </div>
                   <ChevronDownIcon className={`h-4 w-4 shrink-0 text-[#999] transition-transform ${open ? "rotate-180" : ""}`} />
                 </button>

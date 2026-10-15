@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoTip } from "@/components/InfoTip";
 import { useMemo, useState, useTransition } from "react";
 import type { AccessProfile, AccessRoleRow } from "@/app/admin/access-maintenance/actions";
 import type { GroupSummary } from "@/lib/groups";
@@ -332,17 +333,21 @@ export function AccessMaintenanceInteractive({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="text-sm font-bold text-brand mb-2">What each role can and cannot do</h2>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
-          {(Object.keys(ROLE_LABELS) as AccessRoleRow["role"][]).map((r) => (
-            <div key={r}>
-              <dt className="font-semibold text-[#333]">{ROLE_LABELS[r]}</dt>
-              <dd className="text-[#666]">{ROLE_DESCRIPTIONS[r]}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
+      {/* Owner-requested (15 Oct 2026): this took too much room -- it sits
+          behind an (i) now. */}
+      <p className="flex items-center justify-end gap-1.5 text-xs font-semibold text-[#666]">
+        What each role can and cannot do
+        <InfoTip title="What each role can and cannot do">
+          <dl className="space-y-2 text-xs">
+            {(Object.keys(ROLE_LABELS) as AccessRoleRow["role"][]).map((r) => (
+              <div key={r}>
+                <dt className="font-semibold text-[#333]">{ROLE_LABELS[r]}</dt>
+                <dd className="text-[#666]">{ROLE_DESCRIPTIONS[r]}</dd>
+              </div>
+            ))}
+          </dl>
+        </InfoTip>
+      </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">

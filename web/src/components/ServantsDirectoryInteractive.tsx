@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoTip } from "@/components/InfoTip";
 import { useMemo, useRef, useState } from "react";
 import type { ServantDirectoryEntry } from "@/lib/servant-directory";
 import { PhoneLink } from "@/components/PhoneLink";
@@ -92,12 +93,6 @@ export function ServantsDirectoryInteractive({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[#666]">
-        {windowWeeks === null
-          ? `Attendance % is calculated over each ${L.servantLower}'s entire history since their Join Date, counting only ${dayName}s.`
-          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
-      </p>
-
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="text"
@@ -122,6 +117,14 @@ export function ServantsDirectoryInteractive({
             Alphabetical
           </button>
         </div>
+        {/* Owner-requested (15 Oct 2026): the explanation sits behind an (i). */}
+        <InfoTip title="How Attendance % works">
+          <p>
+            {windowWeeks === null
+              ? `Attendance % is calculated over each ${L.servantLower}'s entire history since their Join Date, counting only ${dayName}s.`
+              : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
+          </p>
+        </InfoTip>
       </div>
 
       {filtered.length === 0 && <p className="text-sm text-[#666] text-center py-8">No {L.servantsLower} match.</p>}

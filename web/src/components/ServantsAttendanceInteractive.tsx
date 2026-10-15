@@ -10,6 +10,7 @@ import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { UndoBar, type UndoInfo } from "@/components/attendance/UndoBar";
 import { ServantWeeklyStrip } from "@/components/attendance/ServantWeeklyStrip";
 import { COORDINATOR_CHIP } from "@/components/ServantTotals";
+import { InfoTip } from "@/components/InfoTip";
 
 /** REQUIREMENTS.md §6.13 -- same Present/Absent/"Never Attended" pattern as
  * the member Attendance tab (§6.5), applied to servants across the whole
@@ -217,12 +218,19 @@ export function ServantsAttendanceInteractive({
         />
       </div>
 
-      <AverageControls choice={avgChoice} onChange={setAvgChoice} today={bundle.todayDate} />
-
-      <p className="text-xs text-[#666]">
-        Service counts {dayName}s only. Events count the ones for each {L.servantLower}&rsquo;s own{" "}
-        {groupLabel.toLowerCase()}s and the whole ministry. Nothing counts from before someone joined.
-      </p>
+      <AverageControls
+        choice={avgChoice}
+        onChange={setAvgChoice}
+        today={bundle.todayDate}
+        info={
+          <InfoTip title="How the average works" className="[&_svg]:h-4 [&_svg]:w-4">
+            <p>
+              Service counts {dayName}s only. Events count the ones for each {L.servantLower}&rsquo;s own{" "}
+              {groupLabel.toLowerCase()}s and the whole ministry. Nothing counts from before someone joined.
+            </p>
+          </InfoTip>
+        }
+      />
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">

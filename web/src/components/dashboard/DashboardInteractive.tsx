@@ -263,31 +263,46 @@ export function DashboardInteractive({
   const totalActionsNeeded = visibleOutreachNeeded.length + visibleNewlyAssigned.length + visibleFollowUps.length;
 
   // Owner-requested (15 Oct 2026): a summary line under each panel's title,
-  // shown expanded or collapsed, like My Servants Team's.
+  // shown expanded or collapsed, like My Servants Team's -- never a part
+  // that's zero ("0 assigned to you").
   const memberWord = memberLabel.toLowerCase();
   const members = (n: number) => `${n} ${memberWord}${n === 1 ? "" : "s"}`;
   const upcomingBirthdays = filteredBirthdays.filter((m) => m.daysFromToday >= 0).length;
   const recentBirthdays = filteredBirthdays.length - upcomingBirthdays;
+  const birthdayParts: string[] = [];
+  if (upcomingBirthdays > 0)
+    birthdayParts.push(`${upcomingBirthdays} birthday${upcomingBirthdays === 1 ? "" : "s"} coming up in the next ${spanPhrase(birthdayWindowDays.after)}`);
+  if (recentBirthdays > 0)
+    birthdayParts.push(
+      upcomingBirthdays > 0
+        ? `and ${recentBirthdays} in the last ${spanPhrase(birthdayWindowDays.before)}`
+        : `${recentBirthdays} birthday${recentBirthdays === 1 ? "" : "s"} in the last ${spanPhrase(birthdayWindowDays.before)}`,
+    );
   const birthdaysSummary =
-    `${upcomingBirthdays} birthday${upcomingBirthdays === 1 ? "" : "s"} coming up in the next ${spanPhrase(birthdayWindowDays.after)}` +
-    (recentBirthdays > 0 ? `, and ${recentBirthdays} in the last ${spanPhrase(birthdayWindowDays.before)}` : "");
-  const registrationsSummary = `${members(filteredUnassigned.length)} ${filteredUnassigned.length === 1 ? "has" : "have"} not been assigned to a ${L.servantLower}`;
+    birthdayParts.join(", ") ||
+    `No birthdays in the next ${spanPhrase(birthdayWindowDays.after)} or the last ${spanPhrase(birthdayWindowDays.before)}`;
+  const registrationsSummary =
+    filteredUnassigned.length > 0
+      ? `${members(filteredUnassigned.length)} ${filteredUnassigned.length === 1 ? "has" : "have"} not been assigned to a ${L.servantLower}`
+      : `All ${memberWord}s have been assigned to a ${L.servantLower}`;
   const outreachCount = visibleOutreachNeeded.length;
-  const actionsTop = [`${members(outreachCount)} need${outreachCount === 1 ? "s" : ""} outreach`, `${visibleNewlyAssigned.length} newly assigned`];
+  const actionsTop: string[] = [];
+  if (outreachCount > 0) actionsTop.push(`${members(outreachCount)} need${outreachCount === 1 ? "s" : ""} outreach`);
+  if (visibleNewlyAssigned.length > 0) actionsTop.push(`${visibleNewlyAssigned.length} newly assigned`);
   if (visibleFollowUps.length > 0) actionsTop.push(`${visibleFollowUps.length} follow-up${visibleFollowUps.length === 1 ? "" : "s"} due`);
   // The second line is just this person's own.
   const myOutreach = actionsNeeded.filter((m) => inCohort(m.group_id) && m.assigned_servant_id === currentUserId).length;
   const myNew = newlyAssigned.filter((m) => inCohort(m.group_id) && m.assigned_servant_id === currentUserId).length;
   const myFollowUps = followUpsDue.filter((x) => inCohort(x.member_group_id) && x.servant_id === currentUserId).length;
   const firstName = currentUserName.split(" ")[0];
+  const myParts: string[] = [];
+  if (myOutreach > 0) myParts.push(`${myOutreach} need${myOutreach === 1 ? "s" : ""} your outreach`);
+  if (myNew > 0) myParts.push(`${myNew} assigned to you`);
+  if (myFollowUps > 0) myParts.push(`${myFollowUps} need${myFollowUps === 1 ? "s" : ""} follow-up${myFollowUps === 1 ? "" : "s"}`);
   const actionsSummary = (
     <>
-      <div>{actionsTop.join(", ")}</div>
-      <div>
-        {`${firstName}: ${myOutreach} need${myOutreach === 1 ? "s" : ""} your outreach, ${myNew} assigned to you, ${myFollowUps} need${
-          myFollowUps === 1 ? "s" : ""
-        } follow-up${myFollowUps === 1 ? "" : "s"}`}
-      </div>
+      <div>{actionsTop.join(", ") || "Nothing needs action right now"}</div>
+      <div>{`${firstName}: ${myParts.join(", ") || "nothing for you right now"}`}</div>
     </>
   );
 

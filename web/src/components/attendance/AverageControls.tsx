@@ -132,9 +132,13 @@ export function AverageControls({
   choice,
   onChange,
   today,
+  info,
 }: {
   choice: AvgChoice;
   onChange: (c: AvgChoice) => void;
+  /** An (i) after "Average attendance of:" (owner-requested 15 Oct 2026,
+   * Servant Attendance only for now). */
+  info?: React.ReactNode;
   /** The latest day a Custom period can end on. Without a latest day, a
    * browser keeps taking digits into the year ("202609") instead of moving
    * on to the month (owner-reported, 15 Oct 2026). */
@@ -146,7 +150,10 @@ export function AverageControls({
           side by side with a space between. */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2 text-sm text-[#333]">
         <div>
-          <span className="mb-1 block text-xs font-semibold text-[#555]">Average attendance of:</span>
+          <span className="mb-1 flex items-center gap-1 text-xs font-semibold text-[#555]">
+            Average attendance of:
+            {info}
+          </span>
           <div role="group" aria-label="Average attendance of" className="inline-flex overflow-hidden rounded-md border border-[#ddd]">
             {AVG_MODES.map((m) => (
               <button

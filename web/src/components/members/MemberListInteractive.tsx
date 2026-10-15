@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoTip } from "@/components/InfoTip";
 import { useMemo, useState } from "react";
 import type { MemberListItem } from "@/lib/members";
 import type { University } from "@/lib/universities";
@@ -178,6 +179,14 @@ export function MemberListInteractive({
             <span className="rounded-full bg-[#dc3545] text-white text-[11px] px-2 py-0.5">{activeFilterCount}</span>
           )}
         </button>
+        {/* Owner-requested (15 Oct 2026): the explanation sits behind an (i). */}
+        <InfoTip title="How Attendance % works">
+          <p>
+            {windowWeeks === null
+              ? `Attendance % is calculated over each ${memberLabel.toLowerCase()}'s entire history since their Join Date, counting only ${dayName}s.`
+              : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
+          </p>
+        </InfoTip>
       </div>
 
       {showFilters && (
@@ -287,11 +296,6 @@ export function MemberListInteractive({
         </div>
       )}
 
-      <p className="mt-3 text-xs text-[#666]">
-        {windowWeeks === null
-          ? `Attendance % is calculated over each ${memberLabel.toLowerCase()}'s entire history since their Join Date, counting only ${dayName}s.`
-          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
-      </p>
 
       <MemberGrid
         members={filtered}

@@ -1,5 +1,6 @@
 "use client";
 
+import { InfoTip } from "@/components/InfoTip";
 import { useMemo, useState, useTransition } from "react";
 import {
   computeHolidaysForYear,
@@ -119,12 +120,17 @@ export function CalendarMaintenanceInteractive({
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="text-lg font-bold text-brand mb-3">Preload Holidays &amp; Feast Days</h2>
-        <p className="text-sm text-[#666] mb-3">
-          Computes the sets below for the selected year (fixed feasts, Pascha-relative movable feasts, and any
-          custom feasts/fasts you&rsquo;ve added, all calculated algorithmically). Review the preview before adding
-          it to the calendar.
-        </p>
+        <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+          Preload Holidays &amp; Feast Days
+          {/* Owner-requested (15 Oct 2026): the explanation sits behind an (i). */}
+          <InfoTip title="Preload Holidays & Feast Days">
+            <p>
+              Computes the sets below for the selected year (fixed feasts, Pascha-relative movable feasts, and any
+              custom feasts/fasts you&rsquo;ve added, all calculated algorithmically). Review the preview before adding
+              it to the calendar.
+            </p>
+          </InfoTip>
+        </h2>
         <div className="flex flex-wrap items-center gap-4 mb-3">
           <label className="flex items-center gap-2 text-sm text-[#333]">
             <input type="checkbox" checked={includeCoptic} onChange={(e) => setIncludeCoptic(e.target.checked)} />
