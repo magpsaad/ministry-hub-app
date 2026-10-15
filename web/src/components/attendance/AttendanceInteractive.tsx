@@ -265,7 +265,7 @@ export function AttendanceInteractive({
           Exclude visitors
         </label>
       </div>
-      <AverageControls choice={avgChoice} onChange={setAvgChoice} />
+      <AverageControls choice={avgChoice} onChange={setAvgChoice} today={bundle.todayDate} />
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">

@@ -51,6 +51,8 @@ export function useAvgChoice(key: string, today: string): [AvgChoice, (c: AvgCho
   return [choice, update];
 }
 
+const EARLIEST = "2000-01-01";
+
 const dateInput =
   "min-w-0 appearance-none rounded-md border border-[#ddd] bg-white px-2 py-1.5 text-sm focus:border-brand focus:outline-none";
 
@@ -96,7 +98,18 @@ function DateField({
 /** "Average attendance of: [Service | Events | Both]" and "For period:
  * [Last 12 months]", each label above its control, side by side; From/To
  * only for Custom. */
-export function AverageControls({ choice, onChange }: { choice: AvgChoice; onChange: (c: AvgChoice) => void }) {
+export function AverageControls({
+  choice,
+  onChange,
+  today,
+}: {
+  choice: AvgChoice;
+  onChange: (c: AvgChoice) => void;
+  /** The latest day a Custom period can end on. Without a latest day, a
+   * browser keeps taking digits into the year ("202609") instead of moving
+   * on to the month (owner-reported, 15 Oct 2026). */
+  today: string;
+}) {
   return (
     <div className="space-y-2">
       {/* Owner's layout (10 Oct 2026): each label above its control, the two
@@ -142,11 +155,11 @@ export function AverageControls({ choice, onChange }: { choice: AvgChoice; onCha
         <div className="flex flex-wrap items-center gap-2 text-sm text-[#333]">
           <label className="flex items-center gap-1.5">
             From
-            <DateField value={choice.from} max={choice.to || undefined} onCommit={(from) => onChange({ ...choice, from })} />
+            <DateField value={choice.from} min={EARLIEST} max={choice.to || today} onCommit={(from) => onChange({ ...choice, from })} />
           </label>
           <label className="flex items-center gap-1.5">
             To
-            <DateField value={choice.to} min={choice.from || undefined} onCommit={(to) => onChange({ ...choice, to })} />
+            <DateField value={choice.to} min={choice.from || EARLIEST} max={today} onCommit={(to) => onChange({ ...choice, to })} />
           </label>
         </div>
       )}

@@ -15,8 +15,9 @@ import { getDashboardStartOpen } from "@/lib/dashboard-prefs-server";
 import { DashboardPanelsCard } from "./DashboardPanelsCard";
 
 /** My Settings -> Dashboard (owner-requested 15 Oct 2026, migration 0116):
- * which Dashboard panels start open and which start collapsed, panel by
- * panel. The Overview always stays open; My Servants Team is only listed
+ * which Dashboard panels start expanded and which start collapsed, panel by
+ * panel (owner's wording: "expand", never "open"). The Overview is always
+ * expanded; My Servants Team is only listed
  * for those who have it. */
 export default async function DashboardSettingsPage() {
   const supabase = await createClient();

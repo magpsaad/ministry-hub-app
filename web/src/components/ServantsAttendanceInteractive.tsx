@@ -217,7 +217,7 @@ export function ServantsAttendanceInteractive({
         />
       </div>
 
-      <AverageControls choice={avgChoice} onChange={setAvgChoice} />
+      <AverageControls choice={avgChoice} onChange={setAvgChoice} today={bundle.todayDate} />
 
       <p className="text-xs text-[#666]">
         Service counts {dayName}s only. Events count the ones for each {L.servantLower}&rsquo;s own{" "}
