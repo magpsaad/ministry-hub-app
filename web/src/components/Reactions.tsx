@@ -32,6 +32,21 @@ function loadReactions(kind: ReactionKind, id: string): Promise<ReactionRow[]> {
   });
 }
 
+/** The reactions as they'll be once mine is `emoji` (null = none), shown
+ * before the save comes back. Names are filled in by the save. */
+function withMine(rows: ReactionRow[], emoji: string | null): ReactionRow[] {
+  const out = rows
+    .map((r) => (r.mine ? { ...r, n: r.n - 1, mine: false, names: r.names.slice(0, -1) } : r))
+    .filter((r) => r.n > 0);
+  if (emoji === null) return out;
+  const i = out.findIndex((r) => r.emoji === emoji);
+  if (i >= 0) {
+    out[i] = { ...out[i], n: out[i].n + 1, mine: true, names: [...out[i].names, "You"] };
+    return out;
+  }
+  return [...out, { item_id: rows[0]?.item_id ?? "", emoji, n: 1, mine: true, names: ["You"] }];
+}
+
 /** Owner-approved (15 Oct 2026, migration 0117): emoji reactions under an
  * announcement or a message. One per person, like WhatsApp -- another emoji
  * replaces mine, the same one again removes it. The smiley opens the six
@@ -76,17 +91,24 @@ export function Reactions({
 
   const mine = rows.find((r) => r.mine)?.emoji ?? null;
 
+  // Owner-reported (15 Oct 2026): it felt slow. The tap shows straight away;
+  // the save then hands back the real counts and names (or, if it failed,
+  // the reactions go back to how they were).
   async function choose(emoji: string) {
     if (busy || readOnly) return;
     const next = mine === emoji ? null : emoji;
+    const before = rows;
+    setRows(withMine(rows, next));
+    setOpen(false);
     setBusy(true);
     setError(null);
     const res = await setReactionAction(kind, itemId, next);
-    if (res.error) {
-      setError(res.error);
+    if (res.error || !res.rows) {
+      setRows(before);
+      setError(res.error ?? "Couldn't save that. Please try again.");
+      setOpen(true);
     } else {
-      setRows(await getReactionsAction(kind, [itemId]));
-      setOpen(false);
+      setRows(res.rows);
     }
     setBusy(false);
   }
