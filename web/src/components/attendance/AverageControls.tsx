@@ -177,7 +177,13 @@ export function AverageControls({
           <select
             id="average-period"
             value={choice.period}
-            onChange={(e) => onChange({ ...choice, period: e.target.value as AvgPeriodKind })}
+            onChange={(e) => {
+              const period = e.target.value as AvgPeriodKind;
+              // Owner-requested (15 Oct 2026): choosing Custom starts both
+              // dates at today -- a pre-filled date a year back was easy to
+              // keep by mistake.
+              onChange(period === "custom" ? { ...choice, period, from: today, to: today } : { ...choice, period });
+            }}
             className="rounded-md border border-[#ddd] bg-white px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           >
             {AVG_PERIODS.map((p) => (
