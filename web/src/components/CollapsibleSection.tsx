@@ -1,13 +1,13 @@
 "use client";
 
-import { setSessionString, useSessionString } from "@/components/useSessionFlag";
+import { useState } from "react";
 
-/** REQUIREMENTS.md §6.3 -- collapse state persists per browser session, same
- * sessionStorage mechanism as "My Assigned List", resetting each new session.
- * Owner-requested (15 Oct 2026): each panel starts open or collapsed as the
- * person chose in My Settings -> Dashboard (`defaultOpen`); tapping anywhere
- * on the title line opens or closes it, and `summary` stays visible under
- * the title either way. */
+/** Owner-requested (15 Oct 2026): each panel starts open or collapsed as the
+ * person chose in My Settings -> Dashboard (`defaultOpen`), every time the
+ * Dashboard opens -- it used to remember taps for the whole session, which
+ * then overrode that choice. Tapping anywhere on the title line opens or
+ * closes it; `summary` stays visible under the title either way. `id` is
+ * kept for callers. */
 export function CollapsibleSection({
   id,
   title,
@@ -21,22 +21,16 @@ export function CollapsibleSection({
   defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
-  const key = `collapsed:${id}`;
-  const stored = useSessionString(key);
-  const hydrated = stored !== null;
-  const open = stored === "true" ? false : stored === "false" ? true : defaultOpen;
+  const [showBody, setShowBody] = useState(defaultOpen);
 
   function toggle() {
-    setSessionString(key, String(open));
+    setShowBody((o) => !o);
   }
-
-  // Before hydration the server can't know this session's choice: show the
-  // starting state, so nothing jumps open and shut.
-  const showBody = hydrated ? open : defaultOpen;
 
   return (
     <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <div
+        id={`section-${id}`}
         role="button"
         tabIndex={0}
         aria-expanded={showBody}

@@ -13,9 +13,13 @@ export type ServantAttendanceMember = {
   /** The classes they serve -- which events count toward their Events %
    * (none: whole-ministry events only). */
   groupIds: string[];
-  /** A General Coordinator with no Servant grant (not counted in the
-   * weekly strip, owner-requested 15 Oct 2026). */
+  /** A General Coordinator with no Servant or Coordinator grant (not
+   * counted in the weekly strip, owner-requested 15 Oct 2026). */
   gcOnly: boolean;
+  /** Holds a Coordinator (HSY: Steward) grant -- listed with a chip
+   * (owner-requested 15 Oct 2026; HSY Stewards without a Servant grant
+   * used to be missing from this list). */
+  isCoordinator: boolean;
   /** Counted in the weekly strip from this day: when they joined (their
    * first attendance), else when they signed up. */
   countFrom: string | null;
@@ -60,7 +64,7 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
     supabase
       .from("user_roles")
       .select("user_id, role, group_id, groups(name, display_order), profiles(full_name, join_date, created_at)")
-      .in("role", ["servant", "general_coordinator"]),
+      .in("role", ["servant", "sub_coordinator", "general_coordinator"]),
     getAttendanceWindowSettings(),
     getRoleLabels(),
     supabase
@@ -73,28 +77,40 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
   const cutoff = settings.same_day_cutoff_time;
   const { date: todayDate, timeMinutes } = nowInZone(settings.timezone);
 
-  const byUser = new Map<string, { full_name: string; join_date: string | null; groupLabel: string; countFrom: string | null }>();
+  const byUser = new Map<string, { full_name: string; join_date: string | null; countFrom: string | null }>();
   const groupsByUser = new Map<string, string[]>();
+  const groupNameById = new Map<string, string>();
   const servantGrant = new Set<string>();
+  const coordinatorGrant = new Set<string>();
+  const gcGrant = new Set<string>();
   const groupOrder: { id: string; name: string; order: number }[] = [];
   for (const r of roleRows ?? []) {
     const group = r.groups as unknown as { name: string; display_order: number | null } | null;
     if (r.role === "servant") servantGrant.add(r.user_id);
-    if (r.role === "servant" && r.group_id) {
-      groupsByUser.set(r.user_id, [...(groupsByUser.get(r.user_id) ?? []), r.group_id]);
-      if (group && !groupOrder.some((g) => g.id === r.group_id)) groupOrder.push({ id: r.group_id, name: group.name, order: group.display_order ?? 0 });
+    if (r.role === "sub_coordinator") coordinatorGrant.add(r.user_id);
+    if (r.role === "general_coordinator") gcGrant.add(r.user_id);
+    if (r.role !== "general_coordinator" && r.group_id && group) {
+      // Servants and Coordinators alike: the groups they serve.
+      const list = groupsByUser.get(r.user_id) ?? [];
+      if (!list.includes(r.group_id)) groupsByUser.set(r.user_id, [...list, r.group_id]);
+      groupNameById.set(r.group_id, group.name);
+      if (!groupOrder.some((g) => g.id === r.group_id)) groupOrder.push({ id: r.group_id, name: group.name, order: group.display_order ?? 0 });
     }
     if (byUser.has(r.user_id)) continue;
     const profile = r.profiles as unknown as { full_name: string; join_date: string | null; created_at: string | null } | null;
     if (!profile) continue;
-    const groupLabel = r.role === "general_coordinator" ? L.generalCoordinator : (group?.name ?? "Unassigned");
     byUser.set(r.user_id, {
       full_name: profile.full_name,
       join_date: profile.join_date,
-      groupLabel,
       countFrom: profile.join_date ?? profile.created_at?.slice(0, 10) ?? null,
     });
   }
+  // Their group's name; else General Coordinator; else Unassigned.
+  const groupLabelOf = (id: string) => {
+    const first = groupsByUser.get(id)?.[0];
+    if (first) return groupNameById.get(first) ?? "Unassigned";
+    return gcGrant.has(id) ? L.generalCoordinator : "Unassigned";
+  };
   groupOrder.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
   const groupNames = Object.fromEntries(groupOrder.map((g) => [g.id, g.name]));
 
@@ -158,7 +174,14 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
 
   const members: ServantAttendanceMember[] = ids.map((id) => {
     const info = byUser.get(id)!;
-    return { id, ...info, groupIds: groupsByUser.get(id) ?? [], gcOnly: !servantGrant.has(id) };
+    return {
+      id,
+      ...info,
+      groupLabel: groupLabelOf(id),
+      groupIds: groupsByUser.get(id) ?? [],
+      gcOnly: !servantGrant.has(id) && !coordinatorGrant.has(id),
+      isCoordinator: coordinatorGrant.has(id),
+    };
   });
   members.sort((a, b) => a.full_name.localeCompare(b.full_name));
 

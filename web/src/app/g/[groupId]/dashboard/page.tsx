@@ -29,9 +29,12 @@ function shouldAskBirthday(access: AccessSummary | null, profile: DashboardProfi
   return !after || (after !== "infinity" && new Date(after).getTime() <= Date.now());
 }
 
-/** My Servants Team (0116): only Coordinators and General Coordinators. */
+/** My Servants Team (0116): Coordinators, General Coordinators and System
+ * Admins (who see the General Coordinators' view, owner-requested 15 Oct). */
 function servantTeamFor(access: AccessSummary | null): Promise<ServantTeamRow[]> {
-  return access && (access.isGeneralCoordinator || access.isSubCoordinator) ? getMyServantTeam() : Promise.resolve([]);
+  return access && (access.isGeneralCoordinator || access.isAdmin || access.isSubCoordinator)
+    ? getMyServantTeam()
+    : Promise.resolve([]);
 }
 
 export default async function DashboardPage({ params }: { params: Promise<{ groupId: string }> }) {
@@ -104,7 +107,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
           currentUserName={profile?.full_name ?? user?.email ?? "Unknown"}
           startOpen={startOpen}
           servantTeam={servantTeam}
-          isGeneralCoordinator={access?.isGeneralCoordinator ?? false}
+          isGeneralCoordinator={(access?.isGeneralCoordinator || access?.isAdmin) ?? false}
           servantAbsenceWeeks={settings.servant_absence_weeks}
           servantQuietDays={settings.servant_quiet_days}
           askBirthday={shouldAskBirthday(access, profile)}
@@ -185,7 +188,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
         currentUserName={currentUserName}
         startOpen={startOpen}
         servantTeam={servantTeam}
-        isGeneralCoordinator={access?.isGeneralCoordinator ?? false}
+        isGeneralCoordinator={(access?.isGeneralCoordinator || access?.isAdmin) ?? false}
         servantAbsenceWeeks={settings.servant_absence_weeks}
         servantQuietDays={settings.servant_quiet_days}
         askBirthday={shouldAskBirthday(access, profile)}

@@ -34,7 +34,7 @@ export default async function DashboardSettingsPage() {
     getDashboardStartOpen(),
   ]);
   const names = dashboardPanelNames(settings.member_label, L.servants);
-  const hasTeam = access.isGeneralCoordinator || access.isSubCoordinator;
+  const hasTeam = access.isGeneralCoordinator || access.isAdmin || access.isSubCoordinator;
   const panels = DASHBOARD_PANELS.filter((p) => p !== "servant_team" || hasTeam).map((p) => ({
     panel: p,
     name: names[p],

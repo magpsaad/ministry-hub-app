@@ -31,8 +31,8 @@ export function DashboardPanelsCard({ panels, overviewName }: { panels: PanelRow
     <section className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-base font-bold text-brand">Dashboard panels</h2>
       <p className="mt-1 text-sm text-[#666]">
-        Choose how each panel looks when you open the app. You can still open or close any panel by tapping its title;
-        it stays that way until you close the app. The {overviewName} is always open.
+        Choose how each panel looks every time you open the Dashboard. You can still open or close a panel by tapping
+        its title; next time, it starts the way you chose here. The {overviewName} is always open.
       </p>
       {error && <p className="mt-3 text-sm text-[#dc3545]">{error}</p>}
       <div className="mt-4 divide-y divide-[#f0f0f0]">

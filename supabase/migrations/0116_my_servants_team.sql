@@ -12,7 +12,7 @@
 -- * last_seen: when each person last opened the app (noted at most once a
 --   day by note_seen()), seeded from what the app already knew.
 -- * servant_team(): the people a Coordinator (their groups' Servants and
---   Coordinators) or a General Coordinator (everyone) looks after, with
+--   Coordinators) or a General Coordinator or System Admin (everyone) looks after, with
 --   their absences, last-seen and birthday. my_servant_team() is the
 --   signed-in person's own; servant_team_line() the weekly-recap line.
 -- * dashboard_prefs: each person's choice of which Dashboard panels start
@@ -153,7 +153,7 @@ begin
   v_today := (now() at time zone coalesce(v_s.timezone, 'America/Toronto'))::date;
   v_y := extract(year from v_today)::int;
   v_gc := exists (select 1 from user_roles ur
-                  where ur.ministry_id = p_ministry and ur.user_id = p_user and ur.role::text = 'general_coordinator');
+                  where ur.ministry_id = p_ministry and ur.user_id = p_user and ur.role::text in ('general_coordinator', 'admin'));
   if not v_gc then
     v_groups := my_coordinated_groups(p_ministry, p_user);
     if coalesce(cardinality(v_groups), 0) = 0 then
@@ -276,7 +276,7 @@ begin
                     where ur.ministry_id = p_ministry and ur.user_id = p.id and ur.role::text in ('servant', 'sub_coordinator'))
     ), w as (
       select b.id, b.full_name, gc.user_id uid
-      from b join user_roles gc on gc.ministry_id = p_ministry and gc.role::text = 'general_coordinator'
+      from b join user_roles gc on gc.ministry_id = p_ministry and gc.role::text in ('general_coordinator', 'admin')
       union
       select b.id, b.full_name, c.user_id
       from b

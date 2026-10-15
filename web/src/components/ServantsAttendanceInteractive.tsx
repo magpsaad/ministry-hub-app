@@ -9,6 +9,7 @@ import { AverageControls, useAvgChoice } from "@/components/attendance/AverageCo
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { UndoBar, type UndoInfo } from "@/components/attendance/UndoBar";
 import { ServantWeeklyStrip } from "@/components/attendance/ServantWeeklyStrip";
+import { COORDINATOR_CHIP } from "@/components/ServantTotals";
 
 /** REQUIREMENTS.md §6.13 -- same Present/Absent/"Never Attended" pattern as
  * the member Attendance tab (§6.5), applied to servants across the whole
@@ -242,7 +243,13 @@ export function ServantsAttendanceInteractive({
               const percent = percentById.get(m.id) ?? null;
               return (
                 <tr key={m.id}>
-                  <td className="px-4 py-2.5 font-medium text-[#333]">{m.full_name}</td>
+                  <td className="px-4 py-2.5 font-medium text-[#333]">
+                    {/* Owner-requested (15 Oct 2026): Coordinators / Stewards marked. */}
+                    <span className="flex items-center gap-1.5">
+                      <span>{m.full_name}</span>
+                      {m.isCoordinator && <span className={COORDINATOR_CHIP}>{L.coordinator}</span>}
+                    </span>
+                  </td>
                   <td className="px-4 py-2.5 text-[#666]">
                     {percent === null ? (
                       "N/A"

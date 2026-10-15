@@ -9,15 +9,15 @@ import { COORDINATOR_CHIP } from "@/components/ServantTotals";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { formatDateTimeInZone } from "@/lib/timezone";
-import { ChevronDownIcon, UsersIcon } from "@/components/icons";
+import { ChevronDownIcon, UserCheckIcon } from "@/components/icons";
 
 /** Owner-requested (15 Oct 2026, migration 0116) -- "My Servants Team", at
  * the top of the Dashboard for Coordinators and General Coordinators. One
  * summary line (always shown, even collapsed); opened, the same kind of
  * cards as the youth panels: yellow for someone absent a while, grey for
  * someone who's gone quiet in the app, green for a birthday. A General
- * Coordinator (or a Coordinator of several groups) first sees one line per
- * group and taps a group to see its cards. */
+ * Coordinator or System Admin (or a Coordinator of several groups) first
+ * sees one line per group and taps a group to see its cards. */
 
 type Team = { key: string; name: string; rows: ServantTeamRow[] };
 
@@ -132,8 +132,8 @@ export function MyServantsTeam({
 
   function cards(teamRows: ServantTeamRow[]) {
     const absent = teamRows.filter((r) => r.absent_weeks >= absenceWeeks);
-    // Someone both absent and quiet gets one (yellow) card, not two.
-    const quietOnly = teamRows.filter((r) => r.quiet && r.absent_weeks < absenceWeeks);
+    // Owner-requested (15 Oct 2026): someone both absent and quiet gets both cards.
+    const quietOnly = teamRows.filter((r) => r.quiet);
     const birthdays = teamRows
       .filter((r) => r.birthday_offset !== null)
       .sort((a, b) => (a.birthday_offset ?? 0) - (b.birthday_offset ?? 0));
@@ -148,7 +148,6 @@ export function MyServantsTeam({
             <div className="min-w-0 flex-1">
               {nameLine(r)}
               <p className="text-xs text-[#721c24]">Absent for {plural(r.absent_weeks, "week")}</p>
-              {r.quiet && <p className="text-xs text-[#666]">{seenLine(r)}</p>}
               <PhoneLink phone={r.phone} className="text-xs" />
             </div>
           </div>
@@ -185,7 +184,7 @@ export function MyServantsTeam({
       defaultOpen={defaultOpen}
       title={
         <span className="flex items-center gap-2">
-          <UsersIcon className="h-5 w-5" /> My {L.servants} Team
+          <UserCheckIcon className="h-5 w-5" /> My {L.servants} Team
         </span>
       }
       summary={summary}
@@ -201,8 +200,9 @@ export function MyServantsTeam({
             const c = countPeople(team.rows, absenceWeeks);
             const coordinators = Array.from(new Set(team.rows.filter((r) => r.is_coordinator).map((r) => r.full_name.split(" ")[0])));
             const stats: string[] = [];
-            if (c.lastService && c.counted > 0) stats.push(`${c.present} of ${c.counted} present`);
-            if (c.absent > 0) stats.push(`${c.absent} absent`);
+            // Owner-requested (15 Oct 2026): spelled out, as in the summary line.
+            if (c.lastService && c.counted > 0) stats.push(`${c.present} of ${c.counted} present last week`);
+            if (c.absent > 0) stats.push(`${c.absent} absent ${absenceWeeks}+ weeks`);
             if (c.quiet > 0) stats.push(`${c.quiet} quiet`);
             if (c.birthdays > 0) stats.push(plural(c.birthdays, "birthday"));
             const open = openTeams.has(team.key);
