@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import {
   AVG_MODES,
   AVG_PERIODS,
@@ -54,6 +54,45 @@ export function useAvgChoice(key: string, today: string): [AvgChoice, (c: AvgCho
 const dateInput =
   "min-w-0 appearance-none rounded-md border border-[#ddd] bg-white px-2 py-1.5 text-sm focus:border-brand focus:outline-none";
 
+/** Owner-reported (15 Oct 2026): a Custom date couldn't be changed -- while a
+ * date is being typed the box is briefly empty (or a year like "0002"), and
+ * that half-typed value was saved, read back as "no date" and reset to the
+ * 12-month default. The box now keeps what's being typed and only passes
+ * on a complete date. */
+function DateField({
+  value,
+  min,
+  max,
+  onCommit,
+}: {
+  value: string;
+  min?: string;
+  max?: string;
+  onCommit: (date: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const [shown, setShown] = useState(value);
+  if (value !== shown) {
+    // Changed from outside (e.g. another sheet's choice): show it.
+    setShown(value);
+    setDraft(value);
+  }
+  return (
+    <input
+      type="date"
+      value={draft}
+      min={min}
+      max={max}
+      onChange={(e) => {
+        const v = e.target.value;
+        setDraft(v);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v >= "2000-01-01") onCommit(v);
+      }}
+      className={dateInput}
+    />
+  );
+}
+
 /** "Average attendance of: [Service | Events | Both]" and "For period:
  * [Last 12 months]", each label above its control, side by side; From/To
  * only for Custom. */
@@ -103,23 +142,11 @@ export function AverageControls({ choice, onChange }: { choice: AvgChoice; onCha
         <div className="flex flex-wrap items-center gap-2 text-sm text-[#333]">
           <label className="flex items-center gap-1.5">
             From
-            <input
-              type="date"
-              value={choice.from}
-              max={choice.to || undefined}
-              onChange={(e) => onChange({ ...choice, from: e.target.value })}
-              className={dateInput}
-            />
+            <DateField value={choice.from} max={choice.to || undefined} onCommit={(from) => onChange({ ...choice, from })} />
           </label>
           <label className="flex items-center gap-1.5">
             To
-            <input
-              type="date"
-              value={choice.to}
-              min={choice.from || undefined}
-              onChange={(e) => onChange({ ...choice, to: e.target.value })}
-              className={dateInput}
-            />
+            <DateField value={choice.to} min={choice.from || undefined} onCommit={(to) => onChange({ ...choice, to })} />
           </label>
         </div>
       )}

@@ -29,6 +29,14 @@ function shouldAskBirthday(access: AccessSummary | null, profile: DashboardProfi
   return !after || (after !== "infinity" && new Date(after).getTime() <= Date.now());
 }
 
+/** This sign-in's id (from the sign-in token, checked locally): the
+ * Dashboard remembers opened/closed panels until it ends (owner-requested
+ * 15 Oct 2026). */
+async function getSignInKey(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
+  const { data } = await supabase.auth.getClaims();
+  return String(data?.claims?.session_id ?? "signed-in");
+}
+
 /** My Servants Team (0116): Coordinators, General Coordinators and System
  * Admins (who see the General Coordinators' view, owner-requested 15 Oct). */
 function servantTeamFor(access: AccessSummary | null): Promise<ServantTeamRow[]> {
@@ -64,11 +72,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
       getUniversities(),
     ]);
     const ids = combinedGroups.map((g) => g.id);
-    const [data, servants, startOpen, servantTeam] = await Promise.all([
+    const [data, servants, startOpen, servantTeam, signInKey] = await Promise.all([
       getCombinedDashboardData(ids),
       ids.length > 0 ? getServantsForGroup(ids) : Promise.resolve([]),
       getDashboardStartOpen(),
       servantTeamFor(access),
+      getSignInKey(supabase),
     ]);
     const canEditAll = access?.isAdmin || access?.isGeneralCoordinator || false;
     const editableGroupIds = ids.filter((id) => (access ? canEditGroup(access, id) : false));
@@ -111,6 +120,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
           servantAbsenceWeeks={settings.servant_absence_weeks}
           servantQuietDays={settings.servant_quiet_days}
           askBirthday={shouldAskBirthday(access, profile)}
+          signInKey={signInKey}
         />
       </>
     );
@@ -130,6 +140,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
     access,
     profile,
     startOpen,
+    signInKey,
   ] = await Promise.all([
     getDashboardStatsData(groupId),
     getUpcomingBirthdays(groupId),
@@ -151,6 +162,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
           .then((r) => r.data as DashboardProfile)
       : Promise.resolve(null),
     getDashboardStartOpen(),
+    getSignInKey(supabase),
   ]);
   const servantTeam = await servantTeamFor(access);
 
@@ -192,6 +204,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
         servantAbsenceWeeks={settings.servant_absence_weeks}
         servantQuietDays={settings.servant_quiet_days}
         askBirthday={shouldAskBirthday(access, profile)}
+        signInKey={signInKey}
       />
     </>
   );

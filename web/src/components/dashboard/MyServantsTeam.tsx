@@ -72,12 +72,14 @@ export function MyServantsTeam({
   absenceWeeks,
   quietDays,
   defaultOpen,
+  signInKey,
 }: {
   rows: ServantTeamRow[];
   isGeneralCoordinator: boolean;
   absenceWeeks: number;
   quietDays: number;
   defaultOpen: boolean;
+  signInKey: string;
 }) {
   const L = useRoleLabels();
   const timeZone = useTimezone();
@@ -181,6 +183,7 @@ export function MyServantsTeam({
   return (
     <CollapsibleSection
       id="servant-team"
+      signInKey={signInKey}
       defaultOpen={defaultOpen}
       title={
         <span className="flex items-center gap-2">

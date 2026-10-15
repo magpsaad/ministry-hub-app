@@ -1,30 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { setSessionString, useSessionString } from "@/components/useSessionFlag";
 
 /** Owner-requested (15 Oct 2026): each panel starts open or collapsed as the
- * person chose in My Settings -> Dashboard (`defaultOpen`), every time the
- * Dashboard opens -- it used to remember taps for the whole session, which
- * then overrode that choice. Tapping anywhere on the title line opens or
- * closes it; `summary` stays visible under the title either way. `id` is
- * kept for callers. */
+ * person chose in My Settings -> Dashboard (`defaultOpen`). Opening or
+ * closing one is remembered until the end of that sign-in only: the memory
+ * is kept per sign-in (`signInKey`), so signing in again -- or closing the
+ * app -- starts from the My Settings choice. Tapping anywhere on the title
+ * line opens or closes it; `summary` stays visible under the title either
+ * way. */
 export function CollapsibleSection({
   id,
+  signInKey,
   title,
   summary,
   defaultOpen = true,
   children,
 }: {
   id: string;
+  signInKey: string;
   title: React.ReactNode;
   summary?: React.ReactNode;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
-  const [showBody, setShowBody] = useState(defaultOpen);
+  const key = `panel:${signInKey}:${id}`;
+  // null while the page hydrates (the server can't see this), "" if not
+  // tapped yet this sign-in.
+  const stored = useSessionString(key);
+  const showBody = stored === "open" ? true : stored === "closed" ? false : defaultOpen;
 
   function toggle() {
-    setShowBody((o) => !o);
+    setSessionString(key, showBody ? "closed" : "open");
   }
 
   return (

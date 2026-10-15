@@ -130,6 +130,7 @@ export function DashboardInteractive({
   servantAbsenceWeeks = 3,
   servantQuietDays = 15,
   askBirthday = false,
+  signInKey = "",
 }: {
   groupId: string;
   statsData: DashboardStatsData;
@@ -177,6 +178,8 @@ export function DashboardInteractive({
   servantQuietDays?: number;
   /** The one-time "When is your birthday?" card (0116). */
   askBirthday?: boolean;
+  /** This sign-in: panels opened or closed are remembered until it ends. */
+  signInKey?: string;
 }) {
   const timeZone = useTimezone();
   const L = useRoleLabels();
@@ -281,6 +284,7 @@ export function DashboardInteractive({
         absenceWeeks={servantAbsenceWeeks}
         quietDays={servantQuietDays}
         defaultOpen={startOpen.servant_team}
+        signInKey={signInKey}
       />
 
       {/* Always open (owner-requested 15 Oct 2026). */}
@@ -303,6 +307,7 @@ export function DashboardInteractive({
 
       <CollapsibleSection
         id={`birthdays-${groupId}`}
+        signInKey={signInKey}
         defaultOpen={startOpen.birthdays}
         title={
           <span className="flex items-center gap-2">
@@ -367,6 +372,7 @@ export function DashboardInteractive({
 
       <CollapsibleSection
         id={`unassigned-${groupId}`}
+        signInKey={signInKey}
         defaultOpen={startOpen.registrations}
         title={
           <span className="flex items-center gap-2">
@@ -432,6 +438,7 @@ export function DashboardInteractive({
 
       <CollapsibleSection
         id={`actions-needed-${groupId}`}
+        signInKey={signInKey}
         defaultOpen={startOpen.actions_needed}
         title={
           <span className="flex items-center gap-2">
