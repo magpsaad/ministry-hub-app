@@ -8,6 +8,7 @@ import { AttendanceHistoryModal } from "@/components/attendance/AttendanceHistor
 import { AverageControls, useAvgChoice } from "@/components/attendance/AverageControls";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { UndoBar, type UndoInfo } from "@/components/attendance/UndoBar";
+import { ServantWeeklyStrip } from "@/components/attendance/ServantWeeklyStrip";
 
 /** REQUIREMENTS.md §6.13 -- same Present/Absent/"Never Attended" pattern as
  * the member Attendance tab (§6.5), applied to servants across the whole
@@ -16,10 +17,13 @@ export function ServantsAttendanceInteractive({
   bundle,
   dayName,
   groupLabel,
+  showGroups = false,
 }: {
   bundle: ServantAttendanceBundle;
   dayName: string;
   groupLabel: string;
+  /** The weekly strip's per-group lines: General Coordinators and Admins. */
+  showGroups?: boolean;
 }) {
   const L = useRoleLabels();
   const [attendanceByServant, setAttendanceByServant] = useState(bundle.attendanceByServant);
@@ -179,6 +183,14 @@ export function ServantsAttendanceInteractive({
 
   return (
     <div className="space-y-4">
+      <ServantWeeklyStrip
+        members={bundle.members}
+        attendanceByServant={attendanceByServant}
+        serviceDates={bundle.serviceWeekdayDates}
+        groupNames={bundle.groupNames}
+        showGroups={showGroups}
+      />
+
       <div className="flex flex-wrap items-center gap-3">
         <label htmlFor="servants-attendance-date" className="text-sm font-semibold text-[#333]">
           Date

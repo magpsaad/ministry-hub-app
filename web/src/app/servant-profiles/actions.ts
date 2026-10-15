@@ -6,11 +6,15 @@ import { photosBucket, isExternalPhotoUrl, ministryFilePath } from "@/lib/storag
 import { getActiveMinistry } from "@/lib/ministry-context";
 import { logAudit } from "@/lib/audit";
 import { checkUpload, isUuid } from "@/lib/upload-check";
+import { validBirthday } from "@/lib/birthday";
 
 export type UpdateServantProfileInput = {
   phone: string | null;
   father_of_confession: string | null;
   gender: string | null;
+  /** Migration 0116 -- day and month only; both null clears it. */
+  birthday_month: number | null;
+  birthday_day: number | null;
 };
 
 /** Full Name and Email are always read-only (REQUIREMENTS.md §6.13) -- never
@@ -22,9 +26,16 @@ export async function updateServantProfileAction(servantId: string, input: Updat
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
+  if (!validBirthday(input.birthday_month, input.birthday_day)) return { error: "Choose both a month and a day for the birthday." };
 
   // Security audit #5: only these fields, whatever else was sent (0084).
-  const fields = { phone: input.phone, father_of_confession: input.father_of_confession, gender: input.gender };
+  const fields = {
+    phone: input.phone,
+    father_of_confession: input.father_of_confession,
+    gender: input.gender,
+    birthday_month: input.birthday_month,
+    birthday_day: input.birthday_day,
+  };
   const { error } = await supabase.from("profiles").update(fields).eq("id", servantId);
   if (error) return { error: error.message };
 

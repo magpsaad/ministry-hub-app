@@ -7,16 +7,25 @@ import { BusyLabel } from "@/components/PendingButton";
 import { NotificationsSetupPanel } from "@/components/notifications/NotificationsSetupPanel";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { startNavigationSpinner } from "@/components/NavigationSpinner";
+import { BirthdayPicker } from "@/components/BirthdayPicker";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
-const EMPTY_FORM: RegistrationInput = { phone: "", gender: "Male", father_of_confession: null, comments: null };
+const EMPTY_FORM: RegistrationInput = {
+  phone: "",
+  gender: "Male",
+  father_of_confession: null,
+  comments: null,
+  birthday_month: null,
+  birthday_day: null,
+};
 
 function validate(form: RegistrationInput): string | null {
   const digits = form.phone.replace(/\D/g, "");
   if (digits.length < 10 || digits.length > 11) return "Please enter a valid phone number.";
   if (!form.gender) return "Please select a gender.";
+  if ((form.birthday_month === null) !== (form.birthday_day === null)) return "Choose both a month and a day for your birthday, or leave it blank.";
   return null;
 }
 
@@ -137,6 +146,15 @@ export function RegisterInteractive({
           value={form.father_of_confession ?? ""}
           onChange={(e) => field("father_of_confession", e.target.value || null)}
           className={inputClass}
+        />
+      </Field>
+      {/* Owner-approved (15 Oct 2026, migration 0116): optional, no year. */}
+      <Field label="Birthday (day and month)">
+        <BirthdayPicker
+          month={form.birthday_month}
+          day={form.birthday_day}
+          onChange={(m, d) => setForm((f) => ({ ...f, birthday_month: m, birthday_day: d }))}
+          selectClassName={inputClass}
         />
       </Field>
       {!hasRole && (

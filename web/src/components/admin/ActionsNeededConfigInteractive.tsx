@@ -824,6 +824,52 @@ export function ActionsNeededConfigInteractive({
           </div>
         ))}
       </div>
+
+      {/* Owner-requested (15 Oct 2026, migration 0116): the Dashboard's
+          My Servants Team cards have their own thresholds. */}
+      <div className="border border-[#f0f0f0] rounded-lg p-4 mt-4">
+        <h3 className="text-sm font-bold text-brand mb-1">{L.servants}</h3>
+        <p className="text-xs text-[#666] mb-3">
+          For the Dashboard&rsquo;s &ldquo;My {L.servants} Team&rdquo; cards, seen by {L.coordinatorsLower} and{" "}
+          {L.generalCoordinatorsLower}.
+        </p>
+        {appSettingsError && <p className="mb-2 text-sm text-[#dc3545]">{appSettingsError}</p>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <label className="text-xs text-[#666]">
+            Absent for (weeks in a row)
+            <input
+              type="number"
+              min={1}
+              max={52}
+              value={appSettings.servant_absence_weeks}
+              onChange={(e) => updateAppField("servant_absence_weeks", Number(e.target.value))}
+              className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+            />
+          </label>
+          <label className="text-xs text-[#666]">
+            App not used for (days)
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={appSettings.servant_quiet_days}
+              onChange={(e) => updateAppField("servant_quiet_days", Number(e.target.value))}
+              className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+            />
+          </label>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSaveAppSettings}
+            disabled={pending}
+            className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+          >
+            Save
+          </button>
+          {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+        </div>
+      </div>
     </div>
     </div>
   );

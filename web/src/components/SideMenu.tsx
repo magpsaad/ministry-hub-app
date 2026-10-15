@@ -213,6 +213,8 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
                 opposed to Ministry Settings -- for everyone. */}
             <Section title="My Settings">
               {link("/settings/notifications", "Notifications")}
+              {link("/settings/dashboard", "Dashboard")}
+              {link("/settings/birthday", "My Birthday")}
               {link("/settings/calendar", "Calendar Sync")}
               {link("/settings/screen-lock", "Screen Lock & Face ID")}
               {link("/security", "Account Security")}

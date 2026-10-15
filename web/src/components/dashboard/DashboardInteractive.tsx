@@ -34,6 +34,10 @@ import { useTimezone } from "@/components/TimezoneProvider";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import type { GroupSummary } from "@/lib/groups";
+import type { ServantTeamRow } from "@/lib/servant-team";
+import { DEFAULT_START_OPEN, dashboardPanelNames, type DashboardStartOpen } from "@/lib/dashboard-prefs";
+import { MyServantsTeam } from "@/components/dashboard/MyServantsTeam";
+import { BirthdayPromptCard } from "@/components/dashboard/BirthdayPromptCard";
 
 type ActionsNeededConfigRow = {
   proximity: string;
@@ -120,6 +124,12 @@ export function DashboardInteractive({
   groupLabel = "Group",
   canEditAll = false,
   editableGroupIds = [],
+  startOpen = DEFAULT_START_OPEN,
+  servantTeam = [],
+  isGeneralCoordinator = false,
+  servantAbsenceWeeks = 3,
+  servantQuietDays = 15,
+  askBirthday = false,
 }: {
   groupId: string;
   statsData: DashboardStatsData;
@@ -156,6 +166,17 @@ export function DashboardInteractive({
   groupLabel?: string;
   canEditAll?: boolean;
   editableGroupIds?: string[];
+  /** Owner-requested (15 Oct 2026, migration 0116): which panels start
+   * open, from My Settings -> Dashboard (all collapsed unless chosen). */
+  startOpen?: DashboardStartOpen;
+  /** My Servants Team (0116) -- empty for anyone who isn't a Coordinator
+   * or General Coordinator. */
+  servantTeam?: ServantTeamRow[];
+  isGeneralCoordinator?: boolean;
+  servantAbsenceWeeks?: number;
+  servantQuietDays?: number;
+  /** The one-time "When is your birthday?" card (0116). */
+  askBirthday?: boolean;
 }) {
   const timeZone = useTimezone();
   const L = useRoleLabels();
@@ -170,6 +191,8 @@ export function DashboardInteractive({
   // Only that youth's own group's servants can be assigned to them.
   const servantsFor = (gid: string) => (!combined ? servants : servants.filter((s) => s.groups.some((g) => g.id === gid)));
   const [showHelp, setShowHelp] = useState(false);
+  // Owner-requested (15 Oct 2026): clearer panel names, in this ministry's words.
+  const panelNames = dashboardPanelNames(memberLabel, L.servants);
   const [viewingEntry, setViewingEntry] = useState<FollowUpDueEntry | null>(null);
   const [outreachForFollowUp, setOutreachForFollowUp] = useState<FollowUpDueEntry | null>(null);
   const [dismissPending, startDismiss] = useTransition();
@@ -250,9 +273,20 @@ export function DashboardInteractive({
 
   return (
     <div className="mt-4 space-y-6">
+      {askBirthday && <BirthdayPromptCard />}
+
+      <MyServantsTeam
+        rows={servantTeam}
+        isGeneralCoordinator={isGeneralCoordinator}
+        absenceWeeks={servantAbsenceWeeks}
+        quietDays={servantQuietDays}
+        defaultOpen={startOpen.servant_team}
+      />
+
+      {/* Always open (owner-requested 15 Oct 2026). */}
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold text-brand mb-4">
-          <UsersIcon className="h-5 w-5" /> Overview
+          <UsersIcon className="h-5 w-5" /> {memberLabel} Overview
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard icon={<UsersIcon className="h-3.5 w-3.5" />} label={`Total ${memberLabel}s`} value={stats.totalMembers} />
@@ -269,9 +303,10 @@ export function DashboardInteractive({
 
       <CollapsibleSection
         id={`birthdays-${groupId}`}
+        defaultOpen={startOpen.birthdays}
         title={
           <span className="flex items-center gap-2">
-            <CakeIcon className="h-5 w-5" /> Current Birthdays
+            <CakeIcon className="h-5 w-5" /> {panelNames.birthdays}
           </span>
         }
       >
@@ -332,9 +367,10 @@ export function DashboardInteractive({
 
       <CollapsibleSection
         id={`unassigned-${groupId}`}
+        defaultOpen={startOpen.registrations}
         title={
           <span className="flex items-center gap-2">
-            <UserPlusIcon className="h-5 w-5" /> New Registrations (Unassigned)
+            <UserPlusIcon className="h-5 w-5" /> {panelNames.registrations}
           </span>
         }
       >
@@ -396,14 +432,20 @@ export function DashboardInteractive({
 
       <CollapsibleSection
         id={`actions-needed-${groupId}`}
+        defaultOpen={startOpen.actions_needed}
         title={
           <span className="flex items-center gap-2">
-            <AlertTriangleIcon className="h-5 w-5" /> Actions Needed
+            <AlertTriangleIcon className="h-5 w-5 shrink-0" /> {panelNames.actions_needed}
             <button
               type="button"
-              onClick={() => setShowHelp(true)}
+              onClick={(e) => {
+                // The title line opens and closes the panel; this only explains it.
+                e.stopPropagation();
+                setShowHelp(true);
+              }}
+              onKeyDown={(e) => e.stopPropagation()}
               aria-label="What is Actions Needed?"
-              className="h-5 w-5 flex items-center justify-center rounded-full bg-[#f0f0f0] text-[#666] text-xs font-bold hover:bg-[#e0e0e0]"
+              className="h-5 w-5 shrink-0 flex items-center justify-center rounded-full bg-[#f0f0f0] text-[#666] text-xs font-bold hover:bg-[#e0e0e0]"
             >
               ?
             </button>

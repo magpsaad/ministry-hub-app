@@ -17,6 +17,7 @@ import { useTimezone } from "@/components/TimezoneProvider";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import type { AgreementStatus } from "@/lib/agreement";
+import { BirthdayPicker } from "@/components/BirthdayPicker";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -55,6 +56,8 @@ export function ServantDetailModal({
   const [phone, setPhone] = useState(servant.phone ?? "");
   const [fatherOfConfession, setFatherOfConfession] = useState(servant.father_of_confession ?? "");
   const [gender, setGender] = useState(servant.gender ?? "");
+  const [birthdayMonth, setBirthdayMonth] = useState(servant.birthday_month);
+  const [birthdayDay, setBirthdayDay] = useState(servant.birthday_day);
 
   function handleSave() {
     setError(null);
@@ -63,6 +66,8 @@ export function ServantDetailModal({
         phone: phone || null,
         father_of_confession: fatherOfConfession || null,
         gender: gender || null,
+        birthday_month: birthdayMonth,
+        birthday_day: birthdayDay,
       });
       if (result.error) {
         setError(result.error);
@@ -225,6 +230,19 @@ export function ServantDetailModal({
               <option value="Female">Female</option>
             </select>
           </FieldRow>
+          {/* Owner-approved (15 Oct 2026, migration 0116): day and month only. */}
+          <FieldRow label="Birthday">
+            <BirthdayPicker
+              month={birthdayMonth}
+              day={birthdayDay}
+              disabled={!editing}
+              onChange={(m, d) => {
+                setBirthdayMonth(m);
+                setBirthdayDay(d);
+              }}
+              selectClassName={inputClass(editing)}
+            />
+          </FieldRow>
           <FieldRow label="Join Date">
             <input value={servant.join_date ?? "Not yet attended"} readOnly className={inputClass(false)} />
           </FieldRow>
@@ -255,6 +273,8 @@ export function ServantDetailModal({
                     setPhone(servant.phone ?? "");
                     setFatherOfConfession(servant.father_of_confession ?? "");
                     setGender(servant.gender ?? "");
+                    setBirthdayMonth(servant.birthday_month);
+                    setBirthdayDay(servant.birthday_day);
                   }}
                   className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
                 >

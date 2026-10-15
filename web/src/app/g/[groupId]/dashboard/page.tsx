@@ -13,6 +13,26 @@ import { DashboardInteractive } from "@/components/dashboard/DashboardInteractiv
 import { AnnouncementBanners } from "@/components/announcements/AnnouncementBanners";
 import { CheckinAlertBanner } from "@/components/dashboard/CheckinAlertBanner";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
+import { getDashboardStartOpen } from "@/lib/dashboard-prefs-server";
+import { getMyServantTeam, type ServantTeamRow } from "@/lib/servant-team";
+import type { AccessSummary } from "@/lib/roles";
+
+type DashboardProfile = { full_name: string; birthday_month: number | null; birthday_ask_after: string | null } | null;
+
+/** Owner-requested (15 Oct 2026, migration 0116): the one-time birthday card
+ * is for anyone serving who hasn't given theirs, unless they said "Not now"
+ * (until then) or "No thanks" ('infinity', never again). */
+function shouldAskBirthday(access: AccessSummary | null, profile: DashboardProfile): boolean {
+  if (!access || !profile || !(access.isServant || access.isCoordinator)) return false;
+  if (profile.birthday_month !== null) return false;
+  const after = profile.birthday_ask_after;
+  return !after || (after !== "infinity" && new Date(after).getTime() <= Date.now());
+}
+
+/** My Servants Team (0116): only Coordinators and General Coordinators. */
+function servantTeamFor(access: AccessSummary | null): Promise<ServantTeamRow[]> {
+  return access && (access.isGeneralCoordinator || access.isSubCoordinator) ? getMyServantTeam() : Promise.resolve([]);
+}
 
 export default async function DashboardPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -31,14 +51,21 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
       getAppSettings(),
       user ? getAccessSummary(user.id) : Promise.resolve(null),
       user
-        ? supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle().then((r) => r.data)
+        ? supabase
+            .from("profiles")
+            .select("full_name, birthday_month, birthday_ask_after")
+            .eq("id", user.id)
+            .maybeSingle()
+            .then((r) => r.data as DashboardProfile)
         : Promise.resolve(null),
       getUniversities(),
     ]);
     const ids = combinedGroups.map((g) => g.id);
-    const [data, servants] = await Promise.all([
+    const [data, servants, startOpen, servantTeam] = await Promise.all([
       getCombinedDashboardData(ids),
       ids.length > 0 ? getServantsForGroup(ids) : Promise.resolve([]),
+      getDashboardStartOpen(),
+      servantTeamFor(access),
     ]);
     const canEditAll = access?.isAdmin || access?.isGeneralCoordinator || false;
     const editableGroupIds = ids.filter((id) => (access ? canEditGroup(access, id) : false));
@@ -75,6 +102,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
           canEdit={editableGroupIds.length > 0}
           currentUserId={user?.id ?? ""}
           currentUserName={profile?.full_name ?? user?.email ?? "Unknown"}
+          startOpen={startOpen}
+          servantTeam={servantTeam}
+          isGeneralCoordinator={access?.isGeneralCoordinator ?? false}
+          servantAbsenceWeeks={settings.servant_absence_weeks}
+          servantQuietDays={settings.servant_quiet_days}
+          askBirthday={shouldAskBirthday(access, profile)}
         />
       </>
     );
@@ -93,6 +126,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
     settings,
     access,
     profile,
+    startOpen,
   ] = await Promise.all([
     getDashboardStatsData(groupId),
     getUpcomingBirthdays(groupId),
@@ -106,9 +140,16 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
     getAppSettings(),
     user ? getAccessSummary(user.id) : Promise.resolve(null),
     user
-      ? supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle().then((r) => r.data)
+      ? supabase
+          .from("profiles")
+          .select("full_name, birthday_month, birthday_ask_after")
+          .eq("id", user.id)
+          .maybeSingle()
+          .then((r) => r.data as DashboardProfile)
       : Promise.resolve(null),
+    getDashboardStartOpen(),
   ]);
+  const servantTeam = await servantTeamFor(access);
 
   const memberLabel = settings.member_label;
   const canDelete = access?.isAdmin || access?.isGeneralCoordinator || false;
@@ -142,6 +183,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
         canEdit={canEdit}
         currentUserId={user?.id ?? ""}
         currentUserName={currentUserName}
+        startOpen={startOpen}
+        servantTeam={servantTeam}
+        isGeneralCoordinator={access?.isGeneralCoordinator ?? false}
+        servantAbsenceWeeks={settings.servant_absence_weeks}
+        servantQuietDays={settings.servant_quiet_days}
+        askBirthday={shouldAskBirthday(access, profile)}
       />
     </>
   );

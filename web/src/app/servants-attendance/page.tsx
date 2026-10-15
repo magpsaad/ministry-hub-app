@@ -57,6 +57,7 @@ export default async function ServantsAttendancePage() {
           bundle={bundle}
           dayName={weekdayName(windowSettings.service_weekday)}
           groupLabel={settings.group_label}
+          showGroups={access.isGeneralCoordinator || access.isAdmin}
         />
       </main>
     </div>

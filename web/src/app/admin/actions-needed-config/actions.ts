@@ -335,6 +335,12 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   if (input.idle_lock_minutes !== null && !(LOCK_MINUTE_CHOICES as readonly number[]).includes(input.idle_lock_minutes)) {
     return { error: "Choose how many minutes before the screen locks, or Off." };
   }
+  if (!Number.isInteger(input.servant_absence_weeks) || input.servant_absence_weeks < 1 || input.servant_absence_weeks > 52) {
+    return { error: `${(await getRoleLabels()).servants} absent: choose a whole number of weeks between 1 and 52.` };
+  }
+  if (!Number.isInteger(input.servant_quiet_days) || input.servant_quiet_days < 1 || input.servant_quiet_days > 365) {
+    return { error: "App not used: choose a whole number of days between 1 and 365." };
+  }
   if (input.using_app_since !== null && !/^\d{4}-\d{2}-\d{2}$/.test(input.using_app_since)) {
     return { error: "Choose the date the ministry started using the app." };
   }
@@ -378,6 +384,8 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     message_oversight: input.message_oversight,
     coordinator_scope: input.coordinator_scope,
     using_app_since: input.using_app_since,
+    servant_absence_weeks: input.servant_absence_weeks,
+    servant_quiet_days: input.servant_quiet_days,
   };
   // Saved by this ministry's code (the settings table has one row per
   // ministry now, MULTI_TENANT_PLAN.md §2.5 #1); the security rule would

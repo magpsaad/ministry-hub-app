@@ -12,6 +12,9 @@ export type ServantDirectoryEntry = {
   gender: string | null;
   father_of_confession: string | null;
   join_date: string | null;
+  /** Migration 0116 -- day and month only. */
+  birthday_month: number | null;
+  birthday_day: number | null;
   isGeneralCoordinator: boolean;
   // groups this person holds a 'servant' or 'sub_coordinator' role for --
   // servant / coordinator say which (owner-requested 14 Oct 2026: the
@@ -47,7 +50,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
       .from("user_roles")
       .select("user_id, role, group_id, groups(name, ladder_position, display_order)")
       .in("role", ["servant", "sub_coordinator", "general_coordinator"]),
-    supabase.from("profiles").select("id, full_name, phone, email, photo_path, gender, father_of_confession, join_date"),
+    supabase.from("profiles").select("id, full_name, phone, email, photo_path, gender, father_of_confession, join_date, birthday_month, birthday_day"),
   ]);
   const windowWeeks = windowSettings.servant_attendance_window_weeks;
   let queryFloorISO: string | null = null;
@@ -151,6 +154,8 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
       gender: profile.gender,
       father_of_confession: profile.father_of_confession,
       join_date: profile.join_date,
+      birthday_month: profile.birthday_month,
+      birthday_day: profile.birthday_day,
       isGeneralCoordinator: acc.isGeneralCoordinator,
       servantGroups: acc.servantGroups,
       isUnassignedServant: acc.isUnassignedServant,

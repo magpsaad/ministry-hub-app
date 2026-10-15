@@ -47,6 +47,10 @@ const CONSOLE_PREFIX = "/console";
  * status page itself. Check-in is NOT here -- it stops for everyone. */
 const INACTIVE_OPEN_PREFIXES = ["/login", "/auth", INACTIVE_PATH];
 
+/** My Servants Team (migration 0116): the day this device last noted that
+ * its person opened the app. */
+const SEEN_COOKIE = "mh_seen";
+
 function matchesPrefix(pathname: string, prefixes: string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
@@ -242,6 +246,17 @@ export async function updateSession(request: NextRequest) {
     const isComplete = !!profile && !!profile.phone && !!profile.gender && (roleCount ?? 0) > 0;
     if (!isComplete && !churchAdmin) {
       return NextResponse.redirect(new URL("/register", request.url));
+    }
+  }
+
+  // My Servants Team (owner-approved 15 Oct 2026, migration 0116): note, at
+  // most once a day per device, that this person opened the app -- a
+  // Coordinator sees someone as quiet once it's been a while.
+  if (userId && request.method === "GET" && !pathname.startsWith("/api/")) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (request.cookies.get(SEEN_COOKIE)?.value !== today) {
+      await supabase.rpc("note_seen");
+      response.cookies.set(SEEN_COOKIE, today, { maxAge: 2 * 86_400, path: "/", sameSite: "lax", httpOnly: true, secure: true });
     }
   }
 

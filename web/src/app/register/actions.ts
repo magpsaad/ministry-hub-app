@@ -5,13 +5,28 @@ import { after } from "next/server";
 import { dispatchPush } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
+import { validBirthday } from "@/lib/birthday";
 
 export type RegistrationInput = {
   phone: string;
   gender: "Male" | "Female";
   father_of_confession: string | null;
   comments: string | null;
+  /** Optional, day and month only (owner-approved 15 Oct 2026, 0116). */
+  birthday_month: number | null;
+  birthday_day: number | null;
 };
+
+/** Their own birthday straight onto their own profile (they can always
+ * edit their own row); skipped when left blank. */
+async function saveOwnBirthday(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, input: RegistrationInput) {
+  if (input.birthday_month === null || input.birthday_day === null) return null;
+  const { error } = await supabase
+    .from("profiles")
+    .update({ birthday_month: input.birthday_month, birthday_day: input.birthday_day })
+    .eq("id", userId);
+  return error?.message ?? null;
+}
 
 /** REQUIREMENTS.md §6.1 addendum -- for someone with NO role yet: submits
  * (or updates, if they already submitted once) a pending_servants row via
@@ -26,6 +41,7 @@ export async function submitOwnRegistrationAction(input: RegistrationInput) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
+  if (!validBirthday(input.birthday_month, input.birthday_day)) return { error: "Choose both a month and a day for your birthday." };
 
   const { error } = await supabase.rpc("submit_own_servant_registration", {
     p_phone: input.phone,
@@ -34,6 +50,8 @@ export async function submitOwnRegistrationAction(input: RegistrationInput) {
     p_comments: input.comments,
   });
   if (error) return { error: error.message };
+  const birthdayError = await saveOwnBirthday(supabase, user.id, input);
+  if (birthdayError) return { error: birthdayError };
 
   await logAudit(user.id, "APP_ACCESS", { details: { action: "self_registration_submitted" } });
   // Migration 0092: the new pending servant queued an alert for this
@@ -54,6 +72,7 @@ export async function completeOwnProfileAction(input: RegistrationInput) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
+  if (!validBirthday(input.birthday_month, input.birthday_day)) return { error: "Choose both a month and a day for your birthday." };
 
   const { error } = await supabase
     .from("profiles")
@@ -64,6 +83,8 @@ export async function completeOwnProfileAction(input: RegistrationInput) {
     })
     .eq("id", user.id);
   if (error) return { error: error.message };
+  const birthdayError = await saveOwnBirthday(supabase, user.id, input);
+  if (birthdayError) return { error: birthdayError };
 
   await logAudit(user.id, "SERVANT_EDITED", { details: { action: "self_registration_completed" } });
   revalidatePath("/register");
