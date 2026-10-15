@@ -32,8 +32,17 @@ function roleLabel(roles: string, L: RoleLabels): string {
   return "Read-only";
 }
 
-/** New message (migration 0102): pick people and/or whole classes (their
- * Servants), then -- for more than one person -- whether each replies
+/** Everyone holding one of these roles (owner-requested 15 Oct 2026). */
+type RoleGroup = "sub_coordinator" | "general_coordinator" | "admin";
+const ROLE_GROUPS: RoleGroup[] = ["sub_coordinator", "general_coordinator", "admin"];
+
+function roleGroupLabel(r: RoleGroup, L: RoleLabels): string {
+  return r === "admin" ? "System Admins" : r === "general_coordinator" ? L.generalCoordinators : L.coordinators;
+}
+
+/** New message (migration 0102): pick people, whole classes (their
+ * Servants) and/or everyone in a role ({L.coordinators}, General
+ * Coordinators, System Admins -- any combination), then -- for more than one person -- whether each replies
  * privately or it's one group conversation. "This is a task" adds an
  * optional due date; the people given it can mark it done. */
 export function MessageComposer({
@@ -51,6 +60,7 @@ export function MessageComposer({
   const router = useRouter();
   const [to, setTo] = useState<string[]>(initialTo);
   const [classIds, setClassIds] = useState<string[]>([]);
+  const [roleGroups, setRoleGroups] = useState<RoleGroup[]>([]);
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<"private" | "group">("private");
   const [subject, setSubject] = useState("");
@@ -63,12 +73,18 @@ export function MessageComposer({
   const working = useRef(false);
 
   const byId = useMemo(() => new Map(people.map((p) => [p.user_id, p])), [people]);
+  const hasRole = (p: PersonOption, r: RoleGroup) => p.roles.split(",").includes(r);
+  const roleMembers = useMemo(
+    () => people.filter((p) => roleGroups.some((r) => hasRole(p, r))).map((p) => p.user_id),
+    [people, roleGroups],
+  );
   const recipients = useMemo(() => {
-    const s = new Set(to);
+    const s = new Set([...to, ...roleMembers]);
     for (const p of people) if (p.servant_of.some((g) => classIds.includes(g))) s.add(p.user_id);
     return s;
-  }, [to, classIds, people]);
+  }, [to, roleMembers, classIds, people]);
   const classCount = (id: string) => people.filter((p) => p.servant_of.includes(id)).length;
+  const roleCount = (r: RoleGroup) => people.filter((p) => hasRole(p, r)).length;
   const q = search.trim().toLowerCase();
   const matches = q ? people.filter((p) => !to.includes(p.user_id) && p.full_name.toLowerCase().includes(q)).slice(0, 8) : [];
   const several = recipients.size > 1;
@@ -85,7 +101,8 @@ export function MessageComposer({
     setError(null);
     try {
       const res = await sendMessageAction({
-        people: to,
+        // A role group is sent as its people (the server drops repeats).
+        people: Array.from(new Set([...to, ...roleMembers])),
         classes: classIds,
         subject,
         body,
@@ -114,11 +131,16 @@ export function MessageComposer({
     <div className={`${CARD} space-y-4`}>
       <div>
         <span className={LABEL}>To</span>
-        {(to.length > 0 || classIds.length > 0) && (
+        {(to.length > 0 || classIds.length > 0 || roleGroups.length > 0) && (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {to.map((id) => (
               <button key={id} type="button" onClick={() => setTo((t) => t.filter((x) => x !== id))} className={chipClass(true)}>
                 {byId.get(id)?.full_name ?? "Someone"} &times;
+              </button>
+            ))}
+            {roleGroups.map((r) => (
+              <button key={r} type="button" onClick={() => setRoleGroups((g) => g.filter((x) => x !== r))} className={chipClass(true)}>
+                All {roleGroupLabel(r, L)} &times;
               </button>
             ))}
             {classIds.map((id) => (
@@ -153,6 +175,27 @@ export function MessageComposer({
           </ul>
         )}
         {q && matches.length === 0 && <p className="mt-1 text-xs text-[#888]">No one by that name.</p>}
+
+        {ROLE_GROUPS.some((r) => roleCount(r) > 0) && (
+          <div className="mt-3">
+            <span className={LABEL}>Or everyone who&rsquo;s a&hellip; (pick any)</span>
+            <div className="flex flex-wrap gap-1.5">
+              {ROLE_GROUPS.filter((r) => roleCount(r) > 0).map((r) => {
+                const on = roleGroups.includes(r);
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRoleGroups((g) => (on ? g.filter((x) => x !== r) : [...g, r]))}
+                    className={chipClass(on)}
+                  >
+                    {roleGroupLabel(r, L)} ({roleCount(r)})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {classes.length > 0 && (
           <div className="mt-3">

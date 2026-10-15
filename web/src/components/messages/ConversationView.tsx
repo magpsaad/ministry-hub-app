@@ -1,5 +1,6 @@
 "use client";
 
+import { Reactions } from "@/components/Reactions";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -212,8 +213,8 @@ export function ConversationView({ conv, timeZone, today }: { conv: Conversation
           </p>
         )}
         {messages.map((m) => (
+          <div key={m.id}>
           <Bubble
-            key={m.id}
             m={m}
             timeZone={timeZone}
             editing={editing?.id === m.id ? editing.body : null}
@@ -226,6 +227,9 @@ export function ConversationView({ conv, timeZone, today }: { conv: Conversation
               editing && run(`edit:${m.id}`, () => editMessageAction(m.id, editing.body), () => setEditing(null))
             }
           />
+          {/* Owner-approved (15 Oct 2026, migration 0117). */}
+          <Reactions kind="message" itemId={m.id} readOnly={!conv.member} align={m.mine ? "end" : "start"} />
+          </div>
         ))}
       </div>
 

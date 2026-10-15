@@ -1,5 +1,6 @@
 "use client";
 
+import { Reactions } from "@/components/Reactions";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BusyLabel } from "@/components/PendingButton";
@@ -243,6 +244,8 @@ export function AnnouncementsInteractive({
             Open link
           </a>
         )}
+        {/* Owner-approved (15 Oct 2026, migration 0117). */}
+        <Reactions kind="announcement" itemId={r.id} />
         {(r.mine || full) && (
           <p className="mt-2 text-xs text-[#777]">
             For: {audienceSummary(r, groupName, L)}
