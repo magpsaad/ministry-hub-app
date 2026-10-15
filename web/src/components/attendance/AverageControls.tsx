@@ -11,6 +11,7 @@ import {
   type AvgMode,
   type AvgPeriodKind,
 } from "@/lib/attendance-average";
+import { shiftDateKey } from "@/lib/timezone";
 
 const STORAGE_PREFIX = "attendance-average:";
 const listeners = new Set<() => void>();
@@ -179,10 +180,10 @@ export function AverageControls({
             value={choice.period}
             onChange={(e) => {
               const period = e.target.value as AvgPeriodKind;
-              // Owner-requested (15 Oct 2026): choosing Custom starts both
-              // dates at today -- a pre-filled date a year back was easy to
-              // keep by mistake.
-              onChange(period === "custom" ? { ...choice, period, from: today, to: today } : { ...choice, period });
+              // Owner-requested (15 Oct 2026): choosing Custom starts at the
+              // last month (a pre-filled date a year back was easy to keep
+              // by mistake).
+              onChange(period === "custom" ? { ...choice, period, from: shiftDateKey(today, { months: -1 }), to: today } : { ...choice, period });
             }}
             className="rounded-md border border-[#ddd] bg-white px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
           >

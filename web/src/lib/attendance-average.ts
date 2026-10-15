@@ -46,8 +46,8 @@ export type AttendanceEvent = {
 };
 
 export function defaultAvgChoice(today: string): AvgChoice {
-  // Custom's dates start at today (owner-requested 15 Oct 2026).
-  return { mode: "service", period: "12", from: today, to: today };
+  // Custom's dates start at the last month (owner-requested 15 Oct 2026).
+  return { mode: "service", period: "12", from: shiftDateKey(today, { months: -1 }), to: today };
 }
 
 /** The period's own first and last day. */
