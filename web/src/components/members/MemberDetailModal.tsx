@@ -1,5 +1,6 @@
 "use client";
 
+import { useMinistryRules } from "@/components/MinistryRulesProvider";
 import { useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import type { MemberDetail } from "@/lib/members";
@@ -74,6 +75,7 @@ export function MemberDetailModal({
 }) {
   const L = useRoleLabels();
   const [editing, setEditing] = useState(false);
+  const { readOnlyCanAddPhotos } = useMinistryRules();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [photoPath, setPhotoPath] = useState(member.photo_path);
@@ -311,7 +313,9 @@ export function MemberDetailModal({
                 otherwise), `canEdit && editing` here already collapses to
                 "always false" for a Read-Only viewer, leaving just
                 `!photoUrl` -- no separate flag needed. */}
-            {(!photoUrl || (canEdit && editing)) && (
+            {/* Migration 0118: whether Read-only may add one is a Ministry
+                Settings switch now (on unless the ministry turned it off). */}
+            {((!photoUrl && (canEdit || readOnlyCanAddPhotos)) || (canEdit && editing)) && (
               <button
                 type="button"
                 onClick={handleAddOrReplaceClick}

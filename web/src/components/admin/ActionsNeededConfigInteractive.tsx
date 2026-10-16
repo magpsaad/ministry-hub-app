@@ -587,6 +587,57 @@ export function ActionsNeededConfigInteractive({
 
     {/* Owner-requested (4 Oct 2026, migration 0087): for ministries that
         keep parents' details, e.g. High School and Sunday School. */}
+    {/* Owner-requested (16 Oct 2026, migration 0118). */}
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Read-only Access
+        <InfoTip title="Read-only Access">
+          <p>
+            Read-only access lets someone view a {appSettings.group_label.toLowerCase()}&rsquo;s{" "}
+            {appSettings.member_label.toLowerCase()}s, attendance and outreach without changing anything. These two
+            switches allow a few exceptions, for every Read-only person in this ministry.
+          </p>
+          <p>
+            <strong>Add photos:</strong> add a photo to a {appSettings.member_label.toLowerCase()} who doesn&rsquo;t
+            have one yet (never replace or delete one).
+          </p>
+          <p>
+            <strong>Take attendance:</strong> mark {appSettings.member_label.toLowerCase()}s Present or Absent on the
+            Attendance sheet of the {appSettings.group_label.toLowerCase()}s they have Read-only access to.
+          </p>
+        </InfoTip>
+      </h2>
+      <div className="space-y-2 mb-3">
+        <label className="flex items-center gap-2 text-sm text-[#333]">
+          <input
+            type="checkbox"
+            checked={appSettings.read_only_can_add_photos}
+            onChange={(e) => updateAppField("read_only_can_add_photos", e.target.checked)}
+          />
+          Read-only users can add photos
+        </label>
+        <label className="flex items-center gap-2 text-sm text-[#333]">
+          <input
+            type="checkbox"
+            checked={appSettings.read_only_can_take_attendance}
+            onChange={(e) => updateAppField("read_only_can_take_attendance", e.target.checked)}
+          />
+          Read-only users can take attendance
+        </label>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
+
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
         Parents&rsquo; Contact Details

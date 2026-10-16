@@ -7,6 +7,7 @@ import { getAddressContext } from "@/lib/ministry-context";
 import { QaEnvBanner } from "@/components/QaEnvBanner";
 import { TimezoneProvider } from "@/components/TimezoneProvider";
 import { RoleLabelsProvider } from "@/components/RoleLabelsProvider";
+import { MinistryRulesProvider } from "@/components/MinistryRulesProvider";
 import { ScreenLock } from "@/components/ScreenLock";
 import { NotificationsPrompt } from "@/components/notifications/NotificationsPrompt";
 import { ImportantAnnouncementPopup } from "@/components/announcements/ImportantAnnouncementPopup";
@@ -162,7 +163,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
         <TimezoneProvider timeZone={settings.timezone}>
           <RoleLabelsProvider servantLabel={settings.servant_label} subCoordinatorLabel={settings.sub_coordinator_label}>
-            {children}
+            <MinistryRulesProvider rules={{ readOnlyCanAddPhotos: settings.read_only_can_add_photos }}>
+              {children}
+            </MinistryRulesProvider>
           </RoleLabelsProvider>
         </TimezoneProvider>
         {/* Screen lock (migration 0089): does nothing unless this ministry

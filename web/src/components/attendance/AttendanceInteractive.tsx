@@ -62,6 +62,7 @@ export function AttendanceInteractive({
   showProximity,
   currentUserId,
   memberRecord,
+  readOnlyAttendanceGroupIds = [],
 }: {
   groupId: string;
   bundle: AttendanceBundle;
@@ -69,6 +70,9 @@ export function AttendanceInteractive({
   showProximity: boolean;
   currentUserId: string;
   memberRecord: AttendanceMemberRecordContext;
+  /** Migration 0118: groups this person only has Read-only access to, where
+   * the ministry lets Read-only take attendance (empty when it doesn't). */
+  readOnlyAttendanceGroupIds?: string[];
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
   // Combined view: the header's cohort checkboxes (CohortFilter). With a
@@ -95,7 +99,7 @@ export function AttendanceInteractive({
   // Only people who can edit a member's group get the toggle.
   const editableGroups = useMemo(() => new Set(memberRecord.editableGroupIds), [memberRecord.editableGroupIds]);
   function canToggle(groupIdOfMember: string) {
-    return memberRecord.canEditAll || editableGroups.has(groupIdOfMember);
+    return memberRecord.canEditAll || editableGroups.has(groupIdOfMember) || readOnlyAttendanceGroupIds.includes(groupIdOfMember);
   }
 
   // An event counts toward Events % once it's over or someone was there --

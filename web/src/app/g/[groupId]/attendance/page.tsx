@@ -39,6 +39,10 @@ export default async function AttendancePage({ params }: { params: Promise<{ gro
   const editableGroupIds = (access?.roles ?? [])
     .filter((r) => r.role !== "read_only" && r.group_id)
     .map((r) => r.group_id as string);
+  // Migration 0118: Read-only may take attendance if the ministry allows it.
+  const readOnlyAttendanceGroupIds = settings.read_only_can_take_attendance
+    ? (access?.roles ?? []).filter((r) => r.role === "read_only" && r.group_id).map((r) => r.group_id as string)
+    : [];
 
   return (
     <AttendanceInteractive
@@ -47,6 +51,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ gro
       memberLabel={settings.member_label}
       showProximity={settings.proximity_enabled && settings.show_proximity_on_attendance}
       currentUserId={user?.id ?? ""}
+      readOnlyAttendanceGroupIds={readOnlyAttendanceGroupIds}
       memberRecord={{
         groups: combinedGroups,
         groupLabel: settings.group_label,

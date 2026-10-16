@@ -21,6 +21,7 @@ export type Branding = Pick<
   | "app_version"
   | "servant_label"
   | "sub_coordinator_label"
+  | "read_only_can_add_photos"
 >;
 
 /** Neutral chrome for addresses that belong to no ministry -- the Church
@@ -37,6 +38,7 @@ const NEUTRAL: Omit<Branding, "app_title_long" | "app_title_short" | "app_subtit
   timezone: "UTC",
   servant_label: "Servant",
   sub_coordinator_label: "Coordinator",
+  read_only_can_add_photos: true,
 };
 
 /**
