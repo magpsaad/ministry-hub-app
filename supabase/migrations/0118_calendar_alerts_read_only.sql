@@ -15,7 +15,7 @@
 -- B. READ-ONLY ACCESS, two Ministry Settings switches:
 --    * app_settings.read_only_can_add_photos (default ON, as today): a
 --      Read-only person may add a photo to a youth with none.
---    * app_settings.read_only_can_take_attendance (default OFF, as today):
+--    * app_settings.read_only_can_take_attendance (default ON, owner 16 Oct):
 --      a Read-only person may mark youth Present/Absent in their group.
 --      An extra rule beside attendance_insert/attendance_delete.
 --
@@ -34,7 +34,7 @@ $$;
 -- ---------- B. Read-only switches
 alter table app_settings
   add column if not exists read_only_can_add_photos boolean not null default true,
-  add column if not exists read_only_can_take_attendance boolean not null default false;
+  add column if not exists read_only_can_take_attendance boolean not null default true;
 
 create or replace function readonly_attendance_on()
 returns boolean language sql stable security definer as $$

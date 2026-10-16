@@ -248,15 +248,15 @@ export function DashboardInteractive({
     const taken = new Set(statsData.rows.filter((r) => r.presentLastService).map((r) => r.group_id));
     if (!combined) {
       return taken.size > 0
-        ? { ok: true, text: `Attendance was taken on ${dayText}, the last service day.` }
-        : { ok: false, text: `No attendance was taken on ${dayText}, the last service day.` };
+        ? { ok: true, text: `Attendance was taken on ${dayText}.` }
+        : { ok: false, text: `No attendance was taken on ${dayText}.` };
     }
     const withMembers = new Set(statsData.rows.map((r) => r.group_id));
     // The hidden pre-entry and hand-over groups don't take attendance.
     const missing = combinedGroups.filter((g) => !g.is_terminal && inCohort(g.id) && withMembers.has(g.id) && !taken.has(g.id));
     return missing.length === 0
-      ? { ok: true, text: `Every ${groupLabel.toLowerCase()} took attendance on ${dayText}, the last service day.` }
-      : { ok: false, text: `No attendance was taken on ${dayText}, the last service day, for: ${missing.map((g) => g.name).join(", ")}.` };
+      ? { ok: true, text: `Every ${groupLabel.toLowerCase()} took attendance on ${dayText}.` }
+      : { ok: false, text: `No attendance was taken on ${dayText} for: ${missing.map((g) => g.name).join(", ")}.` };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- inCohort follows `cohort`
   }, [statsData, combined, combinedGroups, groupLabel, cohort]);
 
