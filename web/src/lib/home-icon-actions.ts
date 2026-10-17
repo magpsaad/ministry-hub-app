@@ -3,14 +3,16 @@
 import { createClient } from "@/lib/supabase/server";
 
 /** Migration 0110: this person opened the app from its home screen icon on
- * this ministry's address (Audit Logs -> Device setup). A no-op when not
- * signed in. Never throws. */
-export async function noteHomeIconAction(): Promise<void> {
+ * this ministry's address (Audit Logs -> Device setup). True once recorded;
+ * false when it wasn't (e.g. not signed in yet), so the app tries again.
+ * Never throws. */
+export async function noteHomeIconAction(): Promise<boolean> {
   try {
     const supabase = await createClient();
-    await supabase.rpc("note_home_icon");
+    const { error } = await supabase.rpc("note_home_icon");
+    return !error;
   } catch {
-    // Best effort -- it's only a check mark.
+    return false;
   }
 }
 

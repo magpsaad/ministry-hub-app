@@ -19,10 +19,15 @@ export function HomeIconTracker() {
     const fromIcon =
       window.matchMedia?.("(display-mode: standalone)").matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    // Owner-reported (17 Oct 2026): a new home screen icon starts signed out
+    // (an iPhone keeps its own sign-in for it), and noting it from the
+    // sign-in page was refused -- then never tried again that visit, so
+    // Device setup kept showing an "x". Nothing is noted before sign-in now,
+    // and an icon open counts as done only once the database took it.
+    if (SIGNED_OUT_PAGES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return;
     if (!fromIcon) {
       // Owner-requested (12 Oct 2026): opened from a link -- noted once per
       // device, after sign-in, so Device setup can show an "x".
-      if (SIGNED_OUT_PAGES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return;
       try {
         if (localStorage.getItem(LINK_KEY)) return;
       } catch {
@@ -39,11 +44,16 @@ export function HomeIconTracker() {
     }
     try {
       if (sessionStorage.getItem(KEY)) return;
-      sessionStorage.setItem(KEY, "1");
     } catch {
       // Storage blocked: just note it (cheap, and only once per page load).
     }
-    void noteHomeIconAction();
+    void noteHomeIconAction().then((ok) => {
+      try {
+        if (ok) sessionStorage.setItem(KEY, "1");
+      } catch {
+        // Ignore.
+      }
+    });
   }, [pathname]);
   return null;
 }
