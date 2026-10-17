@@ -57,19 +57,23 @@ export function Reactions({
   itemId,
   readOnly = false,
   align = "start",
+  initialRows,
 }: {
   kind: ReactionKind;
   itemId: string;
   readOnly?: boolean;
   align?: "start" | "end";
+  /** Already loaded with the item (dashboard banners): no request of its own. */
+  initialRows?: ReactionRow[];
 }) {
-  const [rows, setRows] = useState<ReactionRow[]>([]);
+  const [rows, setRows] = useState<ReactionRow[]>(initialRows ?? []);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (initialRows) return;
     let cancelled = false;
     void loadReactions(kind, itemId).then((r) => {
       if (!cancelled) setRows(r);
@@ -77,6 +81,7 @@ export function Reactions({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialRows only matters for the first load
   }, [kind, itemId]);
 
   // Tapping anywhere else closes the picker.

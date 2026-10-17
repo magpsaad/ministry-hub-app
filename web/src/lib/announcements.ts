@@ -1,3 +1,4 @@
+import type { ReactionRow } from "@/lib/reactions";
 import type { RoleLabels } from "@/lib/role-labels";
 
 /** Announcements (owner-approved design 8 Oct 2026, migration 0099). Types
@@ -43,6 +44,9 @@ export type CurrentAnnouncement = {
   link_url: string | null;
   importance: "normal" | "important";
   author_name: string;
+  /** Migration 0117 reactions, filled by currentAnnouncementsAction() so the
+   * dashboard banners don't need a second request (17 Oct 2026). */
+  reactions?: ReactionRow[];
 };
 
 /** The chips, in order. "System Admins" are the ministry's admin role --

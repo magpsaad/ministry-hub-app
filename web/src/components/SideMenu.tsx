@@ -1,5 +1,6 @@
 "use client";
 
+import { SCREEN_LOCK_AVAILABLE } from "@/lib/screen-lock";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -216,7 +217,7 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
               {link("/settings/dashboard", "Dashboard")}
               {link("/settings/birthday", "My Birthday")}
               {link("/settings/calendar", "Calendar Sync")}
-              {link("/settings/screen-lock", "Screen Lock & Face ID")}
+              {SCREEN_LOCK_AVAILABLE && link("/settings/screen-lock", "Screen Lock & Face ID")}
               {link("/security", "Account Security")}
               {link("/settings/agreement", "Confidentiality Agreement")}
             </Section>

@@ -14,7 +14,7 @@ import { ThemePalettePicker } from "@/components/admin/ThemePalettePicker";
 import type { AttendanceWindowSettings } from "@/lib/app-settings";
 import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive";
 import { levelText } from "@/lib/group-names";
-import { LOCK_MINUTE_CHOICES } from "@/lib/screen-lock";
+import { LOCK_MINUTE_CHOICES, SCREEN_LOCK_AVAILABLE } from "@/lib/screen-lock";
 import { NotificationDefaultsCard, type NotificationDefaultRow } from "@/components/admin/NotificationDefaultsCard";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 
@@ -515,9 +515,15 @@ export function ActionsNeededConfigInteractive({
           </p>
         </InfoTip>
       </h2>
-      <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
+      {!SCREEN_LOCK_AVAILABLE && (
+        <p className="mb-3 rounded-md bg-[#fff3cd] px-3 py-2 text-xs text-[#856404]">
+          The screen lock is paused for now, to stay within the free hosting allowance. It can be turned back on later.
+        </p>
+      )}
+      <label className={`flex items-center gap-2 text-sm mb-3 ${SCREEN_LOCK_AVAILABLE ? "text-[#333]" : "text-[#999]"}`}>
         Lock after
         <select
+          disabled={!SCREEN_LOCK_AVAILABLE}
           value={appSettings.idle_lock_minutes ?? ""}
           onChange={(e) => updateAppField("idle_lock_minutes", e.target.value === "" ? null : Number(e.target.value))}
           className="rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"

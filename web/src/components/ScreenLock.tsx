@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { platformAuthenticatorIsAvailable } from "@simplewebauthn/browser";
 import { UnlockPanel } from "@/components/UnlockPanel";
 import { claimPromptSlot } from "@/lib/prompt-slot";
-import { ACTIVITY_PING_MS, isLockExempt, type LockStatus, type UnlockMethods } from "@/lib/screen-lock";
+import { ACTIVITY_PING_MS, SCREEN_LOCK_AVAILABLE, isLockExempt, type LockStatus, type UnlockMethods } from "@/lib/screen-lock";
 
 const OFFER_KEY = "mh_faceid_offer";
 // Owner-requested (11 Oct 2026, free hosting allowance): while the lock is
@@ -35,6 +35,12 @@ function lockKnownOff(): boolean {
  * code, or signing in again. The server refuses every page and save of a
  * locked sign-in too, so this cover is not the only thing in the way. */
 export function ScreenLock() {
+  // Paused (17 Oct 2026): not even a check with the server.
+  if (!SCREEN_LOCK_AVAILABLE) return null;
+  return <ScreenLockActive />;
+}
+
+function ScreenLockActive() {
   const pathname = usePathname();
   const exempt = isLockExempt(pathname);
   const [minutes, setMinutes] = useState<number | null>(null);

@@ -73,7 +73,7 @@ export function AnnouncementBanners() {
             <span className="font-normal text-[#888]">{a.author_name}</span>
           </div>
           {/* Owner-approved (15 Oct 2026, migration 0117). */}
-          <Reactions kind="announcement" itemId={a.id} />
+          <Reactions kind="announcement" itemId={a.id} initialRows={a.reactions ?? []} />
         </div>
       ))}
     </div>

@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveAddress, ministryHeaders } from "@/lib/ministry-context";
 import { AGREEMENT_LATER_COOKIE, AGREEMENT_PATH, firstGateRow } from "@/lib/agreement";
-import { UNLOCK_PATH, isLockExempt } from "@/lib/screen-lock";
+import { SCREEN_LOCK_AVAILABLE, UNLOCK_PATH, isLockExempt } from "@/lib/screen-lock";
 
 /** REQUIREMENTS.md §6.1 addendum -- paths a signed-in-but-not-yet-
  * registered person must still be able to reach: signing in/out, the
@@ -204,7 +204,7 @@ export async function updateSession(request: NextRequest) {
   // goes to the unlock page; anything else (saves, data) is refused until
   // it's unlocked. The app covers itself in the browser first; this is the
   // part that can't be removed from the browser.
-  if (userId && !isLockExempt(pathname)) {
+  if (SCREEN_LOCK_AVAILABLE && userId && !isLockExempt(pathname)) {
     const { data } = await supabase.rpc("screen_lock_state", { p_touch: false });
     const lock = (data as { lock_minutes: number | null; locked: boolean }[] | null)?.[0];
     if (lock?.locked) {
@@ -219,11 +219,23 @@ export async function updateSession(request: NextRequest) {
   const twoStep = await twoStepRedirect(false);
   if (twoStep) return twoStep;
 
+  // Owner-requested (17 Oct 2026, free hosting allowance): the agreement and
+  // registration checks below only decide where a PAGE sends someone. A
+  // background call -- a save or lookup from a page already open (a server
+  // action), an /api/ route, or a background page preload -- can't be sent
+  // anywhere, so those database questions are skipped for it. The
+  // database's own security rules still guard every call, and the sign-in
+  // and authenticator checks above still run for all of them.
+  const isBackground =
+    request.headers.has("next-action") ||
+    pathname.startsWith("/api/") ||
+    request.headers.get("next-router-prefetch") === "1";
+
   // The confidentiality agreement (migration 0086), before registering:
   // anyone who hasn't signed the current version goes to it -- every time
   // once it's required, or (existing SAY servants, during their grace
   // period) as a page-load reminder at most once a day.
-  if (userId && !matchesPrefix(pathname, AGREEMENT_EXEMPT_PREFIXES)) {
+  if (userId && !isBackground && !matchesPrefix(pathname, AGREEMENT_EXEMPT_PREFIXES)) {
     const { data } = await supabase.rpc("agreement_gate");
     const gate = firstGateRow(data);
     const remind =
@@ -237,7 +249,7 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  if (userId && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
+  if (userId && !isBackground && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
     const [{ data: profile }, { count: roleCount }, churchAdmin] = await Promise.all([
       supabase.from("profiles").select("phone, gender").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("user_id", userId),

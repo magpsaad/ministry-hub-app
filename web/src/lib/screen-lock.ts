@@ -3,6 +3,12 @@
  * (src/lib/supabase/proxy.ts), the API routes and the browser, so it imports
  * nothing server-only. */
 
+/** Owner-requested (17 Oct 2026, free hosting allowance): the screen lock is
+ * paused for every ministry. While false, nothing asks whether a sign-in is
+ * locked (the front door, the browser) and Ministry Settings can't turn it
+ * on. Everything else is kept: set this back to true to bring it back. */
+export const SCREEN_LOCK_AVAILABLE = false;
+
 /** Ministry Settings choices; empty (null) = off. */
 export const LOCK_MINUTE_CHOICES = [2, 5, 10, 15, 30] as const;
 

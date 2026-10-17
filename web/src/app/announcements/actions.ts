@@ -1,5 +1,6 @@
 "use server";
 
+import type { ReactionRow } from "@/lib/reactions";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -83,9 +84,16 @@ export async function markAnnouncementAction(id: string, what: "seen" | "dismiss
   return { error: error ? "Couldn't save that. Please try again." : null };
 }
 
-/** Banners (Normal) and pop-ups (Important) for me, right now. */
+/** Banners (Normal) and pop-ups (Important) for me, right now -- with each
+ * banner's reactions, so the dashboard needs one request, not two (owner-
+ * requested 17 Oct 2026, free hosting allowance). */
 export async function currentAnnouncementsAction(): Promise<CurrentAnnouncement[]> {
   const supabase = await createClient();
   const { data } = await supabase.rpc("my_current_announcements");
-  return (data ?? []) as CurrentAnnouncement[];
+  const items = (data ?? []) as CurrentAnnouncement[];
+  const bannerIds = items.filter((a) => a.importance === "normal").map((a) => a.id);
+  if (bannerIds.length === 0) return items;
+  const { data: rows } = await supabase.rpc("item_reactions", { p_kind: "announcement", p_ids: bannerIds });
+  const all = (rows ?? []) as ReactionRow[];
+  return items.map((a) => (a.importance === "normal" ? { ...a, reactions: all.filter((r) => r.item_id === a.id) } : a));
 }
