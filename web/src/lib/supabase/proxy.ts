@@ -4,13 +4,14 @@ import { resolveAddress, ministryHeaders } from "@/lib/ministry-context";
 import { AGREEMENT_LATER_COOKIE, AGREEMENT_PATH, firstGateRow } from "@/lib/agreement";
 import { SCREEN_LOCK_AVAILABLE, UNLOCK_PATH, isLockExempt } from "@/lib/screen-lock";
 import { GATE_COOKIE, readGate, sealGate, type GateWho } from "@/lib/gate-cookie";
+import { NO_ACCESS_PATH, belongsElsewhere, parseAccess, type AccessHere } from "@/lib/no-access";
 
 /** REQUIREMENTS.md §6.1 addendum -- paths a signed-in-but-not-yet-
  * registered person must still be able to reach: signing in/out, the
  * public anonymous Checkin flow, the OAuth callback, and the registration
  * page itself (redirecting there again would loop). Everything else is
  * gated. */
-const GATE_EXEMPT_PREFIXES = ["/login", "/checkin", "/auth", "/register", "/security"];
+const GATE_EXEMPT_PREFIXES = ["/login", "/checkin", "/auth", "/register", "/security", NO_ACCESS_PATH];
 
 /** Owner-approved sign-in change B (3 Oct 2026, migration 0079): the
  * authenticator-app step. Reachable before it's done: signing in/out, the
@@ -20,7 +21,7 @@ const TWO_STEP_EXEMPT_PREFIXES = ["/login", "/auth", "/checkin", SECURITY_PREFIX
 
 /** The confidentiality agreement (migration 0086) lives under Account
  * Security, so the same pages stay reachable before it's signed. */
-const AGREEMENT_EXEMPT_PREFIXES = ["/login", "/auth", "/checkin", SECURITY_PREFIX];
+const AGREEMENT_EXEMPT_PREFIXES = ["/login", "/auth", "/checkin", SECURITY_PREFIX, NO_ACCESS_PATH];
 
 /** Fetched without a session (a browser checking for an installable PWA, or
  * an app-store-style crawler) -- must never be redirected regardless of
@@ -249,6 +250,21 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/api/") ||
     request.headers.get("next-router-prefetch") === "1";
 
+  // Owner-requested (17 Oct 2026, migration 0121): someone with nothing on
+  // this ministry's address who serves (or has registered) in another
+  // ministry -- a failed sign-in landed them here, a wrong link -- goes to
+  // a plain page that names no other ministry, not to this ministry's
+  // agreement or registration form. Registering here takes a deliberate
+  // "I want to join" there. The same answer serves the registration gate
+  // below (has a role here), so this adds no database trip.
+  let access: AccessHere | null = null;
+  if (userId && !isBackground && !sealed && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
+    access = parseAccess((await supabase.rpc("my_access_here")).data);
+    if (belongsElsewhere(access) && !(await isChurchAdmin())) {
+      return NextResponse.redirect(new URL(NO_ACCESS_PATH, request.url));
+    }
+  }
+
   // The confidentiality agreement (migration 0086), before registering:
   // anyone who hasn't signed the current version goes to it -- every time
   // once it's required, or (existing SAY servants, during their grace
@@ -275,12 +291,11 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (userId && !isBackground && !sealed && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
-    const [{ data: profile }, { count: roleCount }, churchAdmin] = await Promise.all([
+    const [{ data: profile }, churchAdmin] = await Promise.all([
       supabase.from("profiles").select("phone, gender").eq("id", userId).maybeSingle(),
-      supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("user_id", userId),
       isChurchAdmin(),
     ]);
-    const isComplete = !!profile && !!profile.phone && !!profile.gender && (roleCount ?? 0) > 0;
+    const isComplete = !!profile && !!profile.phone && !!profile.gender && access?.roleHere === true;
     if (!isComplete && !churchAdmin) {
       return NextResponse.redirect(new URL("/register", request.url));
     }

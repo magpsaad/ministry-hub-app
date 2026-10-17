@@ -11,6 +11,7 @@ import { RegisterInteractive } from "@/components/RegisterInteractive";
 import { HeaderWordmark } from "@/components/MinistryHubBrand";
 import { NotificationsSetupPanel } from "@/components/notifications/NotificationsSetupPanel";
 import { vapidPublicKey } from "@/lib/push";
+import { JOIN_PARAM, NO_ACCESS_PATH, belongsElsewhere, parseAccess } from "@/lib/no-access";
 
 /** REQUIREMENTS.md §6.1 addendum -- the "exceptional workflow" landing
  * screen: where the proxy gate (src/proxy.ts) sends anyone signed in
@@ -21,13 +22,20 @@ import { vapidPublicKey } from "@/lib/push";
  * to "/" first. Three states, in order: fully cleared (shouldn't be here at
  * all -- send them home), awaiting Admin/GC approval (nothing to do but
  * wait), or the registration form itself. */
-export default async function RegisterPage() {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ [JOIN_PARAM]?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  await ensureProfile(user);
-
   const supabase = await createClient();
+
+  // Owner-requested (17 Oct 2026, migration 0121): someone who serves in
+  // another ministry only gets this ministry's form after choosing "I want
+  // to join" on /no-access -- and no profile is made here before that.
+  if (!(await searchParams)[JOIN_PARAM] && belongsElsewhere(parseAccess((await supabase.rpc("my_access_here")).data))) {
+    redirect(NO_ACCESS_PATH);
+  }
+
+  await ensureProfile(user);
 
   // Owner-reported: if an Admin grants access directly through Access
   // Maintenance instead of formally approving this person's /register
