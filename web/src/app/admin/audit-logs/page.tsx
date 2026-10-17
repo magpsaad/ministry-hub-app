@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getAuditLogsAction, getAuditConfigAction, getAuditLogUsersAction } from "@/app/admin/audit-logs/actions";
+import { getAuditLogsAction, getAuditActionTypesAction, getAuditLogUsersAction } from "@/app/admin/audit-logs/actions";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
@@ -34,8 +34,8 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Pr
   // start on that action. Only a known action type is used.
   const { action, view } = await searchParams;
   const devices = view === "devices";
-  const config = await getAuditConfigAction();
-  const initialActionType = action && config.some((c) => c.action_type === action) ? action : "";
+  const actionTypes = await getAuditActionTypesAction();
+  const initialActionType = action && actionTypes.includes(action) ? action : "";
   const supabase = await createClient();
   const [settings, logs, users, deviceRows] = await Promise.all([
     getAppSettings(),
@@ -77,9 +77,8 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Pr
         ) : (
           <AuditLogsInteractive
             initialLogs={logs}
-            actionTypes={config.map((c) => c.action_type)}
+            actionTypes={actionTypes}
             users={users}
-            initialConfig={config}
             initialActionType={initialActionType}
           />
         )}

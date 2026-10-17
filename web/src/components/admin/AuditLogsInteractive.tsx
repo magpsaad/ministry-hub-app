@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import type { AuditLogRow, AuditConfigRow, AuditLogUser } from "@/app/admin/audit-logs/actions";
-import { getAuditLogsAction, toggleAuditConfigAction, archiveAuditLogAction } from "@/app/admin/audit-logs/actions";
+import type { AuditLogRow, AuditLogUser } from "@/app/admin/audit-logs/actions";
+import { getAuditLogsAction, archiveAuditLogAction } from "@/app/admin/audit-logs/actions";
 import { DateFilterModal } from "@/components/outreach/DateFilterModal";
 import { formatDateTimeInZone } from "@/lib/timezone";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
-import { relabelRoleWords } from "@/lib/role-labels";
-
-/** Migration 0080: written by the database for every check-in poster
- * sign-up and sign-up surge, and (0086) for every confidentiality agreement
- * signature, whatever the switch says -- shown ticked and locked. */
-const ALWAYS_RECORDED = new Set(["CHECKIN_REGISTRATION", "CHECKIN_SIGNUP_ALERT", "AGREEMENT_SIGNED"]);
 
 function formatWhen(iso: string, timeZone: string): string {
   return formatDateTimeInZone(iso, timeZone, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
@@ -22,26 +16,22 @@ export function AuditLogsInteractive({
   initialLogs,
   actionTypes,
   users,
-  initialConfig,
   initialActionType = "",
 }: {
   initialLogs: AuditLogRow[];
   actionTypes: string[];
   users: AuditLogUser[];
-  initialConfig: AuditConfigRow[];
   /** Opened from the Dashboard's check-in alert: already filtered. */
   initialActionType?: string;
 }) {
   const timeZone = useTimezone();
   const L = useRoleLabels();
   const [logs, setLogs] = useState(initialLogs);
-  const [config, setConfig] = useState(initialConfig);
   const [actionType, setActionType] = useState(initialActionType);
   const [userId, setUserId] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showDateFilter, setShowDateFilter] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
   const [archiveMsg, setArchiveMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -64,13 +54,6 @@ export function AuditLogsInteractive({
       setLogs(rows);
     });
   }, [actionType, userId, dateFrom, dateTo]);
-
-  function handleToggleConfig(type: string, enabled: boolean) {
-    setConfig((prev) => prev.map((c) => (c.action_type === type ? { ...c, enabled } : c)));
-    startTransition(async () => {
-      await toggleAuditConfigAction(type, enabled);
-    });
-  }
 
   function handleArchive(days: number, label: string) {
     if (!confirm(`Permanently delete every log entry older than ${label}? This cannot be undone.`)) return;
@@ -140,31 +123,7 @@ export function AuditLogsInteractive({
             {dateFilterActive && <span className="rounded-full bg-brand text-white text-[10px] px-1.5 py-0.5">1</span>}
             <span className="text-[#999]">▾</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setShowConfig((v) => !v)}
-            className="ml-auto rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-          >
-            {showConfig ? "Hide" : "Select Logged Actions"}
-          </button>
         </div>
-
-        {showConfig && (
-          <div className="mt-3 border-t border-[#f0f0f0] pt-3 grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-80 overflow-y-auto">
-            {config.map((c) => (
-              <label key={c.action_type} className="flex items-center gap-2 text-xs py-1">
-                <input
-                  type="checkbox"
-                  checked={c.enabled || ALWAYS_RECORDED.has(c.action_type)}
-                  disabled={ALWAYS_RECORDED.has(c.action_type)}
-                  onChange={(e) => handleToggleConfig(c.action_type, e.target.checked)}
-                />
-                <span className="font-mono text-[#666]">{c.action_type}</span>
-                {c.description && <span className="text-[#999]">— {relabelRoleWords(c.description, L)}</span>}
-              </label>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { logGroupSelectedAction } from "@/app/actions";
 import { ChevronDownIcon, CloseIcon, GearIcon, SpinnerIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { MinistryHubLogo, MinistryHubName } from "@/components/MinistryHubBrand";
@@ -59,7 +58,6 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
       // cookie from a server action makes Next.js re-render the whole
       // current page first, slowing the switch.
       document.cookie = `${LAST_GROUP_COOKIE}=${id}; path=/; max-age=31536000; samesite=lax; secure`;
-      void logGroupSelectedAction(id);
     }
     startNavigationSpinner();
     router.push(`/g/${id}/dashboard`);

@@ -2,38 +2,24 @@ import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
+/** Owner-decided (17 Oct 2026, migration 0119): the audit log keeps only
+ * opening the app, role and access changes, deletions and group transitions
+ * (the database also writes the check-in sign-up entries). Everything else
+ * -- attendance, edits, photos, outreach, page views, calendar changes,
+ * agreement signatures -- is no longer recorded, and there are no on/off
+ * switches any more. Past entries of every type stay viewable. */
 export type AuditActionType =
   | "APP_ACCESS"
-  | "GROUP_SELECTED"
-  | "MEMBER_EDITED"
-  | "SERVANT_ASSIGNED"
-  | "OUTREACH_ADDED"
-  | "OUTREACH_UPDATED"
-  | "OUTREACH_DELETED"
-  | "MEMBER_PHOTO_UPLOADED"
-  | "SERVANT_PROFILES_VIEWED"
-  | "SERVANT_ATTENDANCE_VIEWED"
-  | "SERVANT_EDITED"
-  | "SERVANT_GROUP_UPDATED"
-  | "SERVANT_PHOTO_UPLOADED"
-  | "SERVANT_DELETED"
   | "ADMIN_ACCESS_MAINTENANCE"
-  | "ADMIN_UNIVERSITIES_MAINTENANCE"
-  | "ATTENDANCE_ADDED"
-  | "ATTENDANCE_REMOVED"
-  | "CALENDAR_EVENT_CREATED"
-  | "CALENDAR_EVENT_UPDATED"
-  | "CALENDAR_EVENT_DELETED"
-  | "MEMBER_ARCHIVED"
+  | "SERVANT_GROUP_UPDATED"
   | "MEMBER_DELETED"
-  | "GROUP_TRANSITION_RUN"
-  | "AGREEMENT_SIGNED";
+  | "SERVANT_DELETED"
+  | "MEMBER_ARCHIVED"
+  | "GROUP_TRANSITION_RUN";
 
 /**
  * REQUIREMENTS.md §3.11/§6.14 -- writes one audit_log row for the given
- * action, honoring audit_config's per-action-type enable/disable switch
- * (silently skips if that type is turned off). Best-effort: a failure here
- * (including "type disabled") never throws back into the calling action --
+ * action. Best-effort: a failure here never throws back into the calling action --
  * the underlying app operation this is attached to must always succeed
  * regardless of audit logging's own state.
  *
@@ -62,19 +48,11 @@ export async function logAudit(
   try {
     // The Supabase client (which reads the request's cookies) is created
     // HERE, during the request -- Server Components can't read cookies
-    // inside an after() callback. The two audit queries themselves run via
-    // after(), once the response has been sent, so logging no longer adds
-    // two round trips to every page load and every save.
+    // inside an after() callback. The insert itself runs via after(), once
+    // the response has been sent.
     const supabase = await createClient();
     after(async () => {
       try {
-        const { data: config } = await supabase
-          .from("audit_config")
-          .select("enabled")
-          .eq("action_type", actionType)
-          .maybeSingle();
-        if (config && config.enabled === false) return;
-
         const groupId = combined ? await groupFromDetails(supabase, opts?.details) : explicitGroupId;
         await supabase.from("audit_log").insert({
           user_id: userId,

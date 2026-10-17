@@ -22,10 +22,6 @@ export type UpdateServantProfileInput = {
  * allows id=self or is_coordinator()). */
 export async function updateServantProfileAction(servantId: string, input: UpdateServantProfileInput) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not signed in" };
   if (!validBirthday(input.birthday_month, input.birthday_day)) return { error: "Choose both a month and a day for the birthday." };
 
   // Security audit #5: only these fields, whatever else was sent (0084).
@@ -39,7 +35,6 @@ export async function updateServantProfileAction(servantId: string, input: Updat
   const { error } = await supabase.from("profiles").update(fields).eq("id", servantId);
   if (error) return { error: error.message };
 
-  await logAudit(user.id, "SERVANT_EDITED", { details: { servantId } });
   revalidatePath("/servant-profiles");
   return { error: null };
 }
@@ -52,11 +47,6 @@ export async function uploadServantPhotoAction(servantId: string, formData: Form
   if (!isUuid(servantId)) return { error: "Unknown person." };
 
   const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not signed in" };
-
   const path = ministryFilePath(ministryId, "profiles", `servant-${servantId}-${Date.now()}.${checked.ext}`);
 
   const { data: existing } = await supabase.from("profiles").select("photo_path").eq("id", servantId).maybeSingle();
@@ -71,7 +61,6 @@ export async function uploadServantPhotoAction(servantId: string, formData: Form
     await supabase.storage.from(photosBucket()).remove([existing.photo_path]);
   }
 
-  await logAudit(user.id, "SERVANT_PHOTO_UPLOADED", { details: { servantId } });
   revalidatePath("/servant-profiles");
   revalidatePath("/servants-directory");
   return { error: null, photoPath: path };
@@ -79,11 +68,6 @@ export async function uploadServantPhotoAction(servantId: string, formData: Form
 
 export async function removeServantPhotoAction(servantId: string, photoPath: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not signed in" };
-
   void photoPath;
   // Security audit #3 (migration 0082): change the record first (refused
   // for anyone who can't edit this servant), then delete the file it held.
@@ -97,7 +81,6 @@ export async function removeServantPhotoAction(servantId: string, photoPath: str
     await supabase.storage.from(photosBucket()).remove([before.photo_path]);
   }
 
-  await logAudit(user.id, "SERVANT_PHOTO_UPLOADED", { details: { servantId, removed: true } });
   revalidatePath("/servant-profiles");
   return { error: null };
 }

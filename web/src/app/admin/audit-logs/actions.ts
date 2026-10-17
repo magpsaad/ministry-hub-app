@@ -72,21 +72,13 @@ export async function getAuditLogUsersAction(): Promise<AuditLogUser[]> {
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
 }
 
-export type AuditConfigRow = { action_type: string; enabled: boolean; description: string | null };
-
-export async function getAuditConfigAction(): Promise<AuditConfigRow[]> {
+/** Every action type, for the Action Type filter -- including ones no
+ * longer recorded (17 Oct 2026, migration 0119), so past entries can still
+ * be found. The on/off switches were removed at the same time. */
+export async function getAuditActionTypesAction(): Promise<string[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("audit_config").select("action_type, enabled, description").order("action_type");
-  return data ?? [];
-}
-
-export async function toggleAuditConfigAction(actionType: string, enabled: boolean) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("audit_config").update({ enabled }).eq("action_type", actionType);
-  if (error) return { error: await roleWords(error.message) };
-
-  revalidatePath("/admin/audit-logs");
-  return { error: null };
+  const { data } = await supabase.from("audit_config").select("action_type").order("action_type");
+  return (data ?? []).map((r) => r.action_type as string);
 }
 
 /** REQUIREMENTS.md §3.11 -- deletes log entries older than the given cutoff.

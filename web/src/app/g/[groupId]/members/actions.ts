@@ -38,9 +38,6 @@ export type UpdateMemberInput = {
  * tell "saved" apart from "silently blocked" here. */
 export async function updateMemberAction(memberId: string, groupId: string, input: UpdateMemberInput) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   // Security audit #5: send only the edit form's fields, whatever else the
   // browser put in `input` (the database also refuses other fields, 0084).
   const fields = {
@@ -60,7 +57,6 @@ export async function updateMemberAction(memberId: string, groupId: string, inpu
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "You don't have permission to edit this record." };
 
-  if (user) await logAudit(user.id, "MEMBER_EDITED", { groupId, details: { memberId } });
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
@@ -104,9 +100,6 @@ export async function deleteMemberAction(memberId: string, groupId: string) {
  * null) always clears the flag -- there's no servant left to notify. */
 export async function assignServantAction(memberId: string, groupId: string, servantId: string | null) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("members")
     .update({ assigned_servant_id: servantId, is_new_assignment: servantId !== null })
@@ -115,7 +108,6 @@ export async function assignServantAction(memberId: string, groupId: string, ser
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
 
-  if (user) await logAudit(user.id, "SERVANT_ASSIGNED", { groupId, details: { memberId, servantId } });
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
@@ -135,9 +127,6 @@ export async function assignServantAction(memberId: string, groupId: string, ser
  * cohort's dashboard, prompting that cohort's coordinator to reassign. */
 export async function moveMemberGroupAction(memberId: string, oldGroupId: string, newGroupId: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("members")
     .update({ group_id: newGroupId, assigned_servant_id: null, is_new_assignment: false })
@@ -146,7 +135,6 @@ export async function moveMemberGroupAction(memberId: string, oldGroupId: string
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
 
-  if (user) await logAudit(user.id, "MEMBER_EDITED", { groupId: newGroupId, details: { memberId, action: "moved_cohort", from: oldGroupId, to: newGroupId } });
   revalidatePath(`/g/${oldGroupId}/members`);
   revalidatePath(`/g/${oldGroupId}/dashboard`);
   revalidatePath(`/g/${newGroupId}/members`);
@@ -184,7 +172,6 @@ export async function dismissNewAssignmentAction(memberId: string, groupId: stri
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
 
-  await logAudit(user.id, "MEMBER_EDITED", { groupId, details: { memberId, action: "new_assignment_dismissed" } });
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
 }
@@ -216,9 +203,6 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
   if (!isUuid(memberId)) return { error: "Unknown person." };
 
   const [supabase, ministryId] = await Promise.all([createClient(), getActiveMinistry()]);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const path = ministryFilePath(ministryId, "members", `${memberId}-${Date.now()}.${checked.ext}`);
 
   const { data: existing } = await supabase.from("members").select("photo_path").eq("id", memberId).maybeSingle();
@@ -257,7 +241,6 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
     await supabase.storage.from(photosBucket()).remove([existing.photo_path]);
   }
 
-  if (user) await logAudit(user.id, "MEMBER_PHOTO_UPLOADED", { groupId, details: { memberId } });
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null, photoPath: path };

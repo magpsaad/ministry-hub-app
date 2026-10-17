@@ -3,7 +3,6 @@ import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings, getAttendanceWindowSettings, weekdayName } from "@/lib/app-settings";
 import { getServantAttendanceBundle } from "@/lib/servant-attendance";
-import { logAudit } from "@/lib/audit";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
@@ -33,7 +32,6 @@ export default async function ServantsAttendancePage() {
     getAttendanceWindowSettings(),
     getRoleLabels(),
   ]);
-  await logAudit(user.id, "SERVANT_ATTENDANCE_VIEWED");
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">

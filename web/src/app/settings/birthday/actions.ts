@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { logAudit } from "@/lib/audit";
 import { validBirthday } from "@/lib/birthday";
 
 /** My Settings -> My Birthday and the Dashboard's one-time card (owner-
@@ -22,7 +21,6 @@ export async function saveMyBirthdayAction(month: number | null, day: number | n
     .eq("id", user.id);
   if (error) return { error: error.message };
 
-  await logAudit(user.id, "SERVANT_EDITED", { details: { action: "own_birthday_saved" } });
   revalidatePath("/", "layout");
   return { error: null };
 }

@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { dispatchPush } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
-import { logAudit } from "@/lib/audit";
 import { validBirthday } from "@/lib/birthday";
 
 export type RegistrationInput = {
@@ -53,7 +52,6 @@ export async function submitOwnRegistrationAction(input: RegistrationInput) {
   const birthdayError = await saveOwnBirthday(supabase, user.id, input);
   if (birthdayError) return { error: birthdayError };
 
-  await logAudit(user.id, "APP_ACCESS", { details: { action: "self_registration_submitted" } });
   // Migration 0092: the new pending servant queued an alert for this
   // ministry's Admins and GCs; send it once this answer is on its way.
   after(dispatchPush);
@@ -86,7 +84,6 @@ export async function completeOwnProfileAction(input: RegistrationInput) {
   const birthdayError = await saveOwnBirthday(supabase, user.id, input);
   if (birthdayError) return { error: birthdayError };
 
-  await logAudit(user.id, "SERVANT_EDITED", { details: { action: "self_registration_completed" } });
   revalidatePath("/register");
   return { error: null };
 }

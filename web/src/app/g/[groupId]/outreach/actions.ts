@@ -11,9 +11,7 @@ import {
   type OutreachEntryFull,
   type FollowUpDueEntry,
 } from "@/lib/outreach";
-import { logAudit } from "@/lib/audit";
 import { getAppSettings } from "@/lib/app-settings";
-import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 export async function getMemberOutreachAction(memberId: string): Promise<OutreachEntry[]> {
   return getMemberOutreach(memberId);
@@ -79,7 +77,6 @@ export async function addOutreachEntryAction(groupId: string, input: AddOutreach
     };
   }
 
-  await logAudit(user.id, "OUTREACH_ADDED", { groupId, details: { memberId: input.member_id } });
   revalidatePath(`/g/${groupId}/dashboard`);
   revalidatePath(`/g/${groupId}/outreach`);
   return { error: null };
@@ -96,9 +93,6 @@ export type EditOutreachInput = {
  * shows (REQUIREMENTS.md §6.6 -- "only the creator sees Edit/Delete"). */
 export async function updateOutreachEntryAction(groupId: string, entryId: string, input: EditOutreachInput) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const { error } = await supabase
     .from("outreach_entries")
     .update({
@@ -110,7 +104,6 @@ export async function updateOutreachEntryAction(groupId: string, entryId: string
     .eq("id", entryId);
   if (error) return { error: error.message };
 
-  if (user) await logAudit(user.id, "OUTREACH_UPDATED", { groupId, details: { entryId } });
   revalidatePath(`/g/${groupId}/outreach`);
   return { error: null };
 }
@@ -145,27 +138,15 @@ export async function dismissFollowUpAction(groupId: string, entryId: string) {
     .eq("id", entryId);
   if (error) return { error: error.message };
 
-  await logAudit(user.id, "OUTREACH_UPDATED", { groupId, details: { entryId, action: "follow_up_dismissed" } });
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
 }
 
 export async function deleteOutreachEntryAction(groupId: string, entryId: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  // In the combined view, the youth's group for the audit entry, read before
-  // the entry is gone.
-  let auditGroupId = groupId;
-  if (groupId === ALL_COHORTS_GROUP_ID) {
-    const { data } = await supabase.from("outreach_entries").select("member:members(group_id)").eq("id", entryId).maybeSingle();
-    auditGroupId = (data?.member as unknown as { group_id: string } | null)?.group_id ?? groupId;
-  }
   const { error } = await supabase.from("outreach_entries").delete().eq("id", entryId);
   if (error) return { error: error.message };
 
-  if (user) await logAudit(user.id, "OUTREACH_DELETED", { groupId: auditGroupId, details: { entryId } });
   revalidatePath(`/g/${groupId}/outreach`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };

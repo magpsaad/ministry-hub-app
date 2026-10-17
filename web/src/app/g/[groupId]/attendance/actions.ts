@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { logAudit } from "@/lib/audit";
 
 /** Toggles a member's Present/Absent status for one date -- no status
  * column, so "Present" is a row existing, "Absent" is deleting it.
@@ -20,9 +19,6 @@ export async function setAttendanceAction(
   eventId: string | null = null,
 ) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const NO_PERMISSION = "You don't have permission to change attendance for this group.";
 
@@ -34,9 +30,6 @@ export async function setAttendanceAction(
       .insert({ attendee_type: "member", member_id: memberId, service_date: date, event_id: eventId });
     if (error && error.code !== "23505")
       return { error: /row-level security/i.test(error.message) ? NO_PERMISSION : error.message };
-    // Only log a record actually added (not one that was already there).
-    if (user && !error)
-      await logAudit(user.id, "ATTENDANCE_ADDED", { groupId, details: { memberId, date, ...(eventId ? { eventId } : {}) } });
   } else {
     // Owner-reported (QA R-1): a delete the security rules refuse isn't an
     // error -- it just deletes nothing -- so this used to report success and
@@ -51,8 +44,6 @@ export async function setAttendanceAction(
       still = eventId ? still.eq("event_id", eventId) : still.eq("service_date", date).is("event_id", null);
       const { count } = await still;
       if ((count ?? 0) > 0) return { error: NO_PERMISSION };
-    } else if (user) {
-      await logAudit(user.id, "ATTENDANCE_REMOVED", { groupId, details: { memberId, date, ...(eventId ? { eventId } : {}) } });
     }
   }
 

@@ -4,7 +4,6 @@ import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
 import { getServantDirectory } from "@/lib/servant-directory";
 import { getRoleLabels } from "@/lib/role-labels-server";
-import { logAudit } from "@/lib/audit";
 import { AppLogo } from "@/components/AppLogo";
 import { MenuButton } from "@/components/MenuButton";
 import { BackButton } from "@/components/BackButton";
@@ -47,7 +46,6 @@ export default async function ServantProfilesPage() {
     getRoleLabels(),
   ]);
 
-  await logAudit(user.id, "SERVANT_PROFILES_VIEWED");
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
