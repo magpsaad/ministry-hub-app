@@ -28,7 +28,7 @@ export default async function ConsoleEditMinistryPage({
       <ConsoleShell title="Ministry not found" email={access.email}>
         <p className="text-sm text-[#666]">
           There&rsquo;s no ministry with the code {id}.{" "}
-          <Link href="/console" className="font-semibold text-brand">
+          <Link prefetch={false} href="/console" className="font-semibold text-brand">
             Back to Ministries
           </Link>
         </p>

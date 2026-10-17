@@ -68,7 +68,7 @@ export default async function AgreementSettingsPage() {
                     ? `Please read and sign it by ${longDate(agreement.grace_until)}.`
                     : "Please read and sign it."}
               </p>
-              <Link
+              <Link prefetch={false}
                 href={`${AGREEMENT_PATH}?next=/settings/agreement`}
                 className={`${PRIMARY_BUTTON} mt-4 block text-center`}
               >

@@ -34,7 +34,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
         ) : (
           <div className="rounded-xl bg-white p-6 text-center text-sm text-[#777] shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
             This conversation isn&rsquo;t available.{" "}
-            <Link href="/messages" className="font-semibold text-brand hover:underline">
+            <Link prefetch={false} href="/messages" className="font-semibold text-brand hover:underline">
               Back to Messages
             </Link>
           </div>

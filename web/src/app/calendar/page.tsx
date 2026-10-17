@@ -61,7 +61,7 @@ export default async function ServiceCalendarPage() {
       </header>
       {/* Owner-approved (9 Oct 2026, migration 0107): this calendar in your own. */}
       <div className="max-w-5xl mx-auto px-4 pt-3 text-right">
-        <Link href="/settings/calendar" className="text-sm font-semibold text-brand hover:underline">
+        <Link prefetch={false} href="/settings/calendar" className="text-sm font-semibold text-brand hover:underline">
           Add to my phone&rsquo;s calendar &rarr;
         </Link>
       </div>

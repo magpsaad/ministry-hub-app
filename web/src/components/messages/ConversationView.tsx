@@ -182,7 +182,7 @@ export function ConversationView({ conv, timeZone, today }: { conv: Conversation
               <li key={r.key} className={`py-2 ${r.current ? "bg-brand/5 -mx-2 px-2 rounded" : ""}`}>
                 <div className="flex items-center justify-between gap-2 text-sm">
                   {r.href ? (
-                    <Link href={r.href} className="font-semibold text-brand hover:underline">
+                    <Link prefetch={false} href={r.href} className="font-semibold text-brand hover:underline">
                       {r.name}
                     </Link>
                   ) : (

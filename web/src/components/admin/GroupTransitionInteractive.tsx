@@ -158,7 +158,7 @@ export function GroupTransitionInteractive({
               <li key={name}>{name}</li>
             ))}
           </ul>
-          <Link
+          <Link prefetch={false}
             href="/qr-codes"
             target="_blank"
             rel="noopener noreferrer"

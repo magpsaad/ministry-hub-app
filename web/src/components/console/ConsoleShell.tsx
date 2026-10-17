@@ -40,7 +40,7 @@ export function ConsoleShell({
         </div>
         <nav className="mt-3 flex flex-wrap justify-center gap-1">
           {NAV.map((n) => (
-            <Link
+            <Link prefetch={false}
               key={n.href}
               href={n.href}
               className="rounded-md px-3 py-1 text-xs font-semibold text-white/90 hover:bg-white/15 transition-colors"

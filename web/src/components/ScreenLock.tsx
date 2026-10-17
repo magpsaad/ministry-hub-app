@@ -15,7 +15,9 @@ const OFFER_KEY = "mh_faceid_offer";
 // minutes instead of on every page change. Turning the lock on takes effect
 // within 10 minutes (and at once in a new tab).
 const OFF_KEY = "mh_lock_off_until";
-const OFF_RECHECK_MS = 10 * 60_000;
+// 60 minutes since 17 Oct 2026 (was 10): turning the lock on reaches tabs
+// already open within the hour (new tabs at once).
+const OFF_RECHECK_MS = 60 * 60_000;
 function lockKnownOff(): boolean {
   try {
     return Number(sessionStorage.getItem(OFF_KEY) ?? 0) > Date.now();
@@ -178,7 +180,7 @@ export function ScreenLock() {
     <div className="fixed inset-x-0 bottom-4 z-[900] flex justify-center px-4">
       <div className="flex w-full max-w-md items-center gap-3 rounded-xl bg-white px-4 py-3 text-sm text-[#333] shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
         <span className="flex-1">Unlock this app with Face ID or your fingerprint instead of an email code?</span>
-        <Link href="/settings/screen-lock" onClick={dismissOffer} className="shrink-0 font-semibold text-brand hover:underline">
+        <Link prefetch={false} href="/settings/screen-lock" onClick={dismissOffer} className="shrink-0 font-semibold text-brand hover:underline">
           Set it up
         </Link>
         <button type="button" onClick={dismissOffer} className="shrink-0 text-[#777] hover:underline">

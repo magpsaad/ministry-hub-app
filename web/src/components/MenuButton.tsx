@@ -36,9 +36,11 @@ export function MenuButton() {
     // menu in the background is a wasted server call (owner-requested,
     // 11 Oct 2026). It still loads when the button is tapped.
     if (pathname.startsWith("/checkin")) return;
+    // Owner-requested (17 Oct 2026, free hosting allowance): only the menu's
+    // code is preloaded (a static file, no server work); its data is fetched
+    // when the menu is opened.
     const preload = () => {
       void loadSideMenu();
-      void refreshMenuData();
     };
     // Safari has no requestIdleCallback; a short delay does the same job.
     if ("requestIdleCallback" in window) {

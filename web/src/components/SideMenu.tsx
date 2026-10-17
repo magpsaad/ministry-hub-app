@@ -65,7 +65,7 @@ export function SideMenu({ data, onClose }: { data: MenuData | null; onClose: ()
   }
 
   const link = (href: string, label: React.ReactNode) => (
-    <Link href={href} onClick={onClose} className={ITEM}>
+    <Link prefetch={false} href={href} onClick={onClose} className={ITEM}>
       {label}
     </Link>
   );

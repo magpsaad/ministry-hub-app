@@ -82,7 +82,7 @@ export default async function AccountSecurityPage() {
               ))}
             </ul>
           ) : (
-            <Link href="/security/setup?next=/security" className={`${PRIMARY_BUTTON} mt-4 block text-center`}>
+            <Link prefetch={false} href="/security/setup?next=/security" className={`${PRIMARY_BUTTON} mt-4 block text-center`}>
               {required ? "Set it up" : "Turn it on"}
               <LinkSpinner />
             </Link>

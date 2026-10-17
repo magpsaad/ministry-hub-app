@@ -113,7 +113,7 @@ export function GroupNavShell({
             const href = `/g/${groupId}/${tab.slug}`;
             const active = pathname === href;
             return (
-              <Link
+              <Link prefetch={false}
                 key={tab.slug}
                 href={href}
                 className={`flex-1 min-w-[100px] text-center px-2.5 py-3.5 text-sm font-medium border-b-[3px] transition-colors whitespace-nowrap ${

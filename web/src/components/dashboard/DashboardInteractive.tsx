@@ -760,7 +760,7 @@ export function DashboardInteractive({
       </CollapsibleSection>
 
       <div className="text-center">
-        <Link href={`/g/${groupId}/members`} className="text-sm font-semibold text-brand hover:underline">
+        <Link prefetch={false} href={`/g/${groupId}/members`} className="text-sm font-semibold text-brand hover:underline">
           View all {memberLabel.toLowerCase()}s →
         </Link>
       </div>

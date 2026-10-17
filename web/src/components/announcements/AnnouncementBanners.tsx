@@ -3,7 +3,8 @@
 import { Reactions } from "@/components/Reactions";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { currentAnnouncementsAction, markAnnouncementAction } from "@/app/announcements/actions";
+import { markAnnouncementAction } from "@/app/announcements/actions";
+import { forgetCurrentAnnouncements, loadCurrentAnnouncements } from "@/components/announcements/currentAnnouncements";
 import type { CurrentAnnouncement } from "@/lib/announcements";
 
 /** Dashboard banners (migration 0099): Normal announcements for me that are
@@ -16,7 +17,7 @@ export function AnnouncementBanners() {
 
   useEffect(() => {
     let cancelled = false;
-    currentAnnouncementsAction()
+    loadCurrentAnnouncements()
       .then((all) => {
         if (!cancelled) setItems(all.filter((a) => a.importance === "normal"));
       })
@@ -31,7 +32,10 @@ export function AnnouncementBanners() {
     working.current = true;
     setClosing(id);
     const res = await markAnnouncementAction(id, "dismiss");
-    if (!res.error) setItems((list) => list.filter((a) => a.id !== id));
+    if (!res.error) {
+      forgetCurrentAnnouncements();
+      setItems((list) => list.filter((a) => a.id !== id));
+    }
     setClosing(null);
     working.current = false;
   }
@@ -58,7 +62,7 @@ export function AnnouncementBanners() {
           </div>
           <p className="mt-1 whitespace-pre-line line-clamp-3">{a.body}</p>
           <div className="mt-1.5 flex flex-wrap gap-3 text-xs font-semibold">
-            <Link href="/announcements" className="text-brand hover:underline">
+            <Link prefetch={false} href="/announcements" className="text-brand hover:underline">
               Read more
             </Link>
             {a.link_url && (

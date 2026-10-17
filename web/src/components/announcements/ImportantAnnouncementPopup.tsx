@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { currentAnnouncementsAction, markAnnouncementAction } from "@/app/announcements/actions";
+import { markAnnouncementAction } from "@/app/announcements/actions";
+import { forgetCurrentAnnouncements, loadCurrentAnnouncements } from "@/components/announcements/currentAnnouncements";
 import { BusyLabel } from "@/components/PendingButton";
 import type { CurrentAnnouncement } from "@/lib/announcements";
 
@@ -17,7 +18,8 @@ import type { CurrentAnnouncement } from "@/lib/announcements";
  * until a full refresh. It now looks again on every page change and when
  * the tab or app comes back to the front -- at most every 5 minutes
  * (was once a minute; owner-requested 11 Oct 2026, free hosting allowance). */
-const RECHECK_MS = 5 * 60_000;
+// 15 minutes since 17 Oct 2026 (was 5; free hosting allowance).
+const RECHECK_MS = 15 * 60_000;
 
 const EXCLUDED = ["/login", "/auth", "/checkin", "/security", "/register", "/console", "/address-not-set-up", "/ministry-inactive"];
 
@@ -36,7 +38,7 @@ export function ImportantAnnouncementPopup() {
     const look = () => {
       if (document.visibilityState !== "visible" || Date.now() - lastCheck.current < RECHECK_MS) return;
       lastCheck.current = Date.now();
-      currentAnnouncementsAction()
+      loadCurrentAnnouncements()
         .then((all) => {
           if (cancelled) return;
           const important = all.filter((a) => a.importance === "important");
@@ -64,7 +66,10 @@ export function ImportantAnnouncementPopup() {
     const res = await markAnnouncementAction(a.id, "ack");
     setBusy(false);
     working.current = false;
-    if (!res.error) setQueue((q) => q.slice(1));
+    if (!res.error) {
+      forgetCurrentAnnouncements();
+      setQueue((q) => q.slice(1));
+    }
   }
 
   return (

@@ -85,7 +85,7 @@ export default async function LandingPage() {
         ) : (
           <p className="text-sm text-[#666]">
             Your account isn&rsquo;t assigned to any role yet.{" "}
-            <Link href="/register" className="underline">
+            <Link prefetch={false} href="/register" className="underline">
               Register here
             </Link>
             , or contact a System Admin for access.

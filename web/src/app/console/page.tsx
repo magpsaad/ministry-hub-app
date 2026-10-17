@@ -46,7 +46,7 @@ export default async function ConsoleMinistriesPage() {
             </div>
             <div className="flex items-center gap-3">
               <MinistryActiveToggle code={m.id} name={m.name} isActive={m.is_active} />
-              <Link href={`/console/ministries/${m.id}`} className="text-xs font-semibold text-brand hover:underline">
+              <Link prefetch={false} href={`/console/ministries/${m.id}`} className="text-xs font-semibold text-brand hover:underline">
                 Edit
               </Link>
             </div>

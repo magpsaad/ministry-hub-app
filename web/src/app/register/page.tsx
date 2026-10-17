@@ -90,7 +90,7 @@ export default async function RegisterPage() {
         )}
         <p className="text-center text-xs text-[#999]">
           Signed in as {user.email}. Wrong account?{" "}
-          <Link href="/login" className="underline">
+          <Link prefetch={false} href="/login" className="underline">
             Sign in with a different one
           </Link>
           .

@@ -65,10 +65,10 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Pr
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
         <div className="inline-flex overflow-hidden rounded-md border border-[#ddd]">
-          <Link href="/admin/audit-logs" className={tab(!devices)}>
+          <Link prefetch={false} href="/admin/audit-logs" className={tab(!devices)}>
             Activity
           </Link>
-          <Link href="/admin/audit-logs?view=devices" className={tab(devices)}>
+          <Link prefetch={false} href="/admin/audit-logs?view=devices" className={tab(devices)}>
             Device setup
           </Link>
         </div>

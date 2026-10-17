@@ -46,7 +46,7 @@ export default async function SetupAuthenticatorPage({
             </SubmitButton>
           </form>
         ) : (
-          <Link href="/security" className="text-[#666] hover:underline">
+          <Link prefetch={false} href="/security" className="text-[#666] hover:underline">
             Cancel
           </Link>
         )}

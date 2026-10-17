@@ -42,7 +42,7 @@ export default async function SignedAgreementPage({ params }: { params: Promise<
           <p className="text-sm text-[#555]">This signed copy doesn&apos;t exist or you can&apos;t open it.</p>
         </div>
         <p className="mt-4 text-center text-sm">
-          <Link href="/security" className="font-semibold text-brand hover:underline">
+          <Link prefetch={false} href="/security" className="font-semibold text-brand hover:underline">
             &larr; Account Security
           </Link>
         </p>
@@ -80,7 +80,7 @@ export default async function SignedAgreementPage({ params }: { params: Promise<
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-          <Link href={own ? "/security/agreement" : "/servant-profiles"} className="text-sm font-semibold text-brand hover:underline">
+          <Link prefetch={false} href={own ? "/security/agreement" : "/servant-profiles"} className="text-sm font-semibold text-brand hover:underline">
             &larr; {own ? "Back to the agreement" : `${L.servant} Profiles`}
           </Link>
           <PrintButton />

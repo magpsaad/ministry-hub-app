@@ -28,7 +28,7 @@ function homeHref(data: MenuData | null): string {
 export function HomeLink({ className, children }: { className?: string; children: React.ReactNode }) {
   const data = useSyncExternalStore(subscribeMenuData, getMenuDataSnapshot, getMenuDataServerSnapshot);
   return (
-    <Link href={homeHref(data)} className={className}>
+    <Link prefetch={false} href={homeHref(data)} className={className}>
       {children}
     </Link>
   );

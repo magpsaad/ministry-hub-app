@@ -105,7 +105,7 @@ export default async function AgreementPage({
                   You signed this agreement on {when(mine.signed_at, true)} as <strong>{mine.typed_name}</strong>.{" "}
                 </>
               )}
-              <Link href={`/security/agreement/${mine.id}`} className="font-semibold underline">
+              <Link prefetch={false} href={`/security/agreement/${mine.id}`} className="font-semibold underline">
                 View or print your signed copy
               </Link>
             </div>
@@ -177,7 +177,7 @@ export default async function AgreementPage({
 function BackLink() {
   return (
     <p className="mt-4 text-center text-sm">
-      <Link href="/security" className="font-semibold text-brand hover:underline">
+      <Link prefetch={false} href="/security" className="font-semibold text-brand hover:underline">
         &larr; Account Security
       </Link>
     </p>

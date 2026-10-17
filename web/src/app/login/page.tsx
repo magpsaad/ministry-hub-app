@@ -146,14 +146,14 @@ export default async function LoginPage({
                 {step === "signup" ? (
                   <>
                     Already have an account?{" "}
-                    <Link href="/login" className="font-semibold text-brand">
+                    <Link prefetch={false} href="/login" className="font-semibold text-brand">
                       Sign in
                     </Link>
                   </>
                 ) : (
                   <>
                     New here?{" "}
-                    <Link href="/login?mode=signup" className="font-semibold text-brand">
+                    <Link prefetch={false} href="/login?mode=signup" className="font-semibold text-brand">
                       Create an account
                     </Link>
                   </>

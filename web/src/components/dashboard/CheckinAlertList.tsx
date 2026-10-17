@@ -55,7 +55,7 @@ export function CheckinAlertList({ alerts: initial, timeZone }: { alerts: Checki
             Please open Audit Logs and check that each new sign-up is a real person. Delete any that aren&rsquo;t.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link
+            <Link prefetch={false}
               href="/admin/audit-logs?action=CHECKIN_REGISTRATION"
               className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
             >

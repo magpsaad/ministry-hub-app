@@ -63,13 +63,13 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
         <div className="flex items-center justify-between gap-3">
           {oversees ? (
             <div className="inline-flex rounded-full border border-[#ddd] bg-white p-0.5 text-xs font-semibold">
-              <Link
+              <Link prefetch={false}
                 href={qs(filter, false)}
                 className={`rounded-full px-3 py-1 ${!ministryView ? "bg-brand text-white" : "text-[#555]"}`}
               >
                 Mine
               </Link>
-              <Link
+              <Link prefetch={false}
                 href={qs(filter, true)}
                 className={`rounded-full px-3 py-1 ${ministryView ? "bg-brand text-white" : "text-[#555]"}`}
               >
@@ -79,7 +79,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           ) : (
             <span />
           )}
-          <Link
+          <Link prefetch={false}
             href="/messages/new"
             className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)]"
           >
@@ -90,7 +90,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
 
         <div className="flex flex-wrap gap-2">
           {FILTERS.map((x) => (
-            <Link
+            <Link prefetch={false}
               key={x.key}
               href={qs(x.key, ministryView)}
               className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
@@ -116,7 +116,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           <ul className="overflow-hidden rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] divide-y divide-[#eee]">
             {items.map((i) => (
               <li key={i.key}>
-                <Link href={i.href} className="block px-4 py-3 hover:bg-[#fafafa]">
+                <Link prefetch={false} href={i.href} className="block px-4 py-3 hover:bg-[#fafafa]">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className={`truncate text-sm ${i.unread ? "font-bold text-[#222]" : "font-semibold text-[#333]"}`}>
