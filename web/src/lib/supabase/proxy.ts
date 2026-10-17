@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { resolveAddress, ministryHeaders } from "@/lib/ministry-context";
 import { AGREEMENT_LATER_COOKIE, AGREEMENT_PATH, firstGateRow } from "@/lib/agreement";
 import { SCREEN_LOCK_AVAILABLE, UNLOCK_PATH, isLockExempt } from "@/lib/screen-lock";
+import { GATE_COOKIE, readGate, sealGate, type GateWho } from "@/lib/gate-cookie";
 
 /** REQUIREMENTS.md §6.1 addendum -- paths a signed-in-but-not-yet-
  * registered person must still be able to reach: signing in/out, the
@@ -135,13 +136,30 @@ export async function updateSession(request: NextRequest) {
   const userId = claimsData?.claims?.sub ?? null;
   const aal = (claimsData?.claims as { aal?: string } | undefined)?.aal ?? "aal1";
 
+  // Owner-approved (17 Oct 2026, free hosting allowance): the answers below
+  // are asked once per sign-in per day and kept in a sealed cookie
+  // (lib/gate-cookie.ts); a genuine one for this person, ministry, sign-in
+  // and authenticator level means no database questions on this request.
+  const who: GateWho | null =
+    userId && address.kind === "ministry"
+      ? {
+          userId,
+          ministryId: address.ministryId,
+          sessionId: String((claimsData?.claims as { session_id?: string } | undefined)?.session_id ?? ""),
+          aal,
+        }
+      : null;
+  const sealed = who ? await readGate(request.cookies.get(GATE_COOKIE)?.value, who) : null;
+
   // What the front door needs to know about this person, read once and
   // only when it matters (migration 0079's gate_info(): Church Admin, and
   // whether their role here requires the authenticator step -- read
   // regardless of that step, which is what is_church_admin() now needs).
   let gateCheck: Promise<{ church_admin: boolean; mfa_required: boolean }> | null = null;
   const gateInfo = () =>
-    (gateCheck ??= userId
+    (gateCheck ??= sealed
+      ? Promise.resolve({ church_admin: sealed.churchAdmin, mfa_required: sealed.mfaRequired })
+      : userId
       ? Promise.resolve(supabase.rpc("gate_info")).then(({ data }) => {
           const row = (data as { church_admin: boolean; mfa_required: boolean }[] | null)?.[0];
           return { church_admin: row?.church_admin === true, mfa_required: row?.mfa_required === true };
@@ -235,9 +253,16 @@ export async function updateSession(request: NextRequest) {
   // anyone who hasn't signed the current version goes to it -- every time
   // once it's required, or (existing SAY servants, during their grace
   // period) as a page-load reminder at most once a day.
-  if (userId && !isBackground && !matchesPrefix(pathname, AGREEMENT_EXEMPT_PREFIXES)) {
+  // Whether this page open's own answers let the person in -- then they're
+  // sealed for the day (below). Unknown on exempt pages, so nothing's sealed.
+  let agreementOk = false;
+  let registrationOk = false;
+
+  if (userId && !isBackground && !sealed && !matchesPrefix(pathname, AGREEMENT_EXEMPT_PREFIXES)) {
     const { data } = await supabase.rpc("agreement_gate");
     const gate = firstGateRow(data);
+    // Signed the current version (no row: no agreement published yet).
+    agreementOk = !gate || gate.needs_signature === false;
     const remind =
       gate?.needs_signature &&
       request.method === "GET" &&
@@ -249,7 +274,7 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  if (userId && !isBackground && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
+  if (userId && !isBackground && !sealed && !matchesPrefix(pathname, GATE_EXEMPT_PREFIXES)) {
     const [{ data: profile }, { count: roleCount }, churchAdmin] = await Promise.all([
       supabase.from("profiles").select("phone, gender").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("user_id", userId),
@@ -258,6 +283,16 @@ export async function updateSession(request: NextRequest) {
     const isComplete = !!profile && !!profile.phone && !!profile.gender && (roleCount ?? 0) > 0;
     if (!isComplete && !churchAdmin) {
       return NextResponse.redirect(new URL("/register", request.url));
+    }
+    registrationOk = true;
+  }
+
+  // Everything checked out on this page open: seal it for the day.
+  if (who && !sealed && agreementOk && registrationOk) {
+    const facts = await gateInfo();
+    const note = await sealGate(who, { churchAdmin: facts.church_admin, mfaRequired: facts.mfa_required });
+    if (note) {
+      response.cookies.set(GATE_COOKIE, note, { maxAge: 86_400, path: "/", sameSite: "lax", httpOnly: true, secure: true });
     }
   }
 
