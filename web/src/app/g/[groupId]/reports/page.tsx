@@ -1,4 +1,4 @@
-import { getAnalyticsRawData, getServantAssignments } from "@/lib/analytics";
+import { getAnalyticsOutreach, getAnalyticsRawData, getAnalyticsServants } from "@/lib/analytics";
 import { getAppSettings, getAttendanceWindowSettings } from "@/lib/app-settings";
 import { getCombinedGroups } from "@/lib/groups";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
@@ -19,9 +19,10 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ grou
   const combinedGroups = combined ? await getCombinedGroups() : [];
   const groupIds = combined ? combinedGroups.map((g) => g.id) : groupId;
 
-  const [raw, assignments, settings, windowSettings] = await Promise.all([
+  const [raw, servants, outreach, settings, windowSettings] = await Promise.all([
     getAnalyticsRawData(groupIds),
-    getServantAssignments(groupIds),
+    getAnalyticsServants(groupIds),
+    getAnalyticsOutreach(groupIds),
     getAppSettings(),
     getAttendanceWindowSettings(),
   ]);
@@ -29,8 +30,8 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ grou
   return (
     <AnalyticsInteractive
       raw={raw}
-      servants={assignments.servants}
-      unassignedCount={assignments.unassignedCount}
+      servants={servants}
+      outreach={outreach}
       memberLabel={settings.member_label}
       groupLabel={settings.group_label}
       proximityEnabled={settings.proximity_enabled}

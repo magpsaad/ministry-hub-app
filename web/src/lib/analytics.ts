@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { getServantsForGroup, type ServantOption } from "@/lib/servants";
+import { buildServantOptions, type ServantOption, type ServantRoleRow } from "@/lib/servants";
 import { fetchAllRows } from "@/lib/pagination";
+import { getAppSettings } from "@/lib/app-settings";
+import { dateKeyInZone, shiftDateKey, todayInZone } from "@/lib/timezone";
 
 export type MemberAnalyticsRow = {
   id: string;
@@ -94,22 +96,46 @@ export async function getAnalyticsRawData(groupId: string | string[]): Promise<A
   return { members, attendance };
 }
 
-export type ServantAssignments = {
-  servants: ServantOption[];
-  unassignedCount: number;
-};
-
-/** REQUIREMENTS.md §6.7 -- every servant (female before male, then
- * alphabetically), with an unassigned-members total row. Deliberately not
- * filtered by "My Assigned List" -- this table's whole point is comparing
- * caseloads *across* servants, which "just mine" doesn't meaningfully apply to. */
-export async function getServantAssignments(groupId: string | string[]): Promise<ServantAssignments> {
+/** Servant-Youth Assignments (owner-requested 18 Oct 2026): the groups'
+ * Servants. Their caseloads and the unassigned-youth count are worked out in
+ * the browser from the youths getAnalyticsRawData already loaded -- two
+ * requests fewer than reading them separately. Deliberately not filtered by
+ * "My Assigned List" -- the point is comparing servants. */
+export async function getAnalyticsServants(groupId: string | string[]): Promise<ServantOption[]> {
   const supabase = await createClient();
+  let q = supabase
+    .from("user_roles")
+    .select("user_id, group_id, profiles(id, full_name, gender), groups(name, ladder_position, display_order)")
+    .eq("role", "servant");
+  q = Array.isArray(groupId) ? q.in("group_id", groupId) : q.eq("group_id", groupId);
+  const { data } = await q;
+  return buildServantOptions((data ?? []) as unknown as ServantRoleRow[], []);
+}
 
-  let query = supabase.from("members").select("id", { count: "exact", head: true }).eq("status", "active").is("assigned_servant_id", null);
-  query = Array.isArray(groupId) ? query.in("group_id", groupId) : query.eq("group_id", groupId);
-  // Independent reads -- run in parallel (they used to be sequential).
-  const [servants, { count }] = await Promise.all([getServantsForGroup(groupId), query]);
+/** One outreach entry, on the ministry's calendar day. */
+export type OutreachAnalyticsRow = { memberId: string; servantId: string; groupId: string; date: string };
 
-  return { servants, unassignedCount: count ?? 0 };
+/** Servant-Youth Assignments' "Outreached Youths": the past year's outreach
+ * entries for these groups' youths (the longest period offered); the
+ * browser counts each servant's different youths for the period picked, so
+ * changing it asks the database nothing. */
+export async function getAnalyticsOutreach(groupId: string | string[]): Promise<OutreachAnalyticsRow[]> {
+  const [supabase, settings] = await Promise.all([createClient(), getAppSettings()]);
+  const since = shiftDateKey(todayInZone(settings.timezone), { months: -12, days: -1 });
+  const rows = await fetchAllRows((from, to) => {
+    let q = supabase
+      .from("outreach_entries")
+      .select("member_id, servant_id, occurred_at, member:members!inner(group_id)")
+      .gte("occurred_at", `${since}T00:00:00Z`)
+      .order("id")
+      .range(from, to);
+    q = Array.isArray(groupId) ? q.in("member.group_id", groupId) : q.eq("member.group_id", groupId);
+    return q;
+  });
+  return rows.map((r) => ({
+    memberId: r.member_id,
+    servantId: r.servant_id,
+    groupId: (r.member as unknown as { group_id: string }).group_id,
+    date: dateKeyInZone(r.occurred_at, settings.timezone),
+  }));
 }

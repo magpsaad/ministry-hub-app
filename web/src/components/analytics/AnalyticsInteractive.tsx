@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import type { AnalyticsRawData, MemberAnalyticsRow } from "@/lib/analytics";
+import type { AnalyticsRawData, MemberAnalyticsRow, OutreachAnalyticsRow } from "@/lib/analytics";
 import type { ServantOption } from "@/lib/servants";
 import type { GroupSummary } from "@/lib/groups";
 import { useMyAssigned } from "@/components/MyAssignedContext";
@@ -13,8 +13,23 @@ import { ProximityDonut } from "@/components/charts/ProximityDonut";
 import { AttendanceTrendChart } from "@/components/charts/AttendanceTrendChart";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
+import { shiftDateKey, todayInZone } from "@/lib/timezone";
 
-type SortKey = "name" | "gender" | "caseload" | "cohort";
+type SortKey = "name" | "gender" | "caseload" | "outreached" | "cohort";
+
+/** Servant-Youth Assignments' period for "Outreached Youths" (owner-
+ * requested 18 Oct 2026, 4 weeks by default). */
+const PERIODS = [
+  { value: "1w", label: "1 week", days: 7 },
+  { value: "4w", label: "4 weeks", days: 28 },
+  { value: "3m", label: "3 months", months: 3 },
+  { value: "6m", label: "6 months", months: 6 },
+  { value: "1y", label: "1 year", months: 12 },
+] as const;
+type PeriodValue = (typeof PERIODS)[number]["value"];
+
+/** One servant's line in one card (or the Alphabetical list). */
+type ServantLine = { servant: ServantOption; assigned: number; outreached: number };
 
 function cohortText(s: ServantOption): string {
   return s.groups.map((g) => g.name).join(", ");
@@ -41,7 +56,7 @@ function cohortText(s: ServantOption): string {
 export function AnalyticsInteractive({
   raw,
   servants,
-  unassignedCount,
+  outreach,
   memberLabel,
   groupLabel,
   proximityEnabled,
@@ -52,8 +67,10 @@ export function AnalyticsInteractive({
   windowWeeks,
 }: {
   raw: AnalyticsRawData;
+  /** The groups' Servants (caseloads worked out below from raw.members). */
   servants: ServantOption[];
-  unassignedCount: number;
+  /** The past year's outreach for these groups' youths. */
+  outreach: OutreachAnalyticsRow[];
   memberLabel: string;
   groupLabel: string;
   proximityEnabled: boolean;
@@ -88,20 +105,48 @@ export function AnalyticsInteractive({
     () => (cohort.isFiltered ? raw.members.filter((m) => cohort.matches(m.group_id)) : raw.members),
     [raw.members, cohort],
   );
-  // Servants of the chosen cohorts, with caseloads counted in them only.
+  // Servants of the chosen cohorts (their groups narrowed to those).
   const visibleServants = useMemo(() => {
     if (!cohort.isFiltered) return servants;
     return servants
-      .filter((s) => s.groups.some((g) => cohort.matches(g.id)))
-      .map((s) => ({
-        ...s,
-        groups: s.groups.filter((g) => cohort.matches(g.id)),
-        caseload: cohortMembers.filter((m) => m.assigned_servant_id === s.id).length,
-      }));
-  }, [servants, cohort, cohortMembers]);
-  const visibleUnassignedCount = cohort.isFiltered
-    ? cohortMembers.filter((m) => !m.assigned_servant_id).length
-    : unassignedCount;
+      .filter((s) => s.groups.length === 0 || s.groups.some((g) => cohort.matches(g.id)))
+      .map((s) => ({ ...s, groups: s.groups.filter((g) => cohort.matches(g.id)) }));
+  }, [servants, cohort]);
+  const visibleUnassignedCount = cohortMembers.filter((m) => !m.assigned_servant_id).length;
+
+  // Owner-requested (18 Oct 2026): "Outreached Youths" -- how many different
+  // youths each servant logged outreach for in the period picked.
+  const [period, setPeriod] = useState<PeriodValue>("4w");
+  const periodStart = useMemo(() => {
+    const p = PERIODS.find((x) => x.value === period)!;
+    const today = todayInZone(timeZone);
+    return "days" in p ? shiftDateKey(today, { days: -(p.days - 1) }) : shiftDateKey(today, { months: -p.months, days: 1 });
+  }, [period, timeZone]);
+  /** servant -> group -> the different youths they reached in the period. */
+  const reached = useMemo(() => {
+    const map = new Map<string, Map<string, Set<string>>>();
+    for (const o of outreach) {
+      if (o.date < periodStart || !(cohort.isFiltered ? cohort.matches(o.groupId) : true)) continue;
+      const byGroup = map.get(o.servantId) ?? new Map<string, Set<string>>();
+      const set = byGroup.get(o.groupId) ?? new Set<string>();
+      set.add(o.memberId);
+      byGroup.set(o.groupId, set);
+      map.set(o.servantId, byGroup);
+    }
+    return map;
+  }, [outreach, periodStart, cohort]);
+  /** In one group, or (null) every group shown. */
+  function outreachedBy(servantId: string, groupId: string | null): number {
+    const byGroup = reached.get(servantId);
+    if (!byGroup) return 0;
+    if (groupId) return byGroup.get(groupId)?.size ?? 0;
+    const all = new Set<string>();
+    for (const set of byGroup.values()) for (const id of set) all.add(id);
+    return all.size;
+  }
+  function assignedTo(servantId: string, groupId: string | null): number {
+    return cohortMembers.filter((m) => m.assigned_servant_id === servantId && (groupId === null || m.group_id === groupId)).length;
+  }
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
   const [servantsView, setServantsView] = useState<"categorical" | "alphabetical">("categorical");
@@ -188,46 +233,49 @@ export function AnalyticsInteractive({
     [filteredMembers, raw.attendance, serviceWeekday, windowWeeks],
   );
 
+  // Alphabetical: each servant once, across every group shown.
   const sortedServants = useMemo(() => {
-    return [...visibleServants].sort((a, b) => {
+    const lines: ServantLine[] = visibleServants.map((s) => ({
+      servant: s,
+      assigned: assignedTo(s.id, null),
+      outreached: outreachedBy(s.id, null),
+    }));
+    return lines.sort((x, y) => {
+      const a = x.servant;
+      const b = y.servant;
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "gender") cmp = (a.gender ?? "").localeCompare(b.gender ?? "");
       else if (sortKey === "cohort") cmp = cohortText(a).localeCompare(cohortText(b));
-      else cmp = a.caseload - b.caseload;
+      else if (sortKey === "outreached") cmp = x.outreached - y.outreached;
+      else cmp = x.assigned - y.assigned;
       return sortDesc ? -cmp : cmp;
     });
-  }, [visibleServants, sortKey, sortDesc]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleServants, sortKey, sortDesc, cohortMembers, reached]);
 
   // Categorical view (owner-requested, matches Servant Assignments/Servant
-  // Profiles): cohorts in ladder order, Unassigned last; a person holding
-  // Servant grants at more than one cohort appears under each (same rule
-  // those two screens already use).
-  // Combined view (owner-requested 30 Sep 2026): aggregate only -- one
-  // table of every servant of the chosen cohorts, each listed once with
-  // their whole caseload, still split by gender.
+  // Profiles): a card per group in list order, Female/Male within each,
+  // Unassigned last; someone serving two groups appears in each, with that
+  // group's numbers. Owner-requested (18 Oct 2026): the combined view too
+  // (it used to be one table for every group, 30 Sep 2026).
   const categoricalCohorts = useMemo(() => {
-    if (combined) {
-      return {
-        cohorts: [{ id: "all", name: "", display_order: 0, servants: visibleServants.filter((s) => s.groups.length > 0) }],
-        unassigned: visibleServants.filter((s) => s.groups.length === 0),
-      };
-    }
-    const byCohortId = new Map<string, { id: string; name: string; display_order: number; servants: ServantOption[] }>();
-    const unassigned: ServantOption[] = [];
+    const byCohortId = new Map<string, { id: string; name: string; display_order: number; lines: ServantLine[] }>();
+    const unassigned: ServantLine[] = [];
     for (const s of visibleServants) {
       if (s.groups.length === 0) {
-        unassigned.push(s);
+        unassigned.push({ servant: s, assigned: assignedTo(s.id, null), outreached: outreachedBy(s.id, null) });
         continue;
       }
       for (const g of s.groups) {
-        if (!byCohortId.has(g.id)) byCohortId.set(g.id, { id: g.id, name: g.name, display_order: g.display_order, servants: [] });
-        byCohortId.get(g.id)!.servants.push(s);
+        if (!byCohortId.has(g.id)) byCohortId.set(g.id, { id: g.id, name: g.name, display_order: g.display_order, lines: [] });
+        byCohortId.get(g.id)!.lines.push({ servant: s, assigned: assignedTo(s.id, g.id), outreached: outreachedBy(s.id, g.id) });
       }
     }
     const cohorts = Array.from(byCohortId.values()).sort((a, b) => a.display_order - b.display_order);
     return { cohorts, unassigned };
-  }, [combined, visibleServants]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleServants, cohortMembers, reached]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDesc((v) => !v);
@@ -317,8 +365,22 @@ export function AnalyticsInteractive({
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="flex items-center gap-2 text-lg font-bold text-brand">
-            <UsersIcon className="h-5 w-5" /> {L.servant} Assignments
+            <UsersIcon className="h-5 w-5" /> {L.servant}-{memberLabel} Assignments
           </h2>
+          <label className="flex items-center gap-2 text-sm text-[#333]">
+            Outreach in the last
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value as PeriodValue)}
+              className="rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
+            >
+              {PERIODS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
             <button
               type="button"
@@ -339,11 +401,11 @@ export function AnalyticsInteractive({
 
         {servantsView === "categorical" ? (
           <div className="space-y-4">
-            {categoricalCohorts.cohorts.filter((c) => c.servants.length > 0).map((cohort) => (
-              <ServantCohortTable key={cohort.id} label={cohort.name} servants={cohort.servants} memberLabel={memberLabel} />
+            {categoricalCohorts.cohorts.filter((c) => c.lines.length > 0).map((cohort) => (
+              <ServantCohortTable key={cohort.id} label={cohort.name} lines={cohort.lines} memberLabel={memberLabel} />
             ))}
             {categoricalCohorts.unassigned.length > 0 && (
-              <ServantCohortTable label="Unassigned" servants={categoricalCohorts.unassigned} memberLabel={memberLabel} />
+              <ServantCohortTable label={`Unassigned to a ${groupLabel}`} lines={categoricalCohorts.unassigned} memberLabel={memberLabel} />
             )}
             <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
               <table className="w-full text-sm">
@@ -351,6 +413,7 @@ export function AnalyticsInteractive({
                   <tr className="bg-[#f9f9f9]">
                     <td className="px-4 py-2.5 font-semibold text-[#333]">Unassigned {memberLabel}s (no {L.servantLower})</td>
                     <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{visibleUnassignedCount}</td>
+                    <td className="px-4 py-2.5" />
                   </tr>
                 </tbody>
               </table>
@@ -384,15 +447,21 @@ export function AnalyticsInteractive({
                       Assigned {memberLabel}s{indicator("caseload")}
                     </button>
                   </th>
+                  <th className="px-4 py-2 text-right">
+                    <button type="button" onClick={() => handleSort("outreached")} className="font-semibold hover:underline">
+                      Outreached {memberLabel}s{indicator("outreached")}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f0f0f0]">
-                {sortedServants.map((s) => (
+                {sortedServants.map(({ servant: s, assigned, outreached }) => (
                   <tr key={s.id}>
                     <td className="px-4 py-2.5 font-medium text-[#333]">{s.full_name}</td>
                     <td className="px-4 py-2.5 text-[#666]">{s.gender ?? "—"}</td>
                     {combined && <td className="px-4 py-2.5 text-[#666]">{cohortText(s) || "—"}</td>}
-                    <td className="px-4 py-2.5 text-right text-[#333]">{s.caseload}</td>
+                    <td className="px-4 py-2.5 text-right text-[#333]">{assigned}</td>
+                    <td className="px-4 py-2.5 text-right text-[#333]">{outreached}</td>
                   </tr>
                 ))}
                 <tr className="bg-[#f9f9f9]">
@@ -400,10 +469,11 @@ export function AnalyticsInteractive({
                     Unassigned
                   </td>
                   <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{visibleUnassignedCount}</td>
+                  <td className="px-4 py-2.5" />
                 </tr>
                 {sortedServants.length === 0 && (
                   <tr>
-                    <td colSpan={combined ? 4 : 3} className="px-4 py-6 text-center text-[#666]">
+                    <td colSpan={combined ? 5 : 4} className="px-4 py-6 text-center text-[#666]">
                       No {L.servantsLower} assigned to this group yet.
                     </td>
                   </tr>
@@ -412,19 +482,22 @@ export function AnalyticsInteractive({
             </table>
           </div>
         )}
+        <p className="mt-3 text-xs text-[#666]">
+          Outreached {memberLabel}s: how many different {memberLabel.toLowerCase()}s each {L.servantLower} logged outreach
+          for in the period picked above.
+        </p>
       </section>
     </div>
   );
 }
 
-/** One cohort's servants, categorical view: female-then-male subheadings
+/** One group's servants, categorical view: female-then-male subheadings
  * (same "n Female Servants"/"n Male Servants" pattern as Servant
  * Assignments/Servant Profiles), name-sorted within each -- no per-column
- * sort here, the grouping IS the order. Gender/Cohort columns are dropped
- * (redundant with the heading/subheading text). */
-function ServantCohortTable({ label, servants, memberLabel }: { label: string; servants: ServantOption[]; memberLabel: string }) {
+ * sort here, the grouping IS the order. Numbers are this group's. */
+function ServantCohortTable({ label, lines, memberLabel }: { label: string; lines: ServantLine[]; memberLabel: string }) {
   const L = useRoleLabels();
-  const { female, male, other } = groupByGender(servants, (s) => s.gender);
+  const { female, male, other } = groupByGender(lines, (l) => l.servant.gender);
   return (
     <div>
       {label && <h3 className="text-sm font-bold text-brand mb-2">{label}</h3>}
@@ -434,6 +507,7 @@ function ServantCohortTable({ label, servants, memberLabel }: { label: string; s
             <tr className="bg-[#f5f5f5] text-left text-[#666]">
               <th className="px-4 py-2 font-semibold">{L.servant}</th>
               <th className="px-4 py-2 text-right font-semibold">Assigned {memberLabel}s</th>
+              <th className="px-4 py-2 text-right font-semibold">Outreached {memberLabel}s</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
@@ -447,16 +521,17 @@ function ServantCohortTable({ label, servants, memberLabel }: { label: string; s
               rows.length === 0 ? null : (
                 <Fragment key={kind}>
                   <tr className="bg-[#f9f9f9]">
-                    <td colSpan={2} className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#666]">
+                    <td colSpan={3} className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#666]">
                       {genderSubheading(kind, rows.length, L)}
                     </td>
                   </tr>
                   {[...rows]
-                    .sort((a, b) => a.full_name.localeCompare(b.full_name))
-                    .map((s) => (
-                      <tr key={s.id}>
-                        <td className="px-4 py-2.5 font-medium text-[#333]">{s.full_name}</td>
-                        <td className="px-4 py-2.5 text-right text-[#333]">{s.caseload}</td>
+                    .sort((a, b) => a.servant.full_name.localeCompare(b.servant.full_name))
+                    .map((l) => (
+                      <tr key={l.servant.id}>
+                        <td className="px-4 py-2.5 font-medium text-[#333]">{l.servant.full_name}</td>
+                        <td className="px-4 py-2.5 text-right text-[#333]">{l.assigned}</td>
+                        <td className="px-4 py-2.5 text-right text-[#333]">{l.outreached}</td>
                       </tr>
                     ))}
                 </Fragment>
