@@ -13,9 +13,27 @@ import { ProximityDonut } from "@/components/charts/ProximityDonut";
 import { AttendanceTrendChart } from "@/components/charts/AttendanceTrendChart";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
+import { InfoTip } from "@/components/InfoTip";
 import { shiftDateKey, todayInZone } from "@/lib/timezone";
+import type { RoleLabels } from "@/lib/role-labels";
 
-type SortKey = "name" | "gender" | "caseload" | "outreached" | "cohort";
+type SortKey = "name" | "caseload" | "outreached";
+
+/** "Outreached Youths" and its (i) -- owner-requested (18 Oct 2026): the
+ * explanation behind the heading, not under the table. */
+function OutreachedHeading({ memberLabel, L, children }: { memberLabel: string; L: RoleLabels; children?: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center justify-end gap-1">
+      {children ?? <>Outreached {memberLabel}s</>}
+      <InfoTip title={`Outreached ${memberLabel}s`} className="[&_svg]:h-4 [&_svg]:w-4">
+        <p>
+          How many different {memberLabel.toLowerCase()}s each {L.servantLower} logged outreach for in the period picked
+          above (&ldquo;Outreach in the last&rdquo;).
+        </p>
+      </InfoTip>
+    </span>
+  );
+}
 
 /** Servant-Youth Assignments' period for "Outreached Youths" (owner-
  * requested 18 Oct 2026, 4 weeks by default). */
@@ -30,10 +48,6 @@ type PeriodValue = (typeof PERIODS)[number]["value"];
 
 /** One servant's line in one card (or the Alphabetical list). */
 type ServantLine = { servant: ServantOption; assigned: number; outreached: number };
-
-function cohortText(s: ServantOption): string {
-  return s.groups.map((g) => g.name).join(", ");
-}
 
 /** REQUIREMENTS.md §6.7 -- Data Completeness and Average Attendance by
  * Month respect "My Assigned List" (§6.2) like every other tab; Servant
@@ -245,8 +259,6 @@ export function AnalyticsInteractive({
       const b = y.servant;
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
-      else if (sortKey === "gender") cmp = (a.gender ?? "").localeCompare(b.gender ?? "");
-      else if (sortKey === "cohort") cmp = cohortText(a).localeCompare(cohortText(b));
       else if (sortKey === "outreached") cmp = x.outreached - y.outreached;
       else cmp = x.assigned - y.assigned;
       return sortDesc ? -cmp : cmp;
@@ -430,27 +442,17 @@ export function AnalyticsInteractive({
                       {L.servant}{indicator("name")}
                     </button>
                   </th>
-                  <th className="px-4 py-2">
-                    <button type="button" onClick={() => handleSort("gender")} className="font-semibold hover:underline">
-                      Gender{indicator("gender")}
-                    </button>
-                  </th>
-                  {combined && (
-                    <th className="px-4 py-2">
-                      <button type="button" onClick={() => handleSort("cohort")} className="font-semibold hover:underline">
-                        {groupLabel}{indicator("cohort")}
-                      </button>
-                    </th>
-                  )}
                   <th className="px-4 py-2 text-right">
                     <button type="button" onClick={() => handleSort("caseload")} className="font-semibold hover:underline">
                       Assigned {memberLabel}s{indicator("caseload")}
                     </button>
                   </th>
                   <th className="px-4 py-2 text-right">
-                    <button type="button" onClick={() => handleSort("outreached")} className="font-semibold hover:underline">
-                      Outreached {memberLabel}s{indicator("outreached")}
-                    </button>
+                    <OutreachedHeading memberLabel={memberLabel} L={L}>
+                      <button type="button" onClick={() => handleSort("outreached")} className="font-semibold hover:underline">
+                        Outreached {memberLabel}s{indicator("outreached")}
+                      </button>
+                    </OutreachedHeading>
                   </th>
                 </tr>
               </thead>
@@ -458,22 +460,18 @@ export function AnalyticsInteractive({
                 {sortedServants.map(({ servant: s, assigned, outreached }) => (
                   <tr key={s.id}>
                     <td className="px-4 py-2.5 font-medium text-[#333]">{s.full_name}</td>
-                    <td className="px-4 py-2.5 text-[#666]">{s.gender ?? "—"}</td>
-                    {combined && <td className="px-4 py-2.5 text-[#666]">{cohortText(s) || "—"}</td>}
                     <td className="px-4 py-2.5 text-right text-[#333]">{assigned}</td>
                     <td className="px-4 py-2.5 text-right text-[#333]">{outreached}</td>
                   </tr>
                 ))}
                 <tr className="bg-[#f9f9f9]">
-                  <td className="px-4 py-2.5 font-semibold text-[#333]" colSpan={combined ? 3 : 2}>
-                    Unassigned
-                  </td>
+                  <td className="px-4 py-2.5 font-semibold text-[#333]">Unassigned</td>
                   <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{visibleUnassignedCount}</td>
                   <td className="px-4 py-2.5" />
                 </tr>
                 {sortedServants.length === 0 && (
                   <tr>
-                    <td colSpan={combined ? 5 : 4} className="px-4 py-6 text-center text-[#666]">
+                    <td colSpan={3} className="px-4 py-6 text-center text-[#666]">
                       No {L.servantsLower} assigned to this group yet.
                     </td>
                   </tr>
@@ -482,10 +480,6 @@ export function AnalyticsInteractive({
             </table>
           </div>
         )}
-        <p className="mt-3 text-xs text-[#666]">
-          Outreached {memberLabel}s: how many different {memberLabel.toLowerCase()}s each {L.servantLower} logged outreach
-          for in the period picked above.
-        </p>
       </section>
     </div>
   );
@@ -507,7 +501,9 @@ function ServantCohortTable({ label, lines, memberLabel }: { label: string; line
             <tr className="bg-[#f5f5f5] text-left text-[#666]">
               <th className="px-4 py-2 font-semibold">{L.servant}</th>
               <th className="px-4 py-2 text-right font-semibold">Assigned {memberLabel}s</th>
-              <th className="px-4 py-2 text-right font-semibold">Outreached {memberLabel}s</th>
+              <th className="px-4 py-2 text-right font-semibold">
+                <OutreachedHeading memberLabel={memberLabel} L={L} />
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
