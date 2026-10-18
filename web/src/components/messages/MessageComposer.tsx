@@ -29,7 +29,7 @@ function roleLabel(roles: string, L: RoleLabels): string {
   if (r.includes("general_coordinator")) return L.generalCoordinator;
   if (r.includes("sub_coordinator")) return L.coordinator;
   if (r.includes("servant")) return L.servant;
-  return "Read-only";
+  return "Read Only";
 }
 
 /** Everyone holding one of these roles (owner-requested 15 Oct 2026). */

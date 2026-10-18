@@ -58,7 +58,7 @@ export function roleChips(L: RoleLabels): { role: AnnouncementRole; label: strin
     { role: "sub_coordinator", label: L.coordinators },
     { role: "general_coordinator", label: L.generalCoordinators },
     { role: "admin", label: "System Admins" },
-    { role: "read_only", label: "Read-only" },
+    { role: "read_only", label: "Read Only" },
   ];
 }
 

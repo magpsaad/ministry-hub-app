@@ -32,7 +32,7 @@ function roleChipLabels(L: RoleLabels): Record<RoleGrant["role"], string> {
     // Owner-requested: displayed as just "Coordinator" now (was
     // "Sub-Coordinator") -- the internal role/key name is unchanged.
     sub_coordinator: L.coordinator,
-    read_only: "Read-only",
+    read_only: "Read Only",
     // Owner-requested (9 Oct 2026): the full label, not the initials.
     general_coordinator: L.generalCoordinator,
   };
@@ -233,7 +233,7 @@ export function ServantAssignmentsInteractive({
     const question = scope
       ? `Remove ${ROLE_LABELS[grant.role]} of ${scopeLabel(scope)}? This takes them off all its ${groupWord}s.`
       : isEverywhere(grant)
-        ? `Remove ${ROLE_LABELS.read_only} access to all ${groupWord}s?`
+        ? `Remove ${ROLE_LABELS.read_only} Access to all ${groupWord}s?`
         : `Remove ${ROLE_LABELS[grant.role]}${grant.group_name ? ` — ${grant.group_name}` : ""}?`;
     if (!confirm(question)) return;
     setError(null);
@@ -705,7 +705,7 @@ export function ServantAssignmentsInteractive({
                     {readOnlyRows.length > 0 && (
                       <div>
                         <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">
-                          {readOnlyRows.length} Read-only Access
+                          {readOnlyRows.length} Read Only Access
                         </h4>
                         <div className="divide-y divide-[#f0f0f0]">{readOnlyRows.map(renderPersonRow)}</div>
                       </div>

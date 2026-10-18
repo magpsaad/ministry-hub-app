@@ -14,7 +14,7 @@ const ROLE_LABELS: Record<string, string> = {
   general_coordinator: "General Coordinator",
   sub_coordinator: "Coordinator",
   servant: "Servant",
-  read_only: "Read-Only",
+  read_only: "Read Only",
 };
 
 const TABLE_LABELS: Record<string, string> = {

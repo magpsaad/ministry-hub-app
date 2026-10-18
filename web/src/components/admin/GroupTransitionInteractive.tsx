@@ -34,7 +34,7 @@ function roleLabelsFor(L: RoleLabels): Record<string, string> {
   return {
     servant: L.servant,
     sub_coordinator: L.coordinator,
-    read_only: "Read-Only",
+    read_only: "Read Only",
   };
 }
 

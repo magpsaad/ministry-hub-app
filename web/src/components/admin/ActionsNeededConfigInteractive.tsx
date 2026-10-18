@@ -596,12 +596,12 @@ export function ActionsNeededConfigInteractive({
     {/* Owner-requested (16 Oct 2026, migration 0118). */}
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
-        Read-only Access
-        <InfoTip title="Read-only Access">
+        Read Only Access
+        <InfoTip title="Read Only Access">
           <p>
-            Read-only access lets someone view a {appSettings.group_label.toLowerCase()}&rsquo;s{" "}
+            Read Only Access lets someone view a {appSettings.group_label.toLowerCase()}&rsquo;s{" "}
             {appSettings.member_label.toLowerCase()}s, attendance and outreach without changing anything. These two
-            switches allow a few exceptions, for every Read-only person in this ministry.
+            switches allow a few exceptions, for everyone in this ministry with Read Only Access.
           </p>
           <p>
             <strong>Add photos:</strong> add a photo to a {appSettings.member_label.toLowerCase()} who doesn&rsquo;t
@@ -609,7 +609,7 @@ export function ActionsNeededConfigInteractive({
           </p>
           <p>
             <strong>Take attendance:</strong> mark {appSettings.member_label.toLowerCase()}s Present or Absent on the
-            Attendance sheet of the {appSettings.group_label.toLowerCase()}s they have Read-only access to.
+            Attendance sheet of the {appSettings.group_label.toLowerCase()}s they have Read Only Access to.
           </p>
         </InfoTip>
       </h2>
@@ -620,7 +620,7 @@ export function ActionsNeededConfigInteractive({
             checked={appSettings.read_only_can_add_photos}
             onChange={(e) => updateAppField("read_only_can_add_photos", e.target.checked)}
           />
-          Read-only users can add photos
+          Read Only Access can add photos
         </label>
         <label className="flex items-center gap-2 text-sm text-[#333]">
           <input
@@ -628,7 +628,7 @@ export function ActionsNeededConfigInteractive({
             checked={appSettings.read_only_can_take_attendance}
             onChange={(e) => updateAppField("read_only_can_take_attendance", e.target.checked)}
           />
-          Read-only users can take attendance
+          Read Only Access can take attendance
         </label>
       </div>
       <div className="flex items-center gap-3">

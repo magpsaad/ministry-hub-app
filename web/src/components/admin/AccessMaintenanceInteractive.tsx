@@ -44,7 +44,7 @@ function roleDescriptionsFor(L: RoleLabels): Record<AccessRoleRow["role"], strin
     admin: "Can: everything, everywhere — every group's data, plus every admin-only screen (this one included). Cannot be restricted from anything.",
     general_coordinator: `Can: full read/write on every group's data, and the ${L.coordinator} Corner. Cannot open admin-only screens, unless also separately granted System Admin.`,
     sub_coordinator: `Can: full read/write, same as ${L.generalCoordinator}, but scoped to just one group. Cannot reassign a ${L.servantLower}'s group, remove a ${L.servantLower}, or see/edit any other group's data.`,
-    servant: `Can: view/edit their one assigned group's data (or none at all, if Unassigned), and appear in that group's assignment list — the only role that does, even though ${L.coordinators}/Read-Only can also access that group's data. Cannot see or edit any other group's data.`,
+    servant: `Can: view/edit their one assigned group's data (or none at all, if Unassigned), and appear in that group's assignment list — the only role that does, even though ${L.coordinators} and Read Only Access can also see that group's data. Cannot see or edit any other group's data.`,
     read_only: "Can: view one group's data, or every group's — members, attendance, outreach. Cannot make any edit there, and never appears in a group's assignment dropdown. Meant to sit alongside someone's real primary role, not as their only grant.",
   };
 }

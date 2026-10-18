@@ -67,14 +67,14 @@ begin
     if new.group_id is null then
       if exists (select 1 from user_roles where ministry_id = new.ministry_id and user_id = new.user_id
                    and role = 'read_only' and group_id is null and id is distinct from new.id) then
-        raise exception 'This person already has read-only access everywhere';
+        raise exception 'This person already has Read Only Access everywhere';
       end if;
       -- The every-group grant covers them all.
       delete from user_roles where ministry_id = new.ministry_id and user_id = new.user_id
         and role = 'read_only' and group_id is not null and id is distinct from new.id;
     elsif exists (select 1 from user_roles where ministry_id = new.ministry_id and user_id = new.user_id
                     and role = 'read_only' and group_id is null and id is distinct from new.id) then
-      raise exception 'This person already has read-only access everywhere';
+      raise exception 'This person already has Read Only Access everywhere';
     end if;
   end if;
   return new;
