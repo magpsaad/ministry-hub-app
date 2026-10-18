@@ -3,10 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAccessibleGroups } from "@/lib/groups";
-import { getRoleLabels } from "@/lib/role-labels-server";
 import { todayInZone } from "@/lib/timezone";
 import { MessagesHeader } from "@/components/messages/MessagesHeader";
-import { OversightNote } from "@/components/messages/OversightNote";
 import { MessageComposer } from "@/components/messages/MessageComposer";
 import type { PersonOption } from "@/lib/messages";
 
@@ -18,9 +16,8 @@ export default async function NewMessagePage({ searchParams }: { searchParams: P
   const sp = await searchParams;
 
   const supabase = await createClient();
-  const [settings, L, groups, { data, error }] = await Promise.all([
+  const [settings, groups, { data, error }] = await Promise.all([
     getAppSettings(),
-    getRoleLabels(),
     getAccessibleGroups(),
     supabase.rpc("message_people"),
   ]);
@@ -41,7 +38,6 @@ export default async function NewMessagePage({ searchParams }: { searchParams: P
             initialTo={sp.to && people.some((p) => p.user_id === sp.to) ? [sp.to] : []}
           />
         )}
-        <OversightNote oversight={settings.message_oversight} labels={L} />
       </main>
     </div>
   );

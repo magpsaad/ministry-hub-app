@@ -114,11 +114,6 @@ export function ConversationView({ conv, timeZone, today }: { conv: Conversation
             )}
           </div>
         )}
-        {!conv.member && (
-          <p className="mt-2 rounded-md bg-[#f0f4f8] px-3 py-2 text-xs text-[#333]">
-            You&rsquo;re not in this conversation; your role lets you read it. Only the people in it can write here.
-          </p>
-        )}
       </div>
 
       {/* The task, for the person given it. */}

@@ -3,10 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAppSettings } from "@/lib/app-settings";
-import { getRoleLabels } from "@/lib/role-labels-server";
 import { todayInZone } from "@/lib/timezone";
 import { MessagesHeader } from "@/components/messages/MessagesHeader";
-import { OversightNote } from "@/components/messages/OversightNote";
 import { ConversationView } from "@/components/messages/ConversationView";
 import type { ConversationDetail } from "@/lib/messages";
 
@@ -18,9 +16,8 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   const { id } = await params;
 
   const supabase = await createClient();
-  const [settings, L, { data, error }] = await Promise.all([
+  const [settings, { data, error }] = await Promise.all([
     getAppSettings(),
-    getRoleLabels(),
     /^[0-9a-f-]{36}$/i.test(id) ? supabase.rpc("get_conversation", { p_conv: id }) : Promise.resolve({ data: null, error: true }),
   ]);
   const conv = !error && data ? (data as ConversationDetail) : null;
@@ -39,7 +36,6 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             </Link>
           </div>
         )}
-        <OversightNote oversight={settings.message_oversight} labels={L} />
       </main>
     </div>
   );

@@ -333,9 +333,6 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   if (!["group", "grade", "grade_gender"].includes(input.coordinator_scope)) {
     return { error: "Choose what Coordinators are assigned to." };
   }
-  if (!["gc", "gc_admin", "none"].includes(input.message_oversight)) {
-    return { error: "Choose who can read every conversation in Messages." };
-  }
   if (input.idle_lock_minutes !== null && !(LOCK_MINUTE_CHOICES as readonly number[]).includes(input.idle_lock_minutes)) {
     return { error: "Choose how many minutes before the screen locks, or Off." };
   }
@@ -385,7 +382,6 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     sub_coordinator_auto_servant: input.sub_coordinator_auto_servant,
     show_parent_contacts: input.show_parent_contacts,
     idle_lock_minutes: input.idle_lock_minutes,
-    message_oversight: input.message_oversight,
     coordinator_scope: input.coordinator_scope,
     using_app_since: input.using_app_since,
     servant_absence_weeks: input.servant_absence_weeks,

@@ -2,13 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
-import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getRoleLabels, roleWords } from "@/lib/role-labels-server";
+import { roleWords } from "@/lib/role-labels-server";
 import { todayInZone } from "@/lib/timezone";
 import { LinkSpinner } from "@/components/PendingButton";
 import { MessagesHeader } from "@/components/messages/MessagesHeader";
-import { OversightNote } from "@/components/messages/OversightNote";
 import { dueLabel, toInbox, whenLabel, type ConversationRow, type InboxItem } from "@/lib/messages";
 
 const FILTERS = [
@@ -28,57 +26,29 @@ function keep(item: InboxItem, f: FilterKey): boolean {
 }
 
 /** Servant Corner -> Messages (owner-approved design 8 Oct 2026, migration
- * 0102): my conversations and tasks, newest first, with filters. Those the
- * ministry lets read every conversation (Ministry Settings; no one by
- * default, 0103) also get a "Whole ministry" view. */
-export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ f?: string; view?: string }> }) {
+ * 0102): my conversations and tasks, newest first, with filters. Nobody can
+ * read conversations they aren't in (owner-requested 18 Oct 2026, migration
+ * 0126 removed the "read every conversation" setting). */
+export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const sp = await searchParams;
   const filter: FilterKey = FILTERS.some((x) => x.key === sp.f) ? (sp.f as FilterKey) : "all";
 
-  const [access, settings, L] = await Promise.all([getAccessSummary(user.id), getAppSettings(), getRoleLabels()]);
-  const hasRole = (r: string) => access.roles.some((x) => x.role === r);
-  const oversees =
-    (settings.message_oversight === "gc" && hasRole("general_coordinator")) ||
-    (settings.message_oversight === "gc_admin" && (hasRole("general_coordinator") || hasRole("admin")));
-  const ministryView = oversees && sp.view === "ministry";
+  const settings = await getAppSettings();
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("my_conversations", { p_scope: ministryView ? "all" : "mine" });
+  const { data, error } = await supabase.rpc("my_conversations", { p_scope: "mine" });
   const items = toInbox((data ?? []) as ConversationRow[]).filter((i) => keep(i, filter));
   const today = todayInZone(settings.timezone);
-  const qs = (f: FilterKey, view: boolean) => {
-    const p = new URLSearchParams();
-    if (f !== "all") p.set("f", f);
-    if (view) p.set("view", "ministry");
-    const s = p.toString();
-    return s ? `/messages?${s}` : "/messages";
-  };
+  const qs = (f: FilterKey) => (f !== "all" ? `/messages?f=${f}` : "/messages");
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
       <MessagesHeader logoUrl={settings.logo_url} title={settings.app_title_short} subtitle="Messages" />
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         <div className="flex items-center justify-between gap-3">
-          {oversees ? (
-            <div className="inline-flex rounded-full border border-[#ddd] bg-white p-0.5 text-xs font-semibold">
-              <Link prefetch={false}
-                href={qs(filter, false)}
-                className={`rounded-full px-3 py-1 ${!ministryView ? "bg-brand text-white" : "text-[#555]"}`}
-              >
-                Mine
-              </Link>
-              <Link prefetch={false}
-                href={qs(filter, true)}
-                className={`rounded-full px-3 py-1 ${ministryView ? "bg-brand text-white" : "text-[#555]"}`}
-              >
-                Whole ministry
-              </Link>
-            </div>
-          ) : (
-            <span />
-          )}
+          <span />
           <Link prefetch={false}
             href="/messages/new"
             className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)]"
@@ -92,7 +62,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           {FILTERS.map((x) => (
             <Link prefetch={false}
               key={x.key}
-              href={qs(x.key, ministryView)}
+              href={qs(x.key)}
               className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
                 filter === x.key ? "border-brand bg-brand/10 text-brand" : "border-[#ddd] bg-white text-[#555] hover:bg-[#f5f5f5]"
               }`}
@@ -106,11 +76,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
           <p className="rounded-md bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]">{await roleWords(error.message)}</p>
         ) : items.length === 0 ? (
           <div className="rounded-xl bg-white p-6 text-center text-sm text-[#777] shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
-            {filter === "all"
-              ? ministryView
-                ? "No conversations in this ministry yet."
-                : "No messages yet. Tap “+ New message” to write to someone, or give a task."
-              : "Nothing here."}
+            {filter === "all" ? "No messages yet. Tap “+ New message” to write to someone, or give a task." : "Nothing here."}
           </div>
         ) : (
           <ul className="overflow-hidden rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] divide-y divide-[#eee]">
@@ -125,7 +91,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                         <LinkSpinner />
                       </p>
                       <p className="truncate text-xs text-[#666]">
-                        {i.i_sent ? "To " : ministryView && !i.member ? "" : i.mode === "group" ? "With " : "From "}
+                        {i.i_sent ? "To " : i.mode === "group" ? "With " : "From "}
                         {i.people || "—"}
                       </p>
                     </div>
@@ -150,7 +116,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                           Due {dueLabel(i.due_on)}
                         </span>
                       )}
-                      {i.i_sent || (ministryView && !i.member) ? (
+                      {i.i_sent ? (
                         <span
                           className={`rounded px-1.5 py-0.5 ${
                             i.recipient_count > 0 && i.done_count === i.recipient_count
@@ -172,8 +138,6 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
             ))}
           </ul>
         )}
-
-        <OversightNote oversight={settings.message_oversight} labels={L} />
       </main>
     </div>
   );
