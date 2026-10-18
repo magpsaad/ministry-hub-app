@@ -40,9 +40,12 @@ export default async function AttendancePage({ params }: { params: Promise<{ gro
     .filter((r) => r.role !== "read_only" && r.group_id)
     .map((r) => r.group_id as string);
   // Migration 0118: Read-only may take attendance if the ministry allows it.
-  const readOnlyAttendanceGroupIds = settings.read_only_can_take_attendance
-    ? (access?.roles ?? []).filter((r) => r.role === "read_only" && r.group_id).map((r) => r.group_id as string)
-    : [];
+  // Read-only to every group (migration 0125): every group on this sheet.
+  const readOnlyAttendanceGroupIds = !settings.read_only_can_take_attendance
+    ? []
+    : access?.readOnlyEverywhere
+      ? [groupIds].flat()
+      : (access?.roles ?? []).filter((r) => r.role === "read_only" && r.group_id).map((r) => r.group_id as string);
 
   return (
     <AttendanceInteractive

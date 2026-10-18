@@ -58,6 +58,7 @@ export default async function AccessMaintenancePage() {
           profiles={profiles}
           initialRoles={roles}
           groups={servingGroups}
+          groupLabel={settings.group_label}
           coordinatorScope={settings.coordinator_scope}
           ladderLabel={settings.ladder_position_label}
           levelOffset={settings.level_number_offset}

@@ -98,7 +98,8 @@ export async function getCombinedGroups(): Promise<GroupSummary[]> {
  * Read-Only actually holds a role at.
  */
 export function filterSelectableGroups(groups: GroupSummary[], access: AccessSummary): GroupSummary[] {
-  const hasFullGroupAccess = access.isAdmin || access.isGeneralCoordinator;
+  // Read-only to every group (migration 0125) sees them all, view only.
+  const hasFullGroupAccess = access.isAdmin || access.isGeneralCoordinator || access.readOnlyEverywhere;
   const ownGroupIds = new Set(access.roles.map((r) => r.group_id).filter((id): id is string => id !== null));
   return groups.filter((g) => g.kind === "regular" && (hasFullGroupAccess || ownGroupIds.has(g.id)));
 }

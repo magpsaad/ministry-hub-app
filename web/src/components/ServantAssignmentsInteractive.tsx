@@ -56,6 +56,14 @@ function combinedClassName(names: string[]): string {
 const CLIP = "min-w-0 overflow-hidden whitespace-nowrap text-clip";
 
 const ADDABLE_ROLES: AddableRole[] = ["servant", "sub_coordinator", "read_only"];
+/** Migration 0125: Read-only to every group, one grant (owner-approved
+ * 18 Oct 2026) -- picked as the group, saved as "no group". */
+const ALL_GROUPS = "__all__";
+
+/** A Read-only grant with no group: every group. */
+function isEverywhere(g: RoleGrant): boolean {
+  return g.role === "read_only" && g.group_id === null;
+}
 
 function chipColor(role: RoleGrant["role"]): { bg: string; text: string } {
   switch (role) {
@@ -175,6 +183,7 @@ export function ServantAssignmentsInteractive({
     [sortedGroups, coordinatorScope, ladderLabel, levelOffset],
   );
   const groupWord = groupLabel.toLowerCase();
+  const everywhereLabel = `${ROLE_LABELS.read_only}, all ${groupWord}s`;
   const scopeLabel = (s: ScopeRef) => sectionLabel(s.ladder_position, s.gender_label, sortedGroups, ladderLabel, levelOffset);
 
   const filtered = useMemo(() => {
@@ -223,7 +232,9 @@ export function ServantAssignmentsInteractive({
     const scope = grant.scope ?? null;
     const question = scope
       ? `Remove ${ROLE_LABELS[grant.role]} of ${scopeLabel(scope)}? This takes them off all its ${groupWord}s.`
-      : `Remove ${ROLE_LABELS[grant.role]}${grant.group_name ? ` — ${grant.group_name}` : ""}?`;
+      : isEverywhere(grant)
+        ? `Remove ${ROLE_LABELS.read_only} access to all ${groupWord}s?`
+        : `Remove ${ROLE_LABELS[grant.role]}${grant.group_name ? ` — ${grant.group_name}` : ""}?`;
     if (!confirm(question)) return;
     setError(null);
     startTransition(async () => {
@@ -293,21 +304,23 @@ export function ServantAssignmentsInteractive({
       setError("Pick a group for this role.");
       return;
     }
+    const everywhere = addRole === "read_only" && addGroupId === ALL_GROUPS;
     setError(null);
     startTransition(async () => {
-      const res = await grantServantRoleAction(person.id, addRole, addGroupId || null);
+      const res = await grantServantRoleAction(person.id, addRole, everywhere ? null : addGroupId || null);
       if (res.error || !res.id) {
         setError(res.error ?? "Could not add that role.");
         return;
       }
-      const g = addGroupId ? sortedGroups.find((x) => x.id === addGroupId) : null;
+      const g = addGroupId && !everywhere ? sortedGroups.find((x) => x.id === addGroupId) : null;
       setRoster((prev) =>
         prev.map((p) =>
           p.id === person.id
             ? {
                 ...p,
                 grants: [
-                  ...p.grants,
+                  // The every-group grant replaces their one-group Read-only grants.
+                  ...p.grants.filter((x) => !(everywhere && x.role === "read_only")),
                   { id: res.id!, role: addRole, group_id: g?.id ?? null, group_name: g?.name ?? null, ladder_position: g?.ladder_position ?? null, display_order: g?.display_order ?? null },
                 ],
               }
@@ -367,7 +380,8 @@ export function ServantAssignmentsInteractive({
       key: g.id,
       label: g.name,
       groupId: g.id,
-      rows: rowsFor((gr) => gr.group_id === g.id),
+      // Read-only to every group shows under every group.
+      rows: rowsFor((gr) => gr.group_id === g.id || isEverywhere(gr)),
     }));
     const generalCoordinators = rowsFor((g) => g.role === "general_coordinator");
     return { unassigned, cohorts, generalCoordinators };
@@ -378,7 +392,11 @@ export function ServantAssignmentsInteractive({
   function renderChip(person: AssignmentPerson, grant: RoleGrant, showGroupInLabel: boolean) {
     const { bg, text } = chipColor(grant.role);
     // Owner-requested (9 Oct 2026): no "·" between the role and the class.
-    const label = showGroupInLabel && grant.group_name ? `${ROLE_LABELS[grant.role]} ${grant.group_name}` : ROLE_LABELS[grant.role];
+    const label = isEverywhere(grant)
+      ? everywhereLabel
+      : showGroupInLabel && grant.group_name
+        ? `${ROLE_LABELS[grant.role]} ${grant.group_name}`
+        : ROLE_LABELS[grant.role];
 
     if (grant.role === "servant") {
       // A Coordinator can move a Servant who is Unassigned or in one of
@@ -509,6 +527,7 @@ export function ServantAssignmentsInteractive({
           ) : (
             <>
               <option value="">{addRole === "servant" && canManageAll ? "Unassigned" : "Select a group…"}</option>
+              {addRole === "read_only" && canManageAll && <option value={ALL_GROUPS}>All {groupWord}s</option>}
               {myGroups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}

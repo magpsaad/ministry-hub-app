@@ -16,6 +16,9 @@ export type AccessSummary = {
   /** REQUIREMENTS.md §4.2 -- read-only exception access to a cohort the
    * user doesn't otherwise serve; always layered on top of a real role. */
   isReadOnly: boolean;
+  /** Migration 0125 (owner-approved 18 Oct 2026): a Read-only grant with no
+   * group -- view access to every regular group, now and in future. */
+  readOnlyEverywhere: boolean;
   /** REQUIREMENTS.md §6.1 -- shows the Coordinator Corner (general or sub). */
   isCoordinator: boolean;
 };
@@ -50,6 +53,7 @@ export const getAccessSummary = cache(async (userId: string): Promise<AccessSumm
     isSubCoordinator: has("sub_coordinator"),
     isServant: has("servant"),
     isReadOnly: has("read_only"),
+    readOnlyEverywhere: roles.some((row) => row.role === "read_only" && row.group_id === null),
     isCoordinator: has("general_coordinator") || has("sub_coordinator"),
   };
 });

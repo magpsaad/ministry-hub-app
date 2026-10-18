@@ -44,11 +44,14 @@ function roleDescriptionsFor(L: RoleLabels): Record<AccessRoleRow["role"], strin
     general_coordinator: `Can: full read/write on every group's data, and the ${L.coordinator} Corner. Cannot open admin-only screens, unless also separately granted System Admin.`,
     sub_coordinator: `Can: full read/write, same as ${L.generalCoordinator}, but scoped to just one group. Cannot reassign a ${L.servantLower}'s group, remove a ${L.servantLower}, or see/edit any other group's data.`,
     servant: `Can: view/edit their one assigned group's data (or none at all, if Unassigned), and appear in that group's assignment list — the only role that does, even though ${L.coordinators}/Read-Only can also access that group's data. Cannot see or edit any other group's data.`,
-    read_only: "Can: view one group's data — members, attendance, outreach. Cannot make any edit there, and never appears in that group's assignment dropdown. Meant to sit alongside someone's real primary role, not as their only grant.",
+    read_only: "Can: view one group's data, or every group's — members, attendance, outreach. Cannot make any edit there, and never appears in a group's assignment dropdown. Meant to sit alongside someone's real primary role, not as their only grant.",
   };
 }
 
 const ROLES_REQUIRING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "read_only"];
+/** Migration 0125: Read-only to every group, one grant (owner-approved
+ * 18 Oct 2026) -- picked as the group, saved as "no group". */
+const ALL_GROUPS = "__all__";
 const ROLES_ALLOWING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "servant", "read_only"];
 
 /** REQUIREMENTS.md §6.14/§4 -- Access Maintenance: grant/revoke role rows
@@ -59,6 +62,7 @@ export function AccessMaintenanceInteractive({
   profiles: initialProfiles,
   initialRoles,
   groups,
+  groupLabel,
   coordinatorScope = "group",
   ladderLabel = "",
   levelOffset = 0,
@@ -66,6 +70,8 @@ export function AccessMaintenanceInteractive({
   profiles: AccessProfile[];
   initialRoles: AccessRoleRow[];
   groups: GroupSummary[];
+  /** The ministry's word for a group (Ministry Settings), e.g. "Cohort". */
+  groupLabel: string;
   /** Migration 0106 (Ministry Settings): Coordinators are assigned to each
    * group, a grade, or a grade and gender. */
   coordinatorScope?: CoordinatorScopeMode;
@@ -76,6 +82,7 @@ export function AccessMaintenanceInteractive({
   const L = useRoleLabels();
   const ROLE_LABELS = roleLabelsFor(L);
   const ROLE_DESCRIPTIONS = roleDescriptionsFor(L);
+  const allGroupsLabel = `All ${groupLabel.toLowerCase()}s`;
   const [profiles, setProfiles] = useState(initialProfiles);
   const [roles, setRoles] = useState(initialRoles);
   const [search, setSearch] = useState("");
@@ -165,8 +172,9 @@ export function AccessMaintenanceInteractive({
       });
       return;
     }
-    const groupId = ROLES_ALLOWING_GROUP.includes(newRole) && newGroupId ? newGroupId : null;
-    if (ROLES_REQUIRING_GROUP.includes(newRole) && !groupId) {
+    const everywhere = newRole === "read_only" && newGroupId === ALL_GROUPS;
+    const groupId = !everywhere && ROLES_ALLOWING_GROUP.includes(newRole) && newGroupId ? newGroupId : null;
+    if (ROLES_REQUIRING_GROUP.includes(newRole) && !groupId && !everywhere) {
       setError("This role requires a group.");
       return;
     }
@@ -555,7 +563,9 @@ export function AccessMaintenanceInteractive({
                     {ROLE_LABELS[r.role]}
                     {r.scope
                       ? ` — ${scopeLabel(r.scope)} (${selectedRoles.filter((x) => x.scope?.id === r.scope!.id).length} groups)`
-                      : r.group_name && ` — ${r.group_name}`}
+                      : r.group_name
+                        ? ` — ${r.group_name}`
+                        : r.role === "read_only" && ` — ${allGroupsLabel}`}
                   </span>
                   <button
                     type="button"
@@ -602,6 +612,7 @@ export function AccessMaintenanceInteractive({
                   ) : (
                     <>
                       <option value="">{newRole === "servant" ? "Unassigned" : "Select a group..."}</option>
+                      {newRole === "read_only" && <option value={ALL_GROUPS}>{allGroupsLabel}</option>}
                       {groups.map((g) => (
                         <option key={g.id} value={g.id}>
                           {g.name}
