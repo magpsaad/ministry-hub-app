@@ -28,7 +28,11 @@ export default async function AddressNotSetUpPage() {
           ministry gave you and sign in again.
         </p>
         <p className="mt-3 text-sm text-[#666]">
-          If you need help, check with the System Admin of your ministry, or contact the Church Admin, Maged Saad.
+          If you need help, check with the System Admin of your ministry, or contact the Church Admin, Maged Saad, at{" "}
+          <a href="mailto:magpsaad@gmail.com" className="text-brand underline">
+            magpsaad@gmail.com
+          </a>
+          .
         </p>
       </div>
     </div>
