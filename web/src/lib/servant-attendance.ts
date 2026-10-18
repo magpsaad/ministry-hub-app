@@ -23,6 +23,16 @@ export type ServantAttendanceMember = {
   /** Counted in the weekly strip from this day: when they joined (their
    * first attendance), else when they signed up. */
   countFrom: string | null;
+  /** Owner-requested (18 Oct 2026): the Categorical view, like Servant
+   * Assignments and Servant Profiles -- by group, Female/Male within each. */
+  gender: string | null;
+  /** Groups where they hold a Servant grant (counted in "n Female Servants"). */
+  servantGroupIds: string[];
+  /** Groups where they're a Coordinator (HSY: Steward) -- the chip there. */
+  coordinatorGroupIds: string[];
+  /** Holds a Servant grant with no group ("Unassigned to a Group"). */
+  isUnassignedServant: boolean;
+  isGeneralCoordinator: boolean;
 };
 
 export type ServantAttendanceBundle = {
@@ -63,7 +73,7 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
     getAppSettings(),
     supabase
       .from("user_roles")
-      .select("user_id, role, group_id, groups(name, display_order), profiles(full_name, join_date, created_at)")
+      .select("user_id, role, group_id, groups(name, display_order), profiles(full_name, join_date, created_at, gender)")
       .in("role", ["servant", "sub_coordinator", "general_coordinator"]),
     getAttendanceWindowSettings(),
     getRoleLabels(),
@@ -77,8 +87,11 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
   const cutoff = settings.same_day_cutoff_time;
   const { date: todayDate, timeMinutes } = nowInZone(settings.timezone);
 
-  const byUser = new Map<string, { full_name: string; join_date: string | null; countFrom: string | null }>();
+  const byUser = new Map<string, { full_name: string; join_date: string | null; countFrom: string | null; gender: string | null }>();
   const groupsByUser = new Map<string, string[]>();
+  const servantGroupsByUser = new Map<string, string[]>();
+  const coordinatorGroupsByUser = new Map<string, string[]>();
+  const unassignedServant = new Set<string>();
   const groupNameById = new Map<string, string>();
   const servantGrant = new Set<string>();
   const coordinatorGrant = new Set<string>();
@@ -89,20 +102,30 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
     if (r.role === "servant") servantGrant.add(r.user_id);
     if (r.role === "sub_coordinator") coordinatorGrant.add(r.user_id);
     if (r.role === "general_coordinator") gcGrant.add(r.user_id);
+    if (r.role === "servant" && !r.group_id) unassignedServant.add(r.user_id);
     if (r.role !== "general_coordinator" && r.group_id && group) {
       // Servants and Coordinators alike: the groups they serve.
       const list = groupsByUser.get(r.user_id) ?? [];
       if (!list.includes(r.group_id)) groupsByUser.set(r.user_id, [...list, r.group_id]);
+      const byRole = r.role === "servant" ? servantGroupsByUser : coordinatorGroupsByUser;
+      const roleList = byRole.get(r.user_id) ?? [];
+      if (!roleList.includes(r.group_id)) byRole.set(r.user_id, [...roleList, r.group_id]);
       groupNameById.set(r.group_id, group.name);
       if (!groupOrder.some((g) => g.id === r.group_id)) groupOrder.push({ id: r.group_id, name: group.name, order: group.display_order ?? 0 });
     }
     if (byUser.has(r.user_id)) continue;
-    const profile = r.profiles as unknown as { full_name: string; join_date: string | null; created_at: string | null } | null;
+    const profile = r.profiles as unknown as {
+      full_name: string;
+      join_date: string | null;
+      created_at: string | null;
+      gender: string | null;
+    } | null;
     if (!profile) continue;
     byUser.set(r.user_id, {
       full_name: profile.full_name,
       join_date: profile.join_date,
       countFrom: profile.join_date ?? profile.created_at?.slice(0, 10) ?? null,
+      gender: profile.gender,
     });
   }
   // Their group's name; else General Coordinator; else Unassigned.
@@ -181,6 +204,10 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
       groupIds: groupsByUser.get(id) ?? [],
       gcOnly: !servantGrant.has(id) && !coordinatorGrant.has(id),
       isCoordinator: coordinatorGrant.has(id),
+      servantGroupIds: servantGroupsByUser.get(id) ?? [],
+      coordinatorGroupIds: coordinatorGroupsByUser.get(id) ?? [],
+      isUnassignedServant: unassignedServant.has(id),
+      isGeneralCoordinator: gcGrant.has(id),
     };
   });
   members.sort((a, b) => a.full_name.localeCompare(b.full_name));

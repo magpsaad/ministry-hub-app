@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
-import type { ServantAttendanceBundle } from "@/lib/servant-attendance";
+import type { ServantAttendanceBundle, ServantAttendanceMember } from "@/lib/servant-attendance";
+import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import { AVG_MODES, averageFor, formatSheetDate } from "@/lib/attendance-average";
 import { setServantAttendanceAction } from "@/app/servants-attendance/actions";
 import { AttendanceHistoryModal } from "@/components/attendance/AttendanceHistoryModal";
@@ -14,7 +15,14 @@ import { InfoTip } from "@/components/InfoTip";
 
 /** REQUIREMENTS.md §6.13 -- same Present/Absent/"Never Attended" pattern as
  * the member Attendance tab (§6.5), applied to servants across the whole
- * ministry (not scoped to one group). */
+ * ministry (not scoped to one group).
+ *
+ * Owner-requested (18 Oct 2026): two views, like Servant Assignments and
+ * Servant Profiles -- Categorical (the default: a card per group in list
+ * order, Female/Male within each, then "Unassigned to a Group", then the
+ * General Coordinators) and Alphabetical (the sortable list, as before).
+ * Someone serving in two groups is listed in both; marking them in one
+ * marks them everywhere (it's one attendance per person). */
 export function ServantsAttendanceInteractive({
   bundle,
   dayName,
@@ -39,6 +47,7 @@ export function ServantsAttendanceInteractive({
   const [undo, setUndo] = useState<UndoInfo | null>(null);
   const closeUndo = useCallback(() => setUndo(null), []);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [, startTransition] = useTransition();
   const [sortKey, setSortKey] = useState<"name" | "group" | "attendance" | "status">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -174,6 +183,82 @@ export function ServantsAttendanceInteractive({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bundle.members, search, sortKey, sortDir, selected, attendanceByServant, eventsByServant, avgChoice]);
 
+  // Categorical view: each group's people (search applied), Female/Male.
+  const unassignedLabel = `Unassigned to a ${groupLabel}`;
+  const sections = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const shown = q ? bundle.members.filter((m) => m.full_name.toLowerCase().includes(q)) : bundle.members;
+    const byName = (a: ServantAttendanceMember, b: ServantAttendanceMember) => a.full_name.localeCompare(b.full_name);
+    const list: { key: string; label: string; groupId: string | null; byGender: boolean; members: ServantAttendanceMember[] }[] = [];
+    for (const [groupId, name] of Object.entries(bundle.groupNames)) {
+      const members = shown.filter((m) => m.groupIds.includes(groupId)).sort(byName);
+      if (members.length > 0) list.push({ key: groupId, label: name, groupId, byGender: true, members });
+    }
+    const unassigned = shown.filter((m) => m.isUnassignedServant).sort(byName);
+    if (unassigned.length > 0) list.push({ key: "unassigned", label: unassignedLabel, groupId: null, byGender: true, members: unassigned });
+    const gcs = shown.filter((m) => m.isGeneralCoordinator).sort(byName);
+    if (gcs.length > 0) list.push({ key: "gc", label: L.generalCoordinators, groupId: null, byGender: false, members: gcs });
+    return list;
+  }, [bundle.members, bundle.groupNames, search, unassignedLabel, L.generalCoordinators]);
+
+  /** One person's line: name (with the Coordinator chip where they're one),
+   * their average, the Present/Absent button, and -- Alphabetical only --
+   * their group. */
+  function personRow(m: ServantAttendanceMember, chip: boolean, withGroup: boolean) {
+    const status = statusLabel(m.id);
+    const percent = percentById.get(m.id) ?? null;
+    return (
+      <tr key={m.id}>
+        <td className="px-4 py-2.5 font-medium text-[#333]">
+          {/* Owner-requested (15 Oct 2026): Coordinators / Stewards marked. */}
+          <span className="flex items-center gap-1.5">
+            <span>{m.full_name}</span>
+            {chip && <span className={COORDINATOR_CHIP}>{L.coordinator}</span>}
+          </span>
+        </td>
+        <td className="px-4 py-2.5 text-[#666]">
+          {percent === null ? (
+            "N/A"
+          ) : (
+            <button
+              type="button"
+              onClick={() => setHistoryMember({ id: m.id, full_name: m.full_name })}
+              className="text-brand font-semibold hover:underline"
+            >
+              {percent}%
+            </button>
+          )}
+        </td>
+        <td className="px-4 py-2.5">
+          <button
+            type="button"
+            disabled={togglingId === m.id}
+            onClick={() => handleToggle(m.id, m.full_name)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-50 ${
+              status === "Present"
+                ? "bg-[#d4edda] text-[#155724] hover:bg-[#c3e6cb]"
+                : status === "Absent"
+                  ? "bg-[#f8d7da] text-[#721c24] hover:bg-[#f5c6cb]"
+                  : "bg-[#fff3cd] text-[#856404] hover:bg-[#ffeeba]"
+            }`}
+          >
+            {status}
+          </button>
+        </td>
+        {withGroup && (
+          // Owner-reported (10 Oct 2026): long HSY class names wrapped over
+          // 3-4 lines; at least this wide, they take two at most. (The width
+          // is on an inner block: browsers ignore min-width on a table cell.)
+          <td className="px-4 py-2.5 text-[#666]">
+            <div className="min-w-[11rem]">{m.groupLabel}</div>
+          </td>
+        )}
+      </tr>
+    );
+  }
+
+  const percentColumn = AVG_MODES.find((x) => x.value === avgChoice.mode)?.column ?? "Attendance %";
+
   if (dateOptions.length === 0) {
     return (
       <div className="mt-4 rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6 text-center text-sm text-[#666]">
@@ -216,6 +301,22 @@ export function ServantsAttendanceInteractive({
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 min-w-[160px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         />
+        <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
+          <button
+            type="button"
+            onClick={() => setViewMode("categorical")}
+            className={`px-3 py-2 font-semibold ${viewMode === "categorical" ? "bg-brand text-white" : "bg-white text-[#333]"}`}
+          >
+            Categorical
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("alphabetical")}
+            className={`px-3 py-2 font-semibold ${viewMode === "alphabetical" ? "bg-brand text-white" : "bg-white text-[#333]"}`}
+          >
+            Alphabetical
+          </button>
+        </div>
       </div>
 
       <AverageControls
@@ -232,13 +333,69 @@ export function ServantsAttendanceInteractive({
         }
       />
 
+      {viewMode === "categorical" ? (
+        <div className="space-y-4">
+          {sections.map((s) => {
+            const servantsHere = (rows: ServantAttendanceMember[]) =>
+              rows.filter((m) => (s.groupId ? m.servantGroupIds.includes(s.groupId) : m.isUnassignedServant)).length;
+            const parts = s.byGender
+              ? (() => {
+                  const { female, male, other } = groupByGender(s.members, (m) => m.gender);
+                  return (
+                    [
+                      ["Female", female],
+                      ["Male", male],
+                      ["Other", other],
+                    ] as const
+                  ).filter(([, rows]) => rows.length > 0);
+                })()
+              : null;
+            const table = (rows: ServantAttendanceMember[]) => (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-[#f5f5f5] text-left text-[#666]">
+                      <th className="px-4 py-2 font-semibold">{L.servant}</th>
+                      <th className="px-4 py-2 font-semibold">{percentColumn}</th>
+                      <th className="px-4 py-2 font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f0f0f0]">
+                    {rows.map((m) => personRow(m, s.groupId !== null && m.coordinatorGroupIds.includes(s.groupId), false))}
+                  </tbody>
+                </table>
+              </div>
+            );
+            return (
+              <div key={s.key} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+                <h3 className="text-sm font-bold text-brand mb-3">{s.label}</h3>
+                {parts ? (
+                  <div className="space-y-3">
+                    {parts.map(([kind, rows]) => (
+                      <div key={kind}>
+                        <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">
+                          {genderSubheading(kind, servantsHere(rows), L)}
+                        </h4>
+                        {table(rows)}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  table(s.members)
+                )}
+              </div>
+            );
+          })}
+          {sections.length === 0 && <p className="py-6 text-center text-sm text-[#666]">No {L.servantsLower} to show.</p>}
+        </div>
+      ) : (
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#f5f5f5] text-left text-[#666]">
               <SortableHeader label={L.servant} sortKey="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
               <SortableHeader
-                label={AVG_MODES.find((x) => x.value === avgChoice.mode)?.column ?? "Attendance %"}
+                label={percentColumn}
                 sortKey="attendance" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
               <SortableHeader label="Status" sortKey="status" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
               {/* Owner-requested (10 Oct 2026): Group last. */}
@@ -246,57 +403,7 @@ export function ServantsAttendanceInteractive({
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
-            {visible.map((m) => {
-              const status = statusLabel(m.id);
-              const percent = percentById.get(m.id) ?? null;
-              return (
-                <tr key={m.id}>
-                  <td className="px-4 py-2.5 font-medium text-[#333]">
-                    {/* Owner-requested (15 Oct 2026): Coordinators / Stewards marked. */}
-                    <span className="flex items-center gap-1.5">
-                      <span>{m.full_name}</span>
-                      {m.isCoordinator && <span className={COORDINATOR_CHIP}>{L.coordinator}</span>}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-[#666]">
-                    {percent === null ? (
-                      "N/A"
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setHistoryMember({ id: m.id, full_name: m.full_name })}
-                        className="text-brand font-semibold hover:underline"
-                      >
-                        {percent}%
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <button
-                      type="button"
-                      disabled={togglingId === m.id}
-                      onClick={() => handleToggle(m.id, m.full_name)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-50 ${
-                        status === "Present"
-                          ? "bg-[#d4edda] text-[#155724] hover:bg-[#c3e6cb]"
-                          : status === "Absent"
-                            ? "bg-[#f8d7da] text-[#721c24] hover:bg-[#f5c6cb]"
-                            : "bg-[#fff3cd] text-[#856404] hover:bg-[#ffeeba]"
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  </td>
-                  {/* Owner-reported (10 Oct 2026): long HSY class names wrapped over
-                      3-4 lines; at least this wide, they take two at most. (The
-                      width is on an inner block: browsers ignore min-width on a
-                      table cell.) */}
-                  <td className="px-4 py-2.5 text-[#666]">
-                    <div className="min-w-[11rem]">{m.groupLabel}</div>
-                  </td>
-                </tr>
-              );
-            })}
+            {visible.map((m) => personRow(m, m.isCoordinator, true))}
             {visible.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-center text-[#666]">
@@ -307,6 +414,7 @@ export function ServantsAttendanceInteractive({
           </tbody>
         </table>
       </div>
+      )}
 
       <UndoBar info={undo} onClose={closeUndo} />
       {historyMember && (
