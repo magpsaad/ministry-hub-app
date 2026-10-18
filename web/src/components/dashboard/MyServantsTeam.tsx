@@ -227,7 +227,9 @@ export function MyServantsTeam({
                       {team.name}
                       {coordinators.length > 0 && <span className="font-normal text-[#666]"> ({coordinators.join(", ")})</span>}
                     </p>
-                    <p className="overflow-hidden whitespace-nowrap text-xs text-[#666]">{stats.join(", ") || "Nothing needs attention"}</p>
+                    {/* Owner-requested (18 Oct 2026): the group's summary wraps
+                        onto the next line rather than being cut off. */}
+                    <p className="text-xs text-[#666]">{stats.join(", ") || "Nothing needs attention"}</p>
                   </div>
                   <ChevronDownIcon className={`h-4 w-4 shrink-0 text-[#999] transition-transform ${open ? "rotate-180" : ""}`} />
                 </button>
