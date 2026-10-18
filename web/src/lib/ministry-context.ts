@@ -25,9 +25,12 @@ export type AddressContext =
 type Row = { ministry_id: string | null; name: string | null; is_active: boolean; kind: "ministry" | "console" };
 
 // Addresses change only when the Church Admin adds/removes one or turns a
-// ministry on/off, so a short per-server-instance cache saves the lookup on
-// almost every request. Only successful lookups are cached.
-const CACHE_MS = 60_000;
+// ministry on/off, so a per-server-instance cache saves the lookup on
+// almost every request. Only successful lookups are cached, so a newly
+// added address works at once. Owner-approved (18 Oct 2026, ~1,400 lookups
+// a day): kept a day, not a minute -- removing an address or switching a
+// ministry off can take until the next deploy or a day to apply everywhere.
+const CACHE_MS = 24 * 60 * 60 * 1000;
 const addressCache = new Map<string, { at: number; ctx: AddressContext }>();
 
 export function normalizeHost(host: string | null | undefined): string {

@@ -35,15 +35,18 @@ export type AccessSummary = {
  * helpers used to each query user_roles separately for the same person.
  */
 export const getAccessSummary = cache(async (userId: string): Promise<AccessSummary> => {
+  // Owner-approved (18 Oct 2026, migration 0128): the person's role grants
+  // here and whether they're the Church Admin in ONE call, not two -- on
+  // nearly every page open. (Always the signed-in person: every caller
+  // passes their own id; the database answers for auth.uid().)
+  void userId;
   const supabase = await createClient();
-  const [{ data }, { data: churchAdmin }] = await Promise.all([
-    supabase.from("user_roles").select("role, group_id").eq("user_id", userId),
-    supabase.rpc("is_church_admin"),
-  ]);
+  const { data } = await supabase.rpc("my_access");
+  const access = (data ?? {}) as { roles?: AccessSummary["roles"]; church_admin?: boolean };
 
-  const roles = (data ?? []) as AccessSummary["roles"];
+  const roles = access.roles ?? [];
   const has = (r: Role) => roles.some((row) => row.role === r);
-  const isChurchAdmin = churchAdmin === true;
+  const isChurchAdmin = access.church_admin === true;
 
   return {
     roles,
