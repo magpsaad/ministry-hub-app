@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { cachedLatestReleaseVersion } from "@/lib/ministry-cache";
 
 export type AppRelease = {
   id: string;
@@ -21,15 +22,9 @@ export async function getReleases(): Promise<AppRelease[]> {
   return data ?? [];
 }
 
-/** The newest release's version number, or null if none is logged yet. */
+/** The newest release's version number, or null if none is logged yet --
+ * from the shared copy (lib/ministry-cache.ts), refreshed by the console's
+ * release notes screen. */
 export async function getLatestReleaseVersion(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("app_releases")
-    .select("version")
-    .order("released_on", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data?.version ?? null;
+  return cachedLatestReleaseVersion();
 }

@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { getActiveMinistry } from "@/lib/ministry-context";
+import { cachedUniversities } from "@/lib/ministry-cache";
 
 export type University = {
   id: string;
@@ -6,8 +7,9 @@ export type University = {
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
 };
 
+/** This ministry's schools, from the shared settings copy (owner-approved
+ * 17 Oct 2026, lib/ministry-cache.ts); School Maintenance refreshes it. */
 export async function getUniversities(): Promise<University[]> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("universities").select("id, name, proximity").order("name");
-  return data ?? [];
+  // A failed read isn't kept; the page carries on with no list, as before.
+  return cachedUniversities<University>(await getActiveMinistry()).catch(() => []);
 }

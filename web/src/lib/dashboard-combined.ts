@@ -1,9 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAppSettings } from "@/lib/app-settings";
-import { fetchAllRows } from "@/lib/pagination";
+import { todayInZone } from "@/lib/timezone";
 import {
   birthdaysInWindow,
-  getLastServiceDate,
   withJoinedOn,
   type BirthdayMember,
   type DashboardStatsData,
@@ -16,7 +15,8 @@ import {
   type ActionsNeededInputMember,
   type ActionsNeededMember,
 } from "@/lib/actions-needed";
-import { getFollowUpsDue, type FollowUpDueEntry } from "@/lib/outreach";
+import { toFollowUpDueEntry, type FollowUpDueEntry, type FollowUpDueRow } from "@/lib/outreach";
+import { buildServantOptions, type ServantOption, type ServantRoleRow } from "@/lib/servants";
 
 export type CombinedDashboardData = {
   statsData: DashboardStatsData;
@@ -25,6 +25,7 @@ export type CombinedDashboardData = {
   actionsNeeded: ActionsNeededMember[];
   newlyAssigned: NewlyAssignedMember[];
   followUpsDue: FollowUpDueEntry[];
+  servants: ServantOption[];
 };
 
 type MemberRow = ActionsNeededInputMember & {
@@ -43,6 +44,13 @@ type MemberRow = ActionsNeededInputMember & {
  * follow-ups due -- instead of about six reads per group. The rules are the
  * single-group Dashboard's own (birthdaysInWindow, withJoinedOn,
  * computeActionsNeeded), so both always agree.
+ *
+ * Owner-approved (17 Oct 2026, migration 0123): those reads, plus the last
+ * service day and the groups' Servants, now come from ONE database call,
+ * combined_dashboard() -- same rows, same order, same security rules (it
+ * runs as the person) -- instead of a request each (several, paged, for a
+ * big ministry). On the free database every request waits its turn when
+ * it's busy, so a General Coordinator's Dashboard waited many times over.
  */
 export async function getCombinedDashboardData(groupIds: string[]): Promise<CombinedDashboardData> {
   if (groupIds.length === 0) {
@@ -53,50 +61,28 @@ export async function getCombinedDashboardData(groupIds: string[]): Promise<Comb
       actionsNeeded: [],
       newlyAssigned: [],
       followUpsDue: [],
+      servants: [],
     };
   }
-  const supabase = await createClient();
+  const [supabase, settings, config] = await Promise.all([createClient(), getAppSettings(), getActionsNeededConfig()]);
 
-  const [settings, config, lastServiceDate, members, attendance, outreach, followUpsDue] = await Promise.all([
-    getAppSettings(),
-    getActionsNeededConfig(),
-    getLastServiceDate(),
-    fetchAllRows((from, to) =>
-      supabase
-        .from("members")
-        .select(
-          "id, group_id, full_name, photo_path, phone, is_visitor, assigned_servant_id, is_new_assignment, created_at, join_date, date_of_birth, program_of_study, gender, assigned_servant:profiles(full_name), university:universities(name, proximity)",
-        )
-        .in("group_id", groupIds)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .order("id")
-        .range(from, to),
-    ) as Promise<unknown[]> as Promise<(MemberRow & { university: { name: string; proximity?: string } | null })[]>,
-    fetchAllRows((from, to) =>
-      supabase
-        .from("attendance_records")
-        .select("member_id, service_date, member:members!inner(group_id, status)")
-        .eq("attendee_type", "member")
-        .is("event_id", null) // service days only (event attendance, 0111)
-        .in("member.group_id", groupIds)
-        .eq("member.status", "active")
-        .order("service_date", { ascending: false })
-        .order("id")
-        .range(from, to),
-    ) as Promise<unknown[]> as Promise<{ member_id: string | null; service_date: string }[]>,
-    fetchAllRows((from, to) =>
-      supabase
-        .from("outreach_entries")
-        .select("member_id, occurred_at, member:members!inner(group_id, status)")
-        .in("member.group_id", groupIds)
-        .eq("member.status", "active")
-        .order("occurred_at", { ascending: false })
-        .order("id")
-        .range(from, to),
-    ) as Promise<unknown[]> as Promise<{ member_id: string; occurred_at: string }[]>,
-    getFollowUpsDue(groupIds),
-  ]);
+  const { data: raw, error } = await supabase.rpc("combined_dashboard", {
+    p_group_ids: groupIds,
+    p_today: todayInZone(settings.timezone),
+  });
+  if (error) throw new Error(error.message);
+  const d = raw as {
+    members: (MemberRow & { university: { name: string; proximity?: string } | null })[];
+    attendance: { member_id: string | null; service_date: string }[];
+    outreach: { member_id: string; occurred_at: string }[];
+    follow_ups: FollowUpDueRow[];
+    last_service_date: string | null;
+    servant_roles: ServantRoleRow[];
+  };
+  const { members, attendance, outreach } = d;
+  const lastServiceDate = d.last_service_date;
+  const followUpsDue = d.follow_ups.map(toFollowUpDueEntry);
+  const servants = buildServantOptions(d.servant_roles, members);
 
   // Overview: same rule as getDashboardStatsData, over every group.
   const nonVisitors = members.filter((m) => !m.is_visitor);
@@ -177,5 +163,5 @@ export async function getCombinedDashboardData(groupIds: string[]): Promise<Comb
     settings.timezone,
   );
 
-  return { statsData, birthdays, unassigned, actionsNeeded, newlyAssigned, followUpsDue };
+  return { statsData, birthdays, unassigned, actionsNeeded, newlyAssigned, followUpsDue, servants };
 }

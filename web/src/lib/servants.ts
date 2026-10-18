@@ -57,11 +57,28 @@ export async function getServantsForGroup(groupId: string | string[]): Promise<S
     }),
   ]);
 
+  return buildServantOptions((roleRows ?? []) as unknown as ServantRoleRow[], members);
+}
+
+/** A Servant role with its person and group, as read for the options. */
+export type ServantRoleRow = {
+  user_id: string;
+  group_id: string | null;
+  profiles: { id: string; full_name: string; gender: string | null } | null;
+  groups: { name: string; ladder_position: number; display_order: number } | null;
+};
+
+/** The options from rows already read -- also used by the combined
+ * Dashboard, which reads them in its one database call (migration 0123). */
+export function buildServantOptions(
+  roleRows: ServantRoleRow[],
+  members: { assigned_servant_id: string | null }[],
+): ServantOption[] {
   const byId = new Map<string, { id: string; full_name: string; gender: string | null; groups: ServantGroup[] }>();
-  for (const r of roleRows ?? []) {
-    const p = r.profiles as unknown as { id: string; full_name: string; gender: string | null } | null;
+  for (const r of roleRows) {
+    const p = r.profiles;
     if (!p) continue;
-    const group = r.groups as unknown as { name: string; ladder_position: number; display_order: number } | null;
+    const group = r.groups;
     const entry = group && r.group_id
       ? { id: r.group_id, name: group.name, ladder_position: group.ladder_position, display_order: group.display_order }
       : null;

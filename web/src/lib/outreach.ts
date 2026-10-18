@@ -115,17 +115,25 @@ export async function getFollowUpsDue(groupId: string | string[]): Promise<Follo
     .lte("follow_up_due", today)
     .order("follow_up_due", { ascending: true });
 
-  return ((data ?? []) as unknown as {
-    id: string;
-    member_id: string;
-    servant_id: string;
-    occurred_at: string;
-    type: string | null;
-    notes: string | null;
-    follow_up_due: string | null;
-    member: { full_name: string; phone: string | null; photo_path: string | null; assigned_servant_id: string | null; group_id: string } | null;
-    servant: { full_name: string } | null;
-  }[]).map((r) => ({
+  return ((data ?? []) as unknown as FollowUpDueRow[]).map(toFollowUpDueEntry);
+}
+
+/** One open follow-up as read: the entry with its youth and servant. */
+export type FollowUpDueRow = {
+  id: string;
+  member_id: string;
+  servant_id: string;
+  occurred_at: string;
+  type: string | null;
+  notes: string | null;
+  follow_up_due: string | null;
+  member: { full_name: string; phone: string | null; photo_path: string | null; assigned_servant_id: string | null; group_id: string } | null;
+  servant: { full_name: string } | null;
+};
+
+/** Also used by the combined Dashboard's one database call (migration 0123). */
+export function toFollowUpDueEntry(r: FollowUpDueRow): FollowUpDueEntry {
+  return {
     id: r.id,
     member_id: r.member_id,
     member_name: r.member?.full_name ?? "Unknown",
@@ -139,5 +147,5 @@ export async function getFollowUpsDue(groupId: string | string[]): Promise<Follo
     type: r.type,
     notes: r.notes,
     follow_up_due: r.follow_up_due,
-  }));
+  };
 }

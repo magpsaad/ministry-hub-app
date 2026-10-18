@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getConsoleAccess, listMinistries } from "@/lib/console";
+import { refreshMinistries } from "@/lib/ministry-cache-refresh";
 
 /** MULTI_TENANT_PLAN.md §3.8 -- the Church Admin console's actions. Each is
  * one call to a database function that itself refuses anyone who isn't a
@@ -201,4 +203,16 @@ export async function setConsoleTimezoneAction(timezone: string): Promise<{ erro
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
   return { error: null };
+}
+
+/** Owner-approved (17 Oct 2026): every ministry's shared settings copy
+ * (lib/ministry-cache.ts) read afresh -- for changes made outside the app's
+ * own settings screens (a database script, a migration). */
+export async function refreshMinistrySettingsAction(): Promise<{ error: string | null; count: number }> {
+  const access = await getConsoleAccess();
+  if (!access.isChurchAdmin) return { error: "Only the Church Admin can do this.", count: 0 };
+  const ministries = await listMinistries();
+  refreshMinistries(ministries.map((m) => m.id));
+  revalidatePath("/", "layout");
+  return { error: null, count: ministries.length };
 }

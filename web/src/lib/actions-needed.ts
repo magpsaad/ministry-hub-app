@@ -2,6 +2,8 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/pagination";
 import { getAppSettings } from "@/lib/app-settings";
+import { getActiveMinistry } from "@/lib/ministry-context";
+import { cachedActionsNeededConfig } from "@/lib/ministry-cache";
 import { shiftDateKey, todayInZone } from "@/lib/timezone";
 
 export type ActionsNeededMember = {
@@ -25,14 +27,12 @@ type ConfigRow = { proximity: string; min_presence_count: number; min_absence_we
  * threshold on the config screen immediately updates what's explained here.
  * React.cache()-memoized per request: the Dashboard page and
  * getActionsNeeded() below share one query. */
-export const getActionsNeededConfig = cache(async (): Promise<ConfigRow[]> => {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("actions_needed_config")
-    .select("proximity, min_presence_count, min_absence_weeks, min_outreach_weeks")
-    .order("proximity");
-  return data ?? [];
-});
+/** From the shared settings copy (owner-approved 17 Oct 2026,
+ * lib/ministry-cache.ts); saving the thresholds refreshes it. */
+export const getActionsNeededConfig = cache(async (): Promise<ConfigRow[]> =>
+  // A failed read isn't kept; the page carries on with no thresholds, as before.
+  cachedActionsNeededConfig<ConfigRow>(await getActiveMinistry()).catch(() => []),
+);
 
 /**
  * REQUIREMENTS.md §7.1 -- for each active, non-visitor member: presence_count

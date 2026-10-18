@@ -1,5 +1,6 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { getActiveMinistry } from "@/lib/ministry-context";
+import { cachedLatestReleaseVersion, cachedSettingsRow } from "@/lib/ministry-cache";
 import type { AttendanceWindowSettings } from "@/lib/attendance-window";
 
 // Re-exported for every existing server-side importer -- the actual
@@ -133,19 +134,19 @@ const SETTINGS_COLUMNS =
  * React.cache()-memoized per request: the root layout, the page itself and
  * every lib helper share one read, so a page never queries settings twice.
  * Callers share one object, so treat the result as read-only.
+ *
+ * Owner-approved (17 Oct 2026): read from the shared settings copy
+ * (lib/ministry-cache.ts), not the database, on every page open -- a save
+ * in Ministry Settings refreshes it for everyone.
  */
 export const getAppSettings = cache(async (): Promise<AppSettings> => {
-  const supabase = await createClient();
-  const [{ data, error }, { data: latestRelease }] = await Promise.all([
-    supabase.from("app_settings").select(SETTINGS_COLUMNS).single(),
-    supabase.from("app_releases").select("version").order("released_on", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+  const ministryId = await getActiveMinistry();
+  const [row, latestRelease] = await Promise.all([
+    cachedSettingsRow(ministryId, SETTINGS_COLUMNS),
+    cachedLatestReleaseVersion(),
   ]);
-
-  if (error || !data) {
-    throw new Error(`App settings could not be loaded${error ? `: ${error.message}` : ""}`);
-  }
-  const base = data as AppSettings;
-  return { ...base, app_version: latestRelease?.version ?? base.app_version };
+  const base = row as unknown as AppSettings;
+  return { ...base, app_version: latestRelease ?? base.app_version };
 });
 
 /**

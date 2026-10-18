@@ -4,6 +4,7 @@ import { checkUpload } from "@/lib/upload-check";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveMinistry } from "@/lib/ministry-context";
+import { ministrySettingsChanged } from "@/lib/ministry-cache-refresh";
 import { brandingBucket, brandingPublicUrl, ministryFilePath } from "@/lib/storage";
 import { getAttendanceWindowSettings, type AttendanceWindowSettings, type AppSettings } from "@/lib/app-settings";
 import { LOCK_MINUTE_CHOICES } from "@/lib/screen-lock";
@@ -38,6 +39,7 @@ export async function updateActionsNeededConfigAction(row: ActionsNeededConfigRo
     .eq("proximity", row.proximity);
   if (error) return { error: await roleWords(error.message) };
 
+  await ministrySettingsChanged();
   revalidatePath("/admin/actions-needed-config");
   return { error: null };
 }
@@ -165,6 +167,7 @@ export async function updateNamePatternsAction(defaultPattern: string, terminalP
     .select("ministry_id");
   if (error) return { error: await roleWords(error.message) };
   if (!data || data.length === 0) return { error: "You don't have permission to change the name patterns." };
+  await ministrySettingsChanged();
   groupsChanged();
   return { error: null };
 }
@@ -212,6 +215,7 @@ export async function updateServantsQrColorAction(color: string) {
     const L = await getRoleLabels();
     return { error: `You don't have permission to change the ${L.servants} QR colour.` };
   }
+  await ministrySettingsChanged();
 
   revalidatePath("/admin/actions-needed-config");
   revalidatePath("/", "layout");
@@ -396,6 +400,7 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
   const { error } = await supabase.from("app_settings").update(update).eq("ministry_id", ministryId);
   if (error) return { error: await roleWords(error.message) };
 
+  await ministrySettingsChanged();
   // Branding fields are read on nearly every page (header, nav shell), so
   // revalidate broadly rather than just this one admin route.
   revalidatePath("/", "layout");
@@ -442,6 +447,7 @@ export async function uploadLogoAction(formData: FormData) {
   if (error) return { error: await roleWords(error.message), logoUrl: null };
   if (!data || data.length === 0) return { error: "Only System Admins can change the logo.", logoUrl: null };
 
+  await ministrySettingsChanged();
   // The logo shows in every page header, the sign-in page and QR codes.
   revalidatePath("/", "layout");
   return { error: null, logoUrl };
@@ -460,6 +466,7 @@ export async function updateAttendanceWindowSettingsAction(settings: AttendanceW
     })
     .eq("ministry_id", ministryId);
   if (error) return { error: await roleWords(error.message) };
+  await ministrySettingsChanged();
 
   revalidatePath("/admin/actions-needed-config");
   return { error: null };
@@ -477,6 +484,7 @@ export async function updateActionsNeededLookbackAction(months: number) {
     .update({ actions_needed_lookback_months: months })
     .eq("ministry_id", ministryId);
   if (error) return { error: await roleWords(error.message) };
+  await ministrySettingsChanged();
 
   revalidatePath("/admin/actions-needed-config");
   return { error: null };

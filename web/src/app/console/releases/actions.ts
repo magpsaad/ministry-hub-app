@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { releasesChanged } from "@/lib/ministry-cache-refresh";
 
 /** MULTI_TENANT_PLAN.md P9 -- Version Control is a Church Admin function
  * now: release notes are written once, here in the console, and shown in
@@ -18,6 +19,7 @@ export async function addReleaseAction(version: string, description: string, rel
     .single();
   if (error) return { error: error.message, id: null };
 
+  releasesChanged();
   revalidatePath("/console/releases");
   return { error: null, id: data.id as string };
 }
@@ -34,6 +36,7 @@ export async function updateReleaseAction(id: string, version: string, descripti
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
 
+  releasesChanged();
   revalidatePath("/console/releases");
   return { error: null };
 }

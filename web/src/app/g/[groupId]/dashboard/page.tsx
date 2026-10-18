@@ -72,9 +72,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
       getUniversities(),
     ]);
     const ids = combinedGroups.map((g) => g.id);
-    const [data, servants, startOpen, servantTeam, signInKey] = await Promise.all([
+    const [data, startOpen, servantTeam, signInKey] = await Promise.all([
       getCombinedDashboardData(ids),
-      ids.length > 0 ? getServantsForGroup(ids) : Promise.resolve([]),
       getDashboardStartOpen(),
       servantTeamFor(access),
       getSignInKey(supabase),
@@ -107,7 +106,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
           programLabel={settings.program_label}
           newlyAssigned={data.newlyAssigned}
           followUpsDue={data.followUpsDue}
-          servants={servants}
+          servants={data.servants}
           universities={universities}
           memberLabel={settings.member_label}
           canDelete={canEditAll}

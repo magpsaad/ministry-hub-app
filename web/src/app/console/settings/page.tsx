@@ -2,6 +2,7 @@ import { getConsoleAccess } from "@/lib/console";
 import { getBranding } from "@/lib/branding";
 import { ConsoleShell, NotAuthorized } from "@/components/console/ConsoleShell";
 import { ConsoleTimezoneForm } from "./ConsoleTimezoneForm";
+import { RefreshSettingsPanel } from "./RefreshSettingsPanel";
 
 /** The console's own settings (migration 0091): for now its timezone, used
  * for every date shown or defaulted on the console (Release Notes'
@@ -15,7 +16,10 @@ export default async function ConsoleSettingsPage() {
 
   return (
     <ConsoleShell title="Settings" email={access.email}>
-      <ConsoleTimezoneForm initial={branding.timezone} />
+      <div className="space-y-4">
+        <ConsoleTimezoneForm initial={branding.timezone} />
+        <RefreshSettingsPanel />
+      </div>
     </ConsoleShell>
   );
 }

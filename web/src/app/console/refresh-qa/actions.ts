@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { refreshMinistries } from "@/lib/ministry-cache-refresh";
 import { createClient } from "@/lib/supabase/server";
 
 /** Refresh QA from production (migration 0068, QA only). Each action is one
@@ -52,6 +53,10 @@ export async function runRefreshAction(ministries: string[], keep: KeepItem[], d
   });
   if (error) return { error: error.message, report: null };
   // Every QA page shows the refreshed ministries' data from now on.
-  if (!dryRun) revalidatePath("/", "layout");
+  if (!dryRun) {
+    // The refreshed ministries' settings were replaced wholesale.
+    refreshMinistries(ministries);
+    revalidatePath("/", "layout");
+  }
   return { error: null, report: data as RefreshReport };
 }
