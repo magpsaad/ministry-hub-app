@@ -34,7 +34,8 @@ function roleLabelsFor(L: RoleLabels): Record<AccessRoleRow["role"], string> {
     // "Sub-Coordinator") -- the internal role/key name is unchanged.
     sub_coordinator: L.coordinator,
     servant: L.servant,
-    read_only: "Read-Only (exception access)",
+    // Owner-requested (18 Oct 2026): was "Read-Only (exception access)".
+    read_only: "Read Only Access",
   };
 }
 
