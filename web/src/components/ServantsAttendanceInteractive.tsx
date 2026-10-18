@@ -270,36 +270,16 @@ export function ServantsAttendanceInteractive({
 
   return (
     <div className="space-y-4">
-      <ServantWeeklyStrip
-        members={bundle.members}
-        attendanceByServant={attendanceByServant}
-        serviceDates={bundle.serviceWeekdayDates}
-        groupNames={bundle.groupNames}
-        showGroups={showGroups}
-      />
-
+      {/* Owner-requested (18 Oct 2026): the same top row as Servant Profiles
+          and Servant Assignments -- search, then the view switch; the date
+          on its own line below. */}
       <div className="flex flex-wrap items-center gap-3">
-        <label htmlFor="servants-attendance-date" className="text-sm font-semibold text-[#333]">
-          Date
-        </label>
-        <select
-          id="servants-attendance-date"
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          className="min-w-0 max-w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
-        >
-          {dateOptions.map((d) => (
-            <option key={d.value} value={d.value}>
-              {d.label}
-            </option>
-          ))}
-        </select>
         <input
           type="text"
           placeholder={`Search ${L.servantsLower}...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[160px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
+          className="flex-1 min-w-[180px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
         />
         <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
           <button
@@ -317,6 +297,24 @@ export function ServantsAttendanceInteractive({
             Alphabetical
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label htmlFor="servants-attendance-date" className="text-sm font-semibold text-[#333]">
+          Date
+        </label>
+        <select
+          id="servants-attendance-date"
+          value={selected}
+          onChange={(e) => setSelected(e.target.value)}
+          className="min-w-0 max-w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-brand focus:outline-none"
+        >
+          {dateOptions.map((d) => (
+            <option key={d.value} value={d.value}>
+              {d.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <AverageControls
@@ -415,6 +413,15 @@ export function ServantsAttendanceInteractive({
         </table>
       </div>
       )}
+
+      {/* Owner-requested (18 Oct 2026): week-over-week at the very bottom. */}
+      <ServantWeeklyStrip
+        members={bundle.members}
+        attendanceByServant={attendanceByServant}
+        serviceDates={bundle.serviceWeekdayDates}
+        groupNames={bundle.groupNames}
+        showGroups={showGroups}
+      />
 
       <UndoBar info={undo} onClose={closeUndo} />
       {historyMember && (
