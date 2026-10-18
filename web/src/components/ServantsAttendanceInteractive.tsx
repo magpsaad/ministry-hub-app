@@ -421,6 +421,7 @@ export function ServantsAttendanceInteractive({
         serviceDates={bundle.serviceWeekdayDates}
         groupNames={bundle.groupNames}
         showGroups={showGroups}
+        today={bundle.todayDate}
       />
 
       <UndoBar info={undo} onClose={closeUndo} />

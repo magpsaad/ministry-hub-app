@@ -29,6 +29,7 @@ export function ServantWeeklyStrip({
   serviceDates,
   groupNames,
   showGroups,
+  today,
 }: {
   members: ServantAttendanceMember[];
   attendanceByServant: Record<string, string[]>;
@@ -36,6 +37,9 @@ export function ServantWeeklyStrip({
   serviceDates: string[];
   groupNames: Record<string, string>;
   showGroups: boolean;
+  /** The ministry's today: once attendance is being taken on a service
+   * day, the latest count is "Today", not the last service date. */
+  today: string;
 }) {
   const L = useRoleLabels();
   const [groupsOpen, setGroupsOpen] = useState(false);
@@ -45,6 +49,8 @@ export function ServantWeeklyStrip({
 
   const last = dates[dates.length - 1];
   const lastTally = tally(people, attendanceByServant, last);
+  // Owner-requested (18 Oct 2026): "Today" or "Last service date".
+  const lastWord = last === today ? "Today" : "Last service date";
   const weeks = dates.map((d) => ({ date: d, ...tally(people, attendanceByServant, d) }));
 
   const groups = [
@@ -55,7 +61,7 @@ export function ServantWeeklyStrip({
   return (
     <section className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
       <p className="text-sm text-[#333]">
-        Last week ({shortDate(last)}): <strong>{lastTally.present}</strong> of {lastTally.counted} {L.servantsLower} present
+        {lastWord} ({shortDate(last)}): <strong>{lastTally.present}</strong> of {lastTally.counted} {L.servantsLower} present
       </p>
       <div className="mt-3 flex items-end gap-1.5" aria-label={`${L.servants} present, last ${weeks.length} weeks`}>
         {weeks.map((w) => {
@@ -79,7 +85,7 @@ export function ServantWeeklyStrip({
             aria-expanded={groupsOpen}
             className="flex w-full items-center justify-between text-left text-xs font-semibold text-brand"
           >
-            By group, last week
+            By group, {lastWord.toLowerCase()}
             <ChevronDownIcon className={`h-4 w-4 text-[#999] transition-transform ${groupsOpen ? "rotate-180" : ""}`} />
           </button>
           {groupsOpen && (

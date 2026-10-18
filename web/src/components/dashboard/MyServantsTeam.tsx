@@ -8,7 +8,7 @@ import { PhoneLink } from "@/components/PhoneLink";
 import { COORDINATOR_CHIP } from "@/components/ServantTotals";
 import { useRoleLabels } from "@/components/RoleLabelsProvider";
 import { useTimezone } from "@/components/TimezoneProvider";
-import { formatDateTimeInZone } from "@/lib/timezone";
+import { formatDateTimeInZone, todayInZone } from "@/lib/timezone";
 import { ChevronDownIcon, UserCheckIcon } from "@/components/icons";
 
 /** Owner-requested (15 Oct 2026, migration 0116) -- "My Servants Team", at
@@ -97,10 +97,14 @@ export function MyServantsTeam({
 
   if (rows.length === 0) return null;
 
+  // Owner-requested (18 Oct 2026): on a service day, once attendance is
+  // being taken, the count is today's -- not "last week".
+  const today = todayInZone(timeZone);
+  const when = (date: string | null) => (date === today ? "today" : "on the last service date");
   const total = countPeople(rows, absenceWeeks);
   const parts: string[] = [];
   // Owner-requested (15 Oct 2026): never a part that's zero.
-  if (total.lastService && total.present > 0) parts.push(`${total.present} of ${total.counted} attended last week`);
+  if (total.lastService && total.present > 0) parts.push(`${total.present} of ${total.counted} attended ${when(total.lastService)}`);
   if (total.absent > 0) parts.push(`${total.absent} absent ${absenceWeeks}+ weeks`);
   if (total.quiet > 0) parts.push(`${total.quiet} quiet`);
   if (total.birthdays > 0) parts.push(plural(total.birthdays, "birthday"));
@@ -205,7 +209,7 @@ export function MyServantsTeam({
             const coordinators = Array.from(new Set(team.rows.filter((r) => r.is_coordinator).map((r) => r.full_name.split(" ")[0])));
             const stats: string[] = [];
             // Owner-requested (15 Oct 2026): spelled out, as in the summary line.
-            if (c.lastService && c.present > 0) stats.push(`${c.present} of ${c.counted} present last week`);
+            if (c.lastService && c.present > 0) stats.push(`${c.present} of ${c.counted} present ${when(c.lastService)}`);
             if (c.absent > 0) stats.push(`${c.absent} absent ${absenceWeeks}+ weeks`);
             if (c.quiet > 0) stats.push(`${c.quiet} quiet`);
             if (c.birthdays > 0) stats.push(plural(c.birthdays, "birthday"));
