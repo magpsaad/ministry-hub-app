@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { fetchAllRows } from "@/lib/pagination";
 import { todayInZone } from "@/lib/timezone";
 import { getAppSettings } from "@/lib/app-settings";
@@ -100,7 +101,10 @@ export type FollowUpDueEntry = OutreachEntryFull & { member_photo_path: string |
  * needs so the Dashboard's "view original entry" link can open it without a
  * second fetch. */
 export async function getFollowUpsDue(groupId: string | string[]): Promise<FollowUpDueEntry[]> {
-  const [supabase, settings] = await Promise.all([createClient(), getAppSettings()]);
+  // Owner-requested (24 Oct 2026): only the person who set a follow-up sees
+  // it, so only theirs are read.
+  const [supabase, settings, user] = await Promise.all([createClient(), getAppSettings(), getCurrentUser()]);
+  if (!user) return [];
   const today = todayInZone(settings.timezone);
 
   let query = supabase
@@ -110,6 +114,7 @@ export async function getFollowUpsDue(groupId: string | string[]): Promise<Follo
     );
   query = Array.isArray(groupId) ? query.in("member.group_id", groupId) : query.eq("member.group_id", groupId);
   const { data } = await query
+    .eq("servant_id", user.id)
     .not("follow_up_due", "is", null)
     .is("follow_up_dismissed_at", null)
     .lte("follow_up_due", today)

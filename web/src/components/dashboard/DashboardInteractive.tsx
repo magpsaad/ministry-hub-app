@@ -280,8 +280,10 @@ export function DashboardInteractive({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- inCohort follows `cohort`
     [newlyAssigned, applyFilter, currentUserId, cohort],
   );
+  // Owner-requested (24 Oct 2026): a follow-up card is for the person who set
+  // the follow-up only -- never shown to anyone else looking at the group.
   const visibleFollowUps = useMemo(
-    () => followUpsDue.filter((f) => inCohort(f.member_group_id) && (!applyFilter || f.servant_id === currentUserId)),
+    () => followUpsDue.filter((f) => inCohort(f.member_group_id) && f.servant_id === currentUserId),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- inCohort follows `cohort`
     [followUpsDue, applyFilter, currentUserId, cohort],
   );
@@ -313,7 +315,6 @@ export function DashboardInteractive({
   const outreachCount = visibleOutreachNeeded.length;
   const actionsTop: string[] = [];
   if (outreachCount > 0) actionsTop.push(`${members(outreachCount)} need${outreachCount === 1 ? "s" : ""} outreach`);
-  if (visibleFollowUps.length > 0) actionsTop.push(`${visibleFollowUps.length} follow-up${visibleFollowUps.length === 1 ? "" : "s"} due`);
   // The second line is just this person's own.
   const myOutreach = actionsNeeded.filter((m) => inCohort(m.group_id) && m.assigned_servant_id === currentUserId).length;
   const myNew = newlyAssigned.filter((m) => inCohort(m.group_id) && m.assigned_servant_id === currentUserId).length;
