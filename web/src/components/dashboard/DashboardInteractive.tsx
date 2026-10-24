@@ -273,8 +273,10 @@ export function DashboardInteractive({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- inCohort follows `cohort`
     [actionsNeeded, applyFilter, currentUserId, cohort],
   );
+  // Owner-requested (24 Oct 2026): a "newly assigned to you" card is for that
+  // servant only -- never shown to the group's other servants or coordinators.
   const visibleNewlyAssigned = useMemo(
-    () => newlyAssigned.filter((m) => inCohort(m.group_id) && (!applyFilter || m.assigned_servant_id === currentUserId)),
+    () => newlyAssigned.filter((m) => inCohort(m.group_id) && m.assigned_servant_id === currentUserId),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- inCohort follows `cohort`
     [newlyAssigned, applyFilter, currentUserId, cohort],
   );
@@ -311,7 +313,6 @@ export function DashboardInteractive({
   const outreachCount = visibleOutreachNeeded.length;
   const actionsTop: string[] = [];
   if (outreachCount > 0) actionsTop.push(`${members(outreachCount)} need${outreachCount === 1 ? "s" : ""} outreach`);
-  if (visibleNewlyAssigned.length > 0) actionsTop.push(`${visibleNewlyAssigned.length} newly assigned`);
   if (visibleFollowUps.length > 0) actionsTop.push(`${visibleFollowUps.length} follow-up${visibleFollowUps.length === 1 ? "" : "s"} due`);
   // The second line is just this person's own.
   const myOutreach = actionsNeeded.filter((m) => inCohort(m.group_id) && m.assigned_servant_id === currentUserId).length;

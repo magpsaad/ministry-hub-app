@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAppSettings } from "@/lib/app-settings";
 import { todayInZone } from "@/lib/timezone";
 import { fetchAllRows } from "@/lib/pagination";
@@ -264,7 +265,10 @@ export function withJoinedOn(rows: UnassignedInputMember[], timeZone: string): U
  * migration 0029's trigger the moment an outreach entry lands, or manually
  * dismissed). Grouped by assigned servant on the Dashboard. */
 export async function getNewlyAssignedMembers(groupId: string): Promise<NewlyAssignedMember[]> {
-  const supabase = await createClient();
+  // Owner-requested (24 Oct 2026): only the servant they were assigned to
+  // sees these cards, so only theirs are read.
+  const [supabase, user] = await Promise.all([createClient(), getCurrentUser()]);
+  if (!user) return [];
   const { data } = await supabase
     .from("members")
     .select(
@@ -273,7 +277,7 @@ export async function getNewlyAssignedMembers(groupId: string): Promise<NewlyAss
     .eq("group_id", groupId)
     .eq("status", "active")
     .eq("is_new_assignment", true)
-    .not("assigned_servant_id", "is", null)
+    .eq("assigned_servant_id", user.id)
     .order("created_at", { ascending: false });
 
   return ((data ?? []) as unknown as {
