@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/pagination";
 import { getAppSettings, getAttendanceWindowSettings, isOnServiceWeekday } from "@/lib/app-settings";
+import { serviceWeekdaysBetween } from "@/lib/attendance-window";
 import type { AttendanceEvent } from "@/lib/attendance-average";
 import { nowInZone } from "@/lib/timezone";
 import { getRoleLabels } from "@/lib/role-labels-server";
@@ -179,7 +180,16 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
       held: e.end_date < todayDate || eventsWithRows.has(e.id),
     }));
 
-  const trackedDates = Array.from(trackedDatesSet).sort((a, b) => (a < b ? 1 : -1));
+  // Every past service day since "using the app since" is in the picker too,
+  // marked or not (owner-requested 21 Nov 2026, same as the youth
+  // Attendance tab); the average % below still counts only days with rows.
+  const pickerDates = new Set(trackedDatesSet);
+  if (settings.using_app_since) {
+    for (const d of serviceWeekdaysBetween(settings.using_app_since, todayDate, windowSettings.service_weekday)) {
+      pickerDates.add(d);
+    }
+  }
+  const trackedDates = Array.from(pickerDates).sort((a, b) => (a < b ? 1 : -1));
   const todayHasRows = trackedDatesSet.has(todayDate);
   // Owner-reported: the date-picker was defaulting to today even on days
   // that aren't the configured service day at all -- `cutoffPassed` was
