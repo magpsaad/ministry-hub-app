@@ -71,14 +71,22 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
   // last-present date (owner-reported: counting tracked service occurrences
   // diverged badly from real elapsed time), which is why the all-time rows
   // are needed at all.
-  const [allPresentRows, outreachRows] = await Promise.all([
+  //
+  // Both reads filter by the youth's group through a join, NOT
+  // `.in("member_id", memberIds)`: a 1,000-youth group (Upper Room, 20 Nov
+  // 2026) made that a ~39 KB address the Supabase API rejects with "Bad
+  // Request", so the Dashboard failed to load (owner-reported). The rows are
+  // then narrowed to the active non-visitor youths above.
+  const idSet = new Set(memberIds);
+  const [allPresentRowsRaw, outreachRowsRaw] = await Promise.all([
     fetchAllRows((from, to) =>
       supabase
         .from("attendance_records")
-        .select("member_id, service_date")
+        .select("member_id, service_date, member:members!inner(group_id, status)")
         .eq("attendee_type", "member")
         .is("event_id", null) // service days only (event attendance, 0111)
-        .in("member_id", memberIds)
+        .eq("member.group_id", groupId)
+        .eq("member.status", "active")
         .order("service_date", { ascending: false })
         .order("id")
         .range(from, to),
@@ -86,13 +94,16 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
     fetchAllRows((from, to) =>
       supabase
         .from("outreach_entries")
-        .select("member_id, occurred_at")
-        .in("member_id", memberIds)
+        .select("member_id, occurred_at, member:members!inner(group_id, status)")
+        .eq("member.group_id", groupId)
+        .eq("member.status", "active")
         .order("occurred_at", { ascending: false })
         .order("id")
         .range(from, to),
     ),
   ]);
+  const allPresentRows = allPresentRowsRaw.filter((r) => r.member_id && idSet.has(r.member_id));
+  const outreachRows = outreachRowsRaw.filter((r) => idSet.has(r.member_id));
 
   return computeActionsNeeded(
     activeNonVisitors.map((m) => ({ ...m, group_id: groupId })),

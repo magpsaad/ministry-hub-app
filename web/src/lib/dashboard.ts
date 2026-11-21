@@ -122,26 +122,35 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
       // members "Never Attended" who actually have (whichever ones happen
       // to fall past row 1000). Paged via fetchAllRows (lib/pagination.ts).
       // The two attendance reads are independent -- fetched in parallel.
-      const [attendedIds, { data: presentRows }] = await Promise.all([
+      //
+      // Filtered by the youth's group through a join, NOT
+      // `.in("member_id", memberIds)`: ~1,000 ids made a ~39 KB address the
+      // Supabase API rejects ("Bad Request", Upper Room Dashboard, 20 Nov
+      // 2026). Rows are narrowed to the non-visitor ids afterwards.
+      const idSet = new Set(memberIds);
+      const [attendedRows, { data: presentRows }] = await Promise.all([
         fetchAllRows((from, to) =>
           supabase
             .from("attendance_records")
-            .select("member_id")
+            .select("member_id, member:members!inner(group_id, status)")
             .eq("attendee_type", "member")
             .is("event_id", null) // service days only (event attendance, 0111)
-            .in("member_id", memberIds)
+            .eq("member.group_id", groupId)
+            .eq("member.status", "active")
+            .order("id")
             .range(from, to),
         ),
         supabase
           .from("attendance_records")
-          .select("member_id")
+          .select("member_id, member:members!inner(group_id, status)")
           .eq("attendee_type", "member")
           .is("event_id", null) // service days only (event attendance, 0111)
           .eq("service_date", latestServiceDate)
-          .in("member_id", memberIds),
+          .eq("member.group_id", groupId)
+          .eq("member.status", "active"),
       ]);
-      everAttendedSet = new Set(attendedIds.map((r) => r.member_id));
-      presentLastServiceSet = new Set((presentRows ?? []).map((r) => r.member_id));
+      everAttendedSet = new Set(attendedRows.map((r) => r.member_id).filter((id) => idSet.has(id)));
+      presentLastServiceSet = new Set((presentRows ?? []).map((r) => r.member_id).filter((id) => idSet.has(id)));
     }
   }
 
