@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAccessSummary, type AccessSummary } from "@/lib/roles";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
+import { getAppSettings } from "@/lib/app-settings";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 export { LAST_GROUP_COOKIE } from "@/lib/allCohorts";
 
@@ -29,14 +30,27 @@ export type GroupSummary = {
  * filtering is needed here.
  */
 export async function getAccessibleGroups(): Promise<GroupSummary[]> {
-  const supabase = await createClient();
+  const [supabase, settings] = await Promise.all([createClient(), getAppSettings()]);
   const { data } = await supabase
     .from("groups")
     .select("id, name, ladder_position, display_order, kind, gender_label")
     .eq("is_archived", false)
     .order("display_order");
 
-  return (data ?? []).map((g) => ({ ...(g as Omit<GroupSummary, "is_terminal">), is_terminal: g.kind === "terminal" }));
+  // Migration 0130: a ministry may let its hand-over group work like any other
+  // group (Ministry Settings). The database then shows it to the people with a
+  // role on it, and here it counts as a regular group everywhere a screen asks
+  // "which groups does this person serve?". Its kind stays "terminal" in the
+  // database, so the ladder and the transition are untouched.
+  const open = settings.handover_group_active === true;
+  return (data ?? []).map((g) => {
+    const treatedAsRegular = open && g.kind === "terminal";
+    return {
+      ...(g as Omit<GroupSummary, "is_terminal">),
+      kind: treatedAsRegular ? "regular" : (g.kind as GroupKind),
+      is_terminal: g.kind === "terminal" && !treatedAsRegular,
+    };
+  });
 }
 
 /** GROUP_LADDER_PLAN.md D14/§4.6 -- the regular groups where this person is

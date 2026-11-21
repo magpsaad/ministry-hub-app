@@ -110,10 +110,15 @@ export type AppSettings = {
    * a youth with none (default on), take attendance (default off). */
   read_only_can_add_photos: boolean;
   read_only_can_take_attendance: boolean;
+  /** Migration 0130 -- whether the hand-over group works like any other group
+   * (role grants, attendance, outreach, General Coordinator views, moves).
+   * Off unless switched on; while on the year-end transition leaves its
+   * youths where they are. */
+  handover_group_active: boolean;
 };
 
 const SETTINGS_COLUMNS =
-  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, my_assigned_header_color, my_assigned_header_color_light, group_label, member_label, servant_label, sub_coordinator_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, checkin_opens_at, checkin_closes_at, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, level_number_offset, group_name_template, terminal_name_pattern, youth_attendance_window_weeks, servant_attendance_window_weeks, sub_coordinator_auto_servant, show_parent_contacts, idle_lock_minutes, coordinator_scope, using_app_since, servant_absence_weeks, servant_quiet_days, read_only_can_add_photos, read_only_can_take_attendance";
+  "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, theme_color_light, theme_color_dark, servants_qr_color, my_assigned_header_color, my_assigned_header_color_light, group_label, member_label, servant_label, sub_coordinator_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, checkin_opens_at, checkin_closes_at, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance, actions_needed_lookback_months, ladder_position_label, level_number_offset, group_name_template, terminal_name_pattern, youth_attendance_window_weeks, servant_attendance_window_weeks, sub_coordinator_auto_servant, show_parent_contacts, idle_lock_minutes, coordinator_scope, using_app_since, servant_absence_weeks, servant_quiet_days, read_only_can_add_photos, read_only_can_take_attendance, handover_group_active";
 
 /**
  * REQUIREMENTS.md §2 -- everything about the app's identity, vocabulary,

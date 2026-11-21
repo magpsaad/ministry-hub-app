@@ -606,6 +606,48 @@ export function ActionsNeededConfigInteractive({
       </div>
     </div>
 
+    {/* Owner-requested (21 Nov 2026, migration 0130). */}
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+      <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
+        Hand-over {appSettings.group_label}
+        <InfoTip title={`Hand-over ${appSettings.group_label}`}>
+          <p>
+            The hand-over {appSettings.group_label.toLowerCase()} holds the {appSettings.member_label.toLowerCase()}s
+            who are moving on from this ministry. Normally only Admins can see it. When this is on, it works like any
+            other {appSettings.group_label.toLowerCase()}: a General Coordinator or Admin gives {L.servants} and{" "}
+            {L.coordinators} roles on it (Servant Assignments), and they can then see its{" "}
+            {appSettings.member_label.toLowerCase()}s, take attendance, record outreach and move{" "}
+            {appSettings.member_label.toLowerCase()}s in and out. It also counts in the General Coordinators&rsquo;
+            views and totals.
+          </p>
+          <p>
+            While this is on, the yearly Group Transition no longer waits for the hand-over{" "}
+            {appSettings.group_label.toLowerCase()} to be empty, and nobody in it is archived. It can&rsquo;t be switched
+            off while anyone still has a role on the hand-over {appSettings.group_label.toLowerCase()}.
+          </p>
+        </InfoTip>
+      </h2>
+      <label className="flex items-center gap-2 text-sm text-[#333] mb-3">
+        <input
+          type="checkbox"
+          checked={appSettings.handover_group_active === true}
+          onChange={(e) => updateAppField("handover_group_active", e.target.checked)}
+        />
+        Treat the hand-over {appSettings.group_label.toLowerCase()} like any other {appSettings.group_label.toLowerCase()}
+      </label>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
+
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="flex items-center gap-1.5 text-lg font-bold text-brand mb-3">
         Parents&rsquo; Contact Details

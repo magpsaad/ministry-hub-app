@@ -394,6 +394,7 @@ export async function updateAppSettingsAction(input: AppSettingsFormInput) {
     servant_quiet_days: input.servant_quiet_days,
     read_only_can_add_photos: !!input.read_only_can_add_photos,
     read_only_can_take_attendance: !!input.read_only_can_take_attendance,
+    handover_group_active: !!input.handover_group_active,
   };
   // Saved by this ministry's code (the settings table has one row per
   // ministry now, MULTI_TENANT_PLAN.md §2.5 #1); the security rule would
