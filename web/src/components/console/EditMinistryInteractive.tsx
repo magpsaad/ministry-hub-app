@@ -114,7 +114,8 @@ export function EditMinistryInteractive({ ministry }: { ministry: MinistryListRo
         <p className="text-sm text-[#666] mb-3">
           The web addresses this ministry is reached at in this environment. A new address also has to be added to
           the Vercel project (Settings &rarr; Domains) and to Supabase&rsquo;s Redirect URLs (Authentication &rarr; URL
-          Configuration), each listed exactly, or signing in there fails.
+          Configuration) with the ending <code>/auth/callback</code> (for example{" "}
+          <code>https://the-address/auth/callback</code>), or signing in there fails.
         </p>
         <ul className="divide-y divide-[#f0f0f0] mb-3">
           {addresses.map((h) => (

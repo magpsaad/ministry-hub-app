@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { addressUrl } from "@/lib/address-url";
+import { supabaseRedirectUrl, vercelDomainsUrl } from "@/lib/setup-links";
 
 /**
  * The steps that finish a new ministry's setup outside the app (Vercel
@@ -59,13 +60,29 @@ export function SetupChecklist({
       <p className="text-sm text-[#666]">Before anyone can use it, finish these steps (about 10 minutes):</p>
       <ol className="list-decimal pl-5 space-y-2 text-sm text-[#333]">
         <li>
-          <strong>Vercel:</strong> in the {environment} project, <em>Settings &rarr; Domains</em>, add{" "}
-          {hosts.length > 0 ? hosts.join(", ") : "its address"}.
+          <strong>Vercel:</strong>{" "}
+          <a
+            href={vercelDomainsUrl(environment)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-brand hover:underline"
+          >
+            open the {environment} project&rsquo;s Domains page &#8599;
+          </a>{" "}
+          and add {hosts.length > 0 ? hosts.join(", ") : "its address"}.
         </li>
         <li>
-          <strong>Supabase:</strong> in <em>Authentication &rarr; URL Configuration</em>, add each address to the
-          Redirect URLs, listed exactly (e.g. <code>{`https://${hosts[0] ?? "the-address"}/**`}</code>). Never use a
-          broad pattern like <code>*.vercel.app</code>.
+          <strong>Supabase:</strong> in <em>Authentication &rarr; URL Configuration</em>, add{" "}
+          {hosts.length > 1 ? "each of these" : "this"} to the Redirect URLs, exactly as written (the ending{" "}
+          <code>/auth/callback</code> matters):
+          <ul className="mt-1 space-y-1">
+            {(hosts.length > 0 ? hosts : ["the-address"]).map((h) => (
+              <li key={h}>
+                <code className="break-all">{supabaseRedirectUrl(h)}</code>
+              </li>
+            ))}
+          </ul>
+          Never use a broad pattern like <code>*.vercel.app</code>.
         </li>
         <li>
           Open the address, sign in, and check its Ministry Settings (logo, labels, colours). The first
