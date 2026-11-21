@@ -39,6 +39,22 @@ export function isOnServiceWeekday(dateISO: string, serviceWeekday: number): boo
   return isoDay === serviceWeekday;
 }
 
+/**
+ * Every service-weekday date from `fromISO` (inclusive) to `beforeISO`
+ * (exclusive), ascending. Owner-requested (21 Nov 2026): the Attendance
+ * date picker lists every past service day since the ministry started
+ * using the app, not only days someone was already marked present, so a
+ * class whose attendance wasn't taken on the night can still go back and
+ * fill it in.
+ */
+export function serviceWeekdaysBetween(fromISO: string, beforeISO: string, serviceWeekday: number): string[] {
+  let d = fromISO;
+  for (let i = 0; i < 7 && !isOnServiceWeekday(d, serviceWeekday); i++) d = shiftDateKey(d, { days: 1 });
+  const dates: string[] = [];
+  for (; d < beforeISO; d = shiftDateKey(d, { days: 7 })) dates.push(d);
+  return dates;
+}
+
 const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 /** ISO weekday (1..7) -> its name, e.g. for the average-attendance-%

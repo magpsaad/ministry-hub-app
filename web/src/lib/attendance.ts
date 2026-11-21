@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAppSettings, getAttendanceWindowSettings, isOnServiceWeekday } from "@/lib/app-settings";
+import { serviceWeekdaysBetween } from "@/lib/attendance-window";
 import type { AttendanceEvent } from "@/lib/attendance-average";
 import { nowInZone } from "@/lib/timezone";
 import { fetchAllRows } from "@/lib/pagination";
@@ -23,7 +24,9 @@ export type AttendanceBundle = {
   /** Attendance-taking events for these groups that have started,
    * oldest first. */
   events: AttendanceEvent[];
-  trackedDates: string[]; // service days, descending, most recent first
+  /** Date-picker days, descending: days with rows plus every past service
+   * day since "using the app since". */
+  trackedDates: string[];
   /** Ascending, service-weekday-only dates -- the service days the
    * average % counts (lib/attendance-average.ts, worked out in the browser
    * for the chosen switch and period). */
@@ -143,7 +146,17 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
       held: e.end_date < todayDate || eventsWithRows.has(e.id),
     }));
 
-  const trackedDates = Array.from(trackedDatesSet).sort((a, b) => (a < b ? 1 : -1));
+  // The date picker also lists every past service day since the ministry
+  // started using the app, marked or not (owner-requested 21 Nov 2026), so
+  // a missed night can still be taken afterwards. Picker only: the average %
+  // below still counts only days with rows. Today keeps its own rule.
+  const pickerDates = new Set(trackedDatesSet);
+  if (settings.using_app_since) {
+    for (const d of serviceWeekdaysBetween(settings.using_app_since, todayDate, windowSettings.service_weekday)) {
+      pickerDates.add(d);
+    }
+  }
+  const trackedDates = Array.from(pickerDates).sort((a, b) => (a < b ? 1 : -1));
   const todayHasRows = trackedDatesSet.has(todayDate);
   // Same fix as the servants' equivalent (lib/servant-attendance.ts,
   // owner-reported there) -- this was purely time-of-day before, with no
