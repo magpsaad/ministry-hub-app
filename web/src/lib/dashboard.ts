@@ -99,12 +99,23 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
 
   // Members and the latest service date don't depend on each other -- fetched
   // together (they used to be two sequential round trips).
-  const [{ data: members }, latestServiceDate] = await Promise.all([
-    supabase.from("members").select("id, is_visitor, assigned_servant_id").eq("group_id", groupId).eq("status", "active"),
+  // Paged: a single read stops at PostgREST's 1,000-row cap, so the 1,135-
+  // youth Upper Room showed "Total youths 998" (1,000 minus its 2 visitors;
+  // owner-reported 21 Nov 2026).
+  const [members, latestServiceDate] = await Promise.all([
+    fetchAllRows((from, to) =>
+      supabase
+        .from("members")
+        .select("id, is_visitor, assigned_servant_id")
+        .eq("group_id", groupId)
+        .eq("status", "active")
+        .order("id")
+        .range(from, to),
+    ),
     getLastServiceDate(),
   ]);
 
-  const active = members ?? [];
+  const active = members;
   const nonVisitors = active.filter((m) => !m.is_visitor);
   const memberIds = nonVisitors.map((m) => m.id);
 
@@ -128,7 +139,7 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
       // Supabase API rejects ("Bad Request", Upper Room Dashboard, 20 Nov
       // 2026). Rows are narrowed to the non-visitor ids afterwards.
       const idSet = new Set(memberIds);
-      const [attendedRows, { data: presentRows }] = await Promise.all([
+      const [attendedRows, presentRows] = await Promise.all([
         fetchAllRows((from, to) =>
           supabase
             .from("attendance_records")
@@ -140,17 +151,21 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
             .order("id")
             .range(from, to),
         ),
-        supabase
-          .from("attendance_records")
-          .select("member_id, member:members!inner(group_id, status)")
-          .eq("attendee_type", "member")
-          .is("event_id", null) // service days only (event attendance, 0111)
-          .eq("service_date", latestServiceDate)
-          .eq("member.group_id", groupId)
-          .eq("member.status", "active"),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("attendance_records")
+            .select("member_id, member:members!inner(group_id, status)")
+            .eq("attendee_type", "member")
+            .is("event_id", null) // service days only (event attendance, 0111)
+            .eq("service_date", latestServiceDate)
+            .eq("member.group_id", groupId)
+            .eq("member.status", "active")
+            .order("id")
+            .range(from, to),
+        ),
       ]);
       everAttendedSet = new Set(attendedRows.map((r) => r.member_id).filter((id) => idSet.has(id)));
-      presentLastServiceSet = new Set((presentRows ?? []).map((r) => r.member_id).filter((id) => idSet.has(id)));
+      presentLastServiceSet = new Set(presentRows.map((r) => r.member_id).filter((id) => idSet.has(id)));
     }
   }
 
@@ -235,19 +250,25 @@ export function birthdaysInWindow(
 /** REQUIREMENTS.md §6.3 -- members with no assigned servant yet. */
 export async function getUnassignedMembers(groupId: string): Promise<UnassignedMember[]> {
   const supabase = await createClient();
-  const [{ data }, settings] = await Promise.all([
-    supabase
-      .from("members")
-      .select("id, full_name, photo_path, phone, program_of_study, gender, join_date, created_at, university:universities(name)")
-      .eq("group_id", groupId)
-      .eq("status", "active")
-      .is("assigned_servant_id", null)
-      .order("created_at", { ascending: false }),
+  // Paged (a group can hold more than PostgREST's 1,000-row cap, 21 Nov
+  // 2026); `id` breaks ties so pages can't skip or repeat a row.
+  const [data, settings] = await Promise.all([
+    fetchAllRows((from, to) =>
+      supabase
+        .from("members")
+        .select("id, full_name, photo_path, phone, program_of_study, gender, join_date, created_at, university:universities(name)")
+        .eq("group_id", groupId)
+        .eq("status", "active")
+        .is("assigned_servant_id", null)
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
     getAppSettings(),
   ]);
 
   return withJoinedOn(
-    ((data ?? []) as unknown as UnassignedInputMember[]).map((m) => ({ ...m, group_id: groupId })),
+    (data as unknown as UnassignedInputMember[]).map((m) => ({ ...m, group_id: groupId })),
     settings.timezone,
   );
 }

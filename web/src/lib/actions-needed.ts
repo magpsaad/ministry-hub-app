@@ -45,19 +45,25 @@ export const getActionsNeededConfig = cache(async (): Promise<ConfigRow[]> =>
 export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMember[]> {
   const supabase = await createClient();
 
-  const [{ data: members }, config, appSettings] = await Promise.all([
-    supabase
-      .from("members")
-      .select(
-        "id, full_name, photo_path, phone, is_visitor, assigned_servant_id, created_at, assigned_servant:profiles(full_name), university:universities(proximity)",
-      )
-      .eq("group_id", groupId)
-      .eq("status", "active"),
+  // Paged: a single read stops at PostgREST's 1,000-row cap (21 Nov 2026,
+  // the 1,135-youth Upper Room); `id` keeps the pages stable.
+  const [members, config, appSettings] = await Promise.all([
+    fetchAllRows((from, to) =>
+      supabase
+        .from("members")
+        .select(
+          "id, full_name, photo_path, phone, is_visitor, assigned_servant_id, created_at, assigned_servant:profiles(full_name), university:universities(proximity)",
+        )
+        .eq("group_id", groupId)
+        .eq("status", "active")
+        .order("id")
+        .range(from, to),
+    ),
     getActionsNeededConfig(),
     getAppSettings(),
   ]);
 
-  const activeNonVisitors = ((members ?? []) as unknown as ActionsNeededInputMember[]).filter((m) => !m.is_visitor);
+  const activeNonVisitors = (members as unknown as ActionsNeededInputMember[]).filter((m) => !m.is_visitor);
   if (activeNonVisitors.length === 0) return [];
   const memberIds = activeNonVisitors.map((m) => m.id);
 
