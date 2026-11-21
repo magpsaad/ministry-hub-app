@@ -3,6 +3,7 @@
 import { checkUpload } from "@/lib/upload-check";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/pagination";
 import { getActiveMinistry } from "@/lib/ministry-context";
 import { ministrySettingsChanged } from "@/lib/ministry-cache-refresh";
 import { brandingBucket, brandingPublicUrl, ministryFilePath } from "@/lib/storage";
@@ -72,16 +73,21 @@ export type AdminGroupRow = {
  * unsafe regardless of what the screen offers. */
 export async function getGroupsForAdminAction(): Promise<AdminGroupRow[]> {
   const supabase = await createClient();
-  const [{ data }, { data: members }] = await Promise.all([
+  // The youth read is paged: one request stops at PostgREST's 1,000-row cap,
+  // which would under-count a ministry with more than 1,000 youths (Upper
+  // Room, 21 Nov 2026).
+  const [{ data }, members] = await Promise.all([
     supabase
       .from("groups")
       .select("id, name, cohort_year, ladder_position, display_order, kind, qr_color, qr_active, name_pattern, check_in_code_group_id, gender_label, patron_saint")
       .eq("is_archived", false)
       .order("display_order"),
-    supabase.from("members").select("group_id").eq("status", "active"),
+    fetchAllRows((from, to) =>
+      supabase.from("members").select("group_id").eq("status", "active").order("id").range(from, to),
+    ),
   ]);
   const counts = new Map<string, number>();
-  for (const m of members ?? []) counts.set(m.group_id, (counts.get(m.group_id) ?? 0) + 1);
+  for (const m of members) counts.set(m.group_id, (counts.get(m.group_id) ?? 0) + 1);
   return (data ?? []).map((g) => ({ ...(g as Omit<AdminGroupRow, "active_count">), active_count: counts.get(g.id) ?? 0 }));
 }
 

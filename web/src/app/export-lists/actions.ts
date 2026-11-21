@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/pagination";
 
 /** Owner-requested: names only, nothing else from the profile/member record
  * -- every query below selects exactly one column, on purpose, so there's
@@ -16,8 +17,14 @@ import { createClient } from "@/lib/supabase/server";
  * intentionally broader read. */
 export async function getGroupMemberNamesAction(groupId: string): Promise<string[]> {
   const supabase = await createClient();
-  const { data } = await supabase.rpc("export_group_member_names", { p_group_id: groupId });
-  return ((data ?? []) as { full_name: string }[]).map((r) => r.full_name);
+  // Paged: one request stops at PostgREST's 1,000-row cap, so a group of more
+  // than 1,000 youths (Upper Room, 21 Nov 2026) exported only the first 1,000.
+  // The function returns names in order; equal names are interchangeable, so a
+  // tie at a page edge can't change the list.
+  const rows = await fetchAllRows<{ full_name: string }>((from, to) =>
+    supabase.rpc("export_group_member_names", { p_group_id: groupId }).range(from, to),
+  );
+  return rows.map((r) => r.full_name);
 }
 
 /** Same "servant" definition as the Servant Directory (holds a 'servant',
