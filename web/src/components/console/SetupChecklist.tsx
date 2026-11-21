@@ -95,10 +95,12 @@ export function SetupChecklist({
           >
             open Turnstile &#8599;
           </a>
-          , click the widget named <em>Ministry Hub</em>, find its <em>Hostnames</em> list, and add{" "}
-          {hosts.length > 0 ? hosts.join(", ") : "the address"} (just the address, no https:// and no path), then Save.
-          Without this, the check-in QR codes stop at &ldquo;That didn&rsquo;t work. Please reload the page&rdquo; and the
-          email-code sign-in can&rsquo;t be used on the new address.
+          , click the widget named <em>Ministry Hub</em>, then click the <em>Edit Widget</em> (settings) icon. Under{" "}
+          <em>Hostname Management</em>, type {hosts.length > 0 ? hosts.join(", ") : "the address"} (just the address,
+          no https:// and no path), press Enter, choose <em>Add &hellip; as a custom hostname</em>, then click{" "}
+          <em>Update</em> at the bottom. Without this, the check-in QR codes stop at &ldquo;That didn&rsquo;t work.
+          Please reload the page&rdquo; and the email-code sign-in can&rsquo;t be used on the new address. The widget
+          holds at most 10 hostnames (free plan), one per address, so remove any you no longer use.
         </li>
         <li>
           Open the address, sign in, and check its Ministry Settings (logo, labels, colours). The first
