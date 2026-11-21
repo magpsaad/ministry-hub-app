@@ -115,7 +115,9 @@ export function EditMinistryInteractive({ ministry }: { ministry: MinistryListRo
           The web addresses this ministry is reached at in this environment. A new address also has to be added to
           the Vercel project (Settings &rarr; Domains) and to Supabase&rsquo;s Redirect URLs (Authentication &rarr; URL
           Configuration) with the ending <code>/auth/callback</code> (for example{" "}
-          <code>https://the-address/auth/callback</code>), or signing in there fails.
+          <code>https://the-address/auth/callback</code>), or signing in there fails. It also has to be added to the
+          Hostnames of the &ldquo;Ministry Hub&rdquo; widget in Cloudflare Turnstile, or the check-in QR codes stop
+          at &ldquo;That didn&rsquo;t work&rdquo;.
         </p>
         <ul className="divide-y divide-[#f0f0f0] mb-3">
           {addresses.map((h) => (

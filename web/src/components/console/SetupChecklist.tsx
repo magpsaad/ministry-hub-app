@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { addressUrl } from "@/lib/address-url";
-import { supabaseRedirectUrl, vercelDomainsUrl } from "@/lib/setup-links";
+import { CLOUDFLARE_TURNSTILE_URL, supabaseRedirectUrl, vercelDomainsUrl } from "@/lib/setup-links";
 
 /**
  * The steps that finish a new ministry's setup outside the app (Vercel
- * domain, Supabase redirect URL, first sign-in). Owner-reported (1 Oct
+ * domain, Supabase redirect URL, Cloudflare bot-check hostname, first
+ * sign-in). Owner-reported (1 Oct
  * 2026): it used to show only in the Create Ministry form's own state and
  * vanished almost at once. Now Create Ministry opens the ministry's page
  * with `?created=1`, which shows these steps until Dismiss is clicked (a
@@ -83,6 +84,21 @@ export function SetupChecklist({
             ))}
           </ul>
           Never use a broad pattern like <code>*.vercel.app</code>.
+        </li>
+        <li>
+          <strong>Cloudflare:</strong>{" "}
+          <a
+            href={CLOUDFLARE_TURNSTILE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-brand hover:underline"
+          >
+            open Turnstile &#8599;
+          </a>
+          , click the widget named <em>Ministry Hub</em>, find its <em>Hostnames</em> list, and add{" "}
+          {hosts.length > 0 ? hosts.join(", ") : "the address"} (just the address, no https:// and no path), then Save.
+          Without this, the check-in QR codes stop at &ldquo;That didn&rsquo;t work. Please reload the page&rdquo; and the
+          email-code sign-in can&rsquo;t be used on the new address.
         </li>
         <li>
           Open the address, sign in, and check its Ministry Settings (logo, labels, colours). The first
