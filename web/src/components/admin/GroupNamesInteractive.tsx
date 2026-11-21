@@ -51,7 +51,10 @@ export function GroupNamesInteractive({
   initialServantsQrColor,
   initialDefaultPattern,
   initialTerminalPattern,
+  handoverOpen,
 }: {
+  /** Migration 0130 -- the saved "Hand-over Group" switch in Ministry Settings. */
+  handoverOpen: boolean;
   initial: AdminGroupRow[];
   positionLabel: string;
   levelOffset: number;
@@ -221,8 +224,11 @@ export function GroupNamesInteractive({
         {/* Owner-requested (15 Oct 2026): explanations behind an (i). */}
         <InfoTip title="Group Names & QR Code Colors">
           <p>
-            Every active group, in the order the side menu lists them. The pre-entry group (first) and the hand-over
-            group (last) are hidden from everyone except Admins. Use ▲/▼ to change the order, and <em>More</em> for a
+            Every active group, in the order the side menu lists them.{" "}
+            {handoverOpen
+              ? "The pre-entry group (first) is hidden from everyone except Admins; the hand-over group (last) works like any other group while Hand-over Group is switched on in Ministry Settings."
+              : "The pre-entry group (first) and the hand-over group (last) are hidden from everyone except Admins."}{" "}
+            Use ▲/▼ to change the order, and <em>More</em> for a
             group&rsquo;s level, yearly name pattern and check-in code. Click a colour dot to change that QR code&rsquo;s
             colour; it saves straight away.
           </p>
@@ -349,7 +355,8 @@ export function GroupNamesInteractive({
                       <span className="block truncate text-sm text-[#333]">{g.name}</span>
                       <span className="block text-[11px] text-[#999]">
                         {g.active_count} active
-                        {!isRegular && ` · hidden from ${L.servantsLower}`}
+                        {(g.kind === "pre_entry" || (g.kind === "terminal" && !handoverOpen)) &&
+                          ` · hidden from ${L.servantsLower}`}
                         {sharesCode && ` · uses ${nameOf(g.check_in_code_group_id)}'s QR code`}
                       </span>
                     </span>

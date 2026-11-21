@@ -446,6 +446,7 @@ export function ActionsNeededConfigInteractive({
       initialServantsQrColor={initialServantsQrColor}
       initialDefaultPattern={initialDefaultPattern}
       initialTerminalPattern={initialTerminalPattern}
+      handoverOpen={initialAppSettings.handover_group_active === true}
     />
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
