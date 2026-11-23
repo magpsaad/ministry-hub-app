@@ -256,7 +256,10 @@ export function ServiceCalendar({
   return (
     <>
       <div className="bg-white border-b border-[#ddd] px-4 py-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1">
+        {/* Owner-requested (22 Nov 2026): Export sits on this first row, at
+            its right end on a phone, so + Add Event keeps its place on the
+            second row. Outlined, so it doesn't read as a fifth view. */}
+        <div className="flex items-center gap-1 max-sm:w-full">
           {(["month", "week", "list", "fridays"] as View[]).map((v) => (
             <button
               key={v}
@@ -268,6 +271,12 @@ export function ServiceCalendar({
               {v === "fridays" ? serviceWeekdayLabel : v.charAt(0).toUpperCase() + v.slice(1)}
             </button>
           ))}
+          <button
+            onClick={() => setExporting(true)}
+            className="ml-auto sm:ml-2 rounded-md border border-[#ccc] bg-white px-3 py-[5px] text-sm font-semibold text-[#333] hover:bg-[#f5f5f5]"
+          >
+            Export
+          </button>
         </div>
         {(view === "month" || view === "week") && (
           <div className="flex items-center gap-2">
@@ -285,18 +294,9 @@ export function ServiceCalendar({
             </button>
           </div>
         )}
-        <div className="flex gap-2">
-          {/* Owner-requested (22 Nov 2026): the events as a CSV list. */}
-          <button
-            onClick={() => setExporting(true)}
-            className="rounded-md bg-[#f0f0f0] px-3 py-1.5 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
-          >
-            Export
-          </button>
-          <button onClick={() => openNew()} className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">
-            + Add Event
-          </button>
-        </div>
+        <button onClick={() => openNew()} className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">
+          + Add Event
+        </button>
       </div>
 
       <div className="p-4 max-w-5xl w-full mx-auto">
