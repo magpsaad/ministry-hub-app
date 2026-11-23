@@ -4,10 +4,20 @@ import { useMemo, useState } from "react";
 import type { CalendarEvent, CalendarEventType } from "@/lib/calendar-types";
 import { EVENT_TYPES } from "@/lib/calendar-types";
 import { calendarExportCsv, calendarExportRows, calendarExportRowsByType } from "@/lib/calendar-export";
+import { useTimezone } from "@/components/TimezoneProvider";
+import { todayInZone } from "@/lib/timezone";
+
+type DateChoice = "all" | "future" | "range";
+
+// Owner-reported (10 Oct 2026, the event form): a phone's date boxes have a
+// built-in minimum width, so they're allowed to shrink to their half.
+const dateClass =
+  "block w-full min-w-0 appearance-none rounded-md border border-[#ddd] bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10";
 
 /** Owner-requested (22 Nov 2026): export the Service Calendar's events as a
  * CSV list -- the event types to include, and every day or only the service
- * day (Fridays). See lib/calendar-export.ts for the rows and columns. */
+ * day (Fridays); and all dates, future events only (from today) or a date
+ * range. See lib/calendar-export.ts for the rows and columns. */
 export function CalendarExportModal({
   events,
   serviceWeekday,
@@ -23,12 +33,20 @@ export function CalendarExportModal({
 }) {
   const [types, setTypes] = useState<Set<CalendarEventType>>(new Set(EVENT_TYPES));
   const [serviceDayOnly, setServiceDayOnly] = useState(false);
+  const [dateChoice, setDateChoice] = useState<DateChoice>("all");
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const today = todayInZone(useTimezone());
+
+  const from = dateChoice === "future" ? today : dateChoice === "range" ? rangeFrom || null : null;
+  const to = dateChoice === "range" ? rangeTo || null : null;
+  const badRange = !!from && !!to && from > to;
 
   const rowsByType = useMemo(
-    () => calendarExportRowsByType(events, serviceDayOnly, serviceWeekday),
-    [events, serviceDayOnly, serviceWeekday],
+    () => calendarExportRowsByType(events, serviceDayOnly, serviceWeekday, from, badRange ? from : to),
+    [events, serviceDayOnly, serviceWeekday, from, to, badRange],
   );
-  const rows = calendarExportRows(rowsByType, types);
+  const rows = badRange ? [] : calendarExportRows(rowsByType, types);
 
   function toggle(t: CalendarEventType) {
     setTypes((prev) => {
@@ -44,7 +62,8 @@ export function CalendarExportModal({
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${fileTitle} - ${serviceDayOnly ? serviceWeekdayLabel : "All days"}.csv`;
+    const dates = from && to ? ` - ${from} to ${to}` : from ? ` - from ${from}` : to ? ` - to ${to}` : "";
+    a.download = `${fileTitle} - ${serviceDayOnly ? serviceWeekdayLabel : "All days"}${dates}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -104,8 +123,46 @@ export function CalendarExportModal({
             </div>
           </div>
 
+          <div>
+            <span className="block font-semibold mb-1">Dates</span>
+            <div className="space-y-1.5">
+              {(
+                [
+                  ["all", "All dates"],
+                  ["future", "Future events only (from today)"],
+                  ["range", "Date range"],
+                ] as [DateChoice, string][]
+              ).map(([value, label]) => (
+                <label key={value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="export-dates"
+                    checked={dateChoice === value}
+                    onChange={() => setDateChoice(value)}
+                    className={choiceClass}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            {dateChoice === "range" && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="min-w-0">
+                  <span className="block text-xs text-[#666] mb-0.5">From</span>
+                  <input type="date" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} className={dateClass} />
+                </label>
+                <label className="min-w-0">
+                  <span className="block text-xs text-[#666] mb-0.5">To</span>
+                  <input type="date" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} className={dateClass} />
+                </label>
+              </div>
+            )}
+          </div>
+
           <p className="text-xs text-[#666]">
-            {rows.length === 0
+            {badRange
+              ? "The From date is after the To date."
+              : rows.length === 0
               ? "Nothing to export. Choose at least one event type that has events."
               : `${rows.length} row${rows.length === 1 ? "" : "s"}: date, time, event, type, details (speaker, topic, leader) and location.`}
           </p>

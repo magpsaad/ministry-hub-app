@@ -9,7 +9,11 @@ import { csvCell } from "@/lib/csv";
  * Every day: one row per event, with its start and end dates.
  * Service day only: one row per service day an event falls on -- the same
  * rows as the calendar's Fridays view (a multi-day event that spans three
- * Fridays is on each of them). */
+ * Fridays is on each of them).
+ *
+ * Owner-requested (22 Nov 2026): limited to dates, either from today on or
+ * a chosen range (either end may be left open). An event counts when any
+ * of its days is in the range; a service-day row when its own date is. */
 
 export type CalendarExportRow = { date: string; endDate: string | null; event: CalendarEvent };
 
@@ -46,16 +50,23 @@ function serviceDates(e: CalendarEvent, isoWeekday: number): string[] {
   return out;
 }
 
-/** Each event type's rows, for the type counts and the export itself. */
+/** Each event type's rows, for the type counts and the export itself.
+ * `from` / `to` are YYYY-MM-DD, inclusive; null leaves that end open. */
 export function calendarExportRowsByType(
   events: CalendarEvent[],
   serviceDayOnly: boolean,
   serviceWeekday: number,
+  from: string | null = null,
+  to: string | null = null,
 ): Map<CalendarEventType, CalendarExportRow[]> {
   const byType = new Map<CalendarEventType, CalendarExportRow[]>(EVENT_TYPES.map((t) => [t, []]));
+  const inRange = (start: string, end: string) => (!from || end >= from) && (!to || start <= to);
   for (const e of events) {
+    if (!inRange(e.start_date, e.end_date)) continue;
     const rows = serviceDayOnly
-      ? serviceDates(e, serviceWeekday).map((date) => ({ date, endDate: null, event: e }))
+      ? serviceDates(e, serviceWeekday)
+          .filter((date) => inRange(date, date))
+          .map((date) => ({ date, endDate: null, event: e }))
       : [{ date: e.start_date, endDate: e.end_date !== e.start_date ? e.end_date : null, event: e }];
     byType.get(e.event_type)?.push(...rows);
   }
