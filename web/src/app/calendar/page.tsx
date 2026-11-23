@@ -70,6 +70,7 @@ export default async function ServiceCalendarPage() {
         serviceWeekday={settings.service_weekday}
         serviceWeekdayLabel={`${weekdayName(settings.service_weekday)}s`}
         attendance={attendance}
+        exportTitle={`${settings.app_title_short} Service Calendar`}
       />
     </div>
   );

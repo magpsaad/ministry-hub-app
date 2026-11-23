@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { CalendarEvent, EventAttendanceOptions } from "@/lib/calendar-types";
 import { EVENT_TYPE_COLORS, contrastText } from "@/lib/calendar-types";
 import { EventForm } from "./EventForm";
+import { CalendarExportModal } from "./CalendarExportModal";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { todayInZone } from "@/lib/timezone";
 
@@ -173,11 +174,14 @@ export function ServiceCalendar({
   serviceWeekdayLabel,
   serviceWeekday,
   attendance,
+  exportTitle,
 }: {
   events: CalendarEvent[];
   serviceWeekdayLabel: string;
   serviceWeekday: number;
   attendance: EventAttendanceOptions;
+  /** The downloaded file's name, e.g. "SAY Service Calendar". */
+  exportTitle: string;
 }) {
   const timeZone = useTimezone();
   const router = useRouter();
@@ -185,6 +189,7 @@ export function ServiceCalendar({
   const [cursor, setCursor] = useState(new Date());
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | "new" | null>(null);
   const [newEventDate, setNewEventDate] = useState<string | undefined>(undefined);
+  const [exporting, setExporting] = useState(false);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
   const listBoxRef = useRef<HTMLDivElement>(null);
 
@@ -280,9 +285,18 @@ export function ServiceCalendar({
             </button>
           </div>
         )}
-        <button onClick={() => openNew()} className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">
-          + Add Event
-        </button>
+        <div className="flex gap-2">
+          {/* Owner-requested (22 Nov 2026): the events as a CSV list. */}
+          <button
+            onClick={() => setExporting(true)}
+            className="rounded-md bg-[#f0f0f0] px-3 py-1.5 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
+          >
+            Export
+          </button>
+          <button onClick={() => openNew()} className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">
+            + Add Event
+          </button>
+        </div>
       </div>
 
       <div className="p-4 max-w-5xl w-full mx-auto">
@@ -339,6 +353,15 @@ export function ServiceCalendar({
           attendance={attendance}
           onClose={() => setEditingEvent(null)}
           onSaved={() => router.refresh()}
+        />
+      )}
+      {exporting && (
+        <CalendarExportModal
+          events={events}
+          serviceWeekday={serviceWeekday}
+          serviceWeekdayLabel={serviceWeekdayLabel}
+          fileTitle={exportTitle}
+          onClose={() => setExporting(false)}
         />
       )}
     </>
