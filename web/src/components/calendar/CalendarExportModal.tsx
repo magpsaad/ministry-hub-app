@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import type { CalendarEvent, CalendarEventType } from "@/lib/calendar-types";
 import { EVENT_TYPES } from "@/lib/calendar-types";
 import { calendarExportCsv, calendarExportRows, calendarExportRowsByType } from "@/lib/calendar-export";
+import { buildCalendarPdf, longDate } from "@/lib/calendar-export-pdf";
+import { BusyLabel } from "@/components/PendingButton";
 import { useTimezone } from "@/components/TimezoneProvider";
 import { todayInZone } from "@/lib/timezone";
 
@@ -17,7 +19,8 @@ const dateClass =
 /** Owner-requested (22 Nov 2026): export the Service Calendar's events as a
  * CSV list -- the event types to include, and every day or only the service
  * day (Fridays); and all dates, future events only (from today) or a date
- * range. See lib/calendar-export.ts for the rows and columns. */
+ * range -- as a CSV or (owner-requested the same day) a formatted PDF. See
+ * lib/calendar-export.ts and lib/calendar-export-pdf.ts. */
 export function CalendarExportModal({
   events,
   serviceWeekday,
@@ -47,6 +50,23 @@ export function CalendarExportModal({
     [events, serviceDayOnly, serviceWeekday, from, to, badRange],
   );
   const rows = badRange ? [] : calendarExportRows(rowsByType, types);
+  const [makingPdf, setMakingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  const daysText = serviceDayOnly ? `${serviceWeekdayLabel} only` : "All days";
+  const datesSuffix = from && to ? ` - ${from} to ${to}` : from ? ` - from ${from}` : to ? ` - to ${to}` : "";
+  const fileName = `${fileTitle} - ${serviceDayOnly ? serviceWeekdayLabel : "All days"}${datesSuffix}`;
+
+  function save(blob: Blob, name: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 
   function toggle(t: CalendarEventType) {
     setTypes((prev) => {
@@ -58,17 +78,41 @@ export function CalendarExportModal({
   }
 
   function handleDownload() {
-    const csv = calendarExportCsv(rows, serviceDayOnly);
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-    const a = document.createElement("a");
-    a.href = url;
-    const dates = from && to ? ` - ${from} to ${to}` : from ? ` - from ${from}` : to ? ` - to ${to}` : "";
-    a.download = `${fileTitle} - ${serviceDayOnly ? serviceWeekdayLabel : "All days"}${dates}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    save(new Blob([calendarExportCsv(rows, serviceDayOnly)], { type: "text/csv;charset=utf-8;" }), `${fileName}.csv`);
     onClose();
+  }
+
+  async function handleDownloadPdf(button: HTMLElement) {
+    setMakingPdf(true);
+    setPdfError(null);
+    try {
+      // Loaded only when someone asks for a PDF, like Export Lists.
+      const { jsPDF } = await import("jspdf");
+      const dates =
+        from && to
+          ? `${longDate(from)} to ${longDate(to)}`
+          : from
+            ? dateChoice === "future"
+              ? `future events from ${longDate(from)}`
+              : `from ${longDate(from)}`
+            : to
+              ? `up to ${longDate(to)}`
+              : "all dates";
+      const typeList = types.size === EVENT_TYPES.length ? "all" : EVENT_TYPES.filter((t) => types.has(t)).join(", ");
+      const doc = buildCalendarPdf(jsPDF, {
+        title: fileTitle,
+        subtitle: `${daysText}, ${dates}. Types: ${typeList}`,
+        rows,
+        // The ministry's own color, as the page shows it.
+        brandHex: getComputedStyle(button).getPropertyValue("--brand").trim(),
+        exportedOn: longDate(today),
+      });
+      save(doc.output("blob"), `${fileName}.pdf`);
+      onClose();
+    } catch {
+      setPdfError("Couldn't make the PDF. Please try again.");
+      setMakingPdf(false);
+    }
   }
 
   const choiceClass = "h-4 w-4 accent-brand";
@@ -168,10 +212,21 @@ export function CalendarExportModal({
           </p>
         </div>
 
-        <div className="mt-5 flex gap-2">
+        {pdfError && <div className="mt-3 rounded-md bg-[#f8d7da] text-[#721c24] text-sm px-3 py-2">{pdfError}</div>}
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          <button
+            onClick={(e) => handleDownloadPdf(e.currentTarget)}
+            disabled={rows.length === 0 || makingPdf}
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          >
+            <BusyLabel busy={makingPdf} busyText="Making PDF">
+              Download PDF
+            </BusyLabel>
+          </button>
           <button
             onClick={handleDownload}
-            disabled={rows.length === 0}
+            disabled={rows.length === 0 || makingPdf}
             className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             Download CSV
