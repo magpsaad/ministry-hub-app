@@ -1,32 +1,136 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { QrCodeForPrinting } from "@/lib/qrcodes";
+import { buildQrCodesPdf, qrLabelColor } from "@/lib/qrcodes-pdf";
+import { isAppleMobile } from "@/lib/device-label";
+import { BusyLabel } from "@/components/PendingButton";
 
-function contrastText(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? "#000000" : "#FFFFFF";
+type PdfTools = {
+  jsPDF: typeof import("jspdf").jsPDF;
+  create: typeof import("qrcode").create;
+  logoPng: string | null;
+};
+
+/** The ministry logo cut to a circle (as it sits in the middle of the code
+ * on screen), as a PNG for the PDF. Without it the code still scans. */
+function circleLogo(url: string | null): Promise<string | null> {
+  if (!url) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return resolve(null);
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.clip();
+        // Filled edge to edge, centered (the on-screen "slice").
+        const scale = Math.max(size / img.naturalWidth, size / img.naturalHeight);
+        const w = img.naturalWidth * scale;
+        const h = img.naturalHeight * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        resolve(canvas.toDataURL("image/png"));
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+async function loadPdfTools(logoUrl: string | null): Promise<PdfTools> {
+  const [{ jsPDF }, { create }, logoPng] = await Promise.all([import("jspdf"), import("qrcode"), circleLogo(logoUrl)]);
+  return { jsPDF, create, logoPng };
 }
 
 /** REQUIREMENTS.md §6.15 -- print-optimized layout for every current QR
  * code, real scannable images generated on the fly (no external service).
  * Colored frame/label matches the old app's actual look (colors sampled
- * directly from its real QR image files, not guessed). */
-export function QrCodesInteractive({ qrCodes }: { qrCodes: QrCodeForPrinting[] }) {
+ * directly from its real QR image files, not guessed).
+ *
+ * Owner-reported (24 Nov 2026): Print All did nothing on an iPhone. On an
+ * iPhone or iPad it now makes the same pages as a PDF (lib/qrcodes-pdf.ts)
+ * and opens the share menu, which has Print; computers print as before. */
+export function QrCodesInteractive({
+  qrCodes,
+  logoUrl,
+  fileTitle,
+}: {
+  qrCodes: QrCodeForPrinting[];
+  logoUrl: string | null;
+  fileTitle: string;
+}) {
+  const tools = useRef<Promise<PdfTools> | null>(null);
+  const [makingPdf, setMakingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  // Loaded ahead on Apple phones and tablets only, so the share menu can
+  // open straight from the tap (Apple only allows it right after one).
+  useEffect(() => {
+    if (isAppleMobile()) tools.current = loadPdfTools(logoUrl);
+  }, [logoUrl]);
+
+  function save(blob: Blob, name: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  async function printOnApple() {
+    setMakingPdf(true);
+    setPdfError(null);
+    try {
+      tools.current ??= loadPdfTools(logoUrl);
+      const { jsPDF, create, logoPng } = await tools.current;
+      const blob = buildQrCodesPdf(jsPDF, create, { codes: qrCodes, logoPng }).output("blob");
+      const name = `${fileTitle}.pdf`;
+      const file = new File([blob], name, { type: "application/pdf" });
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+        } catch (e) {
+          // Closing the share menu is fine; anything else, the PDF is saved instead.
+          if ((e as Error)?.name !== "AbortError") save(blob, name);
+        }
+      } else {
+        save(blob, name);
+      }
+    } catch {
+      tools.current = null;
+      setPdfError("Couldn't make the PDF. Please try again.");
+    } finally {
+      setMakingPdf(false);
+    }
+  }
 
   return (
     <div>
       <div className="print:hidden flex justify-end mb-4">
         <button
           type="button"
-          onClick={() => window.print()}
-          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          onClick={() => (isAppleMobile() ? void printOnApple() : window.print())}
+          disabled={makingPdf || qrCodes.length === 0}
+          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)] disabled:opacity-60"
         >
-          Print All
+          <BusyLabel busy={makingPdf} busyText="Making PDF">
+            Print All
+          </BusyLabel>
         </button>
       </div>
+      {pdfError && (
+        <div className="print:hidden mb-4 rounded-md bg-[#f8d7da] text-[#721c24] text-sm px-3 py-2">{pdfError}</div>
+      )}
 
       {/* Owner-reported: "1 QR code per page" didn't hold on mobile print.
           Page breaks inside a CSS Grid container are a long-standing,
@@ -39,7 +143,7 @@ export function QrCodesInteractive({ qrCodes }: { qrCodes: QrCodeForPrinting[] }
           break-after/break-inside are actually reliably supported in. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:block print:gap-0">
         {qrCodes.map((q) => {
-          const textColor = contrastText(q.color);
+          const textColor = qrLabelColor(q.color);
           return (
             <div
               key={q.id}

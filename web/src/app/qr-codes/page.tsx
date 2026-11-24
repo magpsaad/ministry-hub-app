@@ -36,7 +36,7 @@ export default async function QrCodesPage() {
         <HeaderWordmark />
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
-        <QrCodesInteractive qrCodes={qrCodes} />
+        <QrCodesInteractive qrCodes={qrCodes} logoUrl={settings.logo_url ?? null} fileTitle={`${settings.app_title_short} QR Codes`} />
       </main>
     </div>
   );
