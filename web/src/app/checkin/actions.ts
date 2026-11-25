@@ -259,29 +259,32 @@ export async function searchCheckInPeopleAction(
   token: string,
   query: string,
   isServant: boolean,
-): Promise<{ people: CheckInPerson[]; closed: boolean }> {
-  if (!(await hasCheckinPass(token))) return { people: [], closed: false };
+): Promise<{ people: CheckInPerson[]; more: boolean; closed: boolean }> {
+  // Migration 0131 (owner-requested 24 Nov 2026): a name comes back only
+  // when what's typed fits one person (in full, as stored); while it fits
+  // more than one, a single row with no id just says "keep typing".
+  if (!(await hasCheckinPass(token))) return { people: [], more: false, closed: false };
   const supabase = await createCheckinClient();
   if (isServant) {
     const { data, error } = await supabase.rpc("checkin_search_servants", { p_token: token, p_query: query });
-    if (error) return { people: [], closed: error.message.includes("closed") };
+    if (error) return { people: [], more: false, closed: error.message.includes("closed") };
+    const rows = (data ?? []) as { id: string | null; display_name: string | null; kind: "servant" | "pending" | null }[];
     return {
-      people: ((data ?? []) as { id: string; display_name: string; kind: "servant" | "pending" }[]).map((r) => ({
-        id: r.id,
-        full_name: r.display_name,
-        kind: r.kind,
-      })),
+      people: rows
+        .filter((r) => r.id && r.display_name)
+        .map((r) => ({ id: r.id!, full_name: r.display_name!, kind: r.kind ?? "servant" })),
+      more: rows.some((r) => !r.id),
       closed: false,
     };
   }
   const { data, error } = await supabase.rpc("checkin_search_members", { p_token: token, p_query: query });
-  if (error) return { people: [], closed: error.message.includes("closed") };
+  if (error) return { people: [], more: false, closed: error.message.includes("closed") };
+  const rows = (data ?? []) as { member_id: string | null; display_name: string | null }[];
   return {
-    people: ((data ?? []) as { member_id: string; display_name: string }[]).map((r) => ({
-      id: r.member_id,
-      full_name: r.display_name,
-      kind: "member" as const,
-    })),
+    people: rows
+      .filter((r) => r.member_id && r.display_name)
+      .map((r) => ({ id: r.member_id!, full_name: r.display_name!, kind: "member" as const })),
+    more: rows.some((r) => !r.member_id),
     closed: false,
   };
 }

@@ -42,11 +42,15 @@ type View = "list" | "member-intake" | "servant-intake" | "success";
  * name, done -- or "don't see your name?" into an intake form.
  *
  * Migration 0074 (owner-requested, after a congregation member's complaint):
- * the page no longer receives a list of names. Typing 3+ letters searches
- * the database, which returns at most 10 short names ("Mina H."); and it
- * only does so during check-in hours (the service day, between the
- * ministry's check-in times) -- outside them the page says when it opens,
- * and registering is still possible. */
+ * the page no longer receives a list of names, and searches only during
+ * check-in hours (the service day, between the ministry's check-in times)
+ * -- outside them the page says when it opens, and registering is still
+ * possible.
+ *
+ * Migration 0131 (owner-requested 24 Nov 2026): you type your whole first
+ * name, then keep typing your full name until it fits only you -- only
+ * then is a name shown (in full). A phone that remembers you still offers
+ * the one-tap "Check in as ..." without typing. */
 export function CheckInFlow({
   token,
   isServant,
@@ -142,14 +146,15 @@ export function CheckInFlow({
     null,
   );
 
-  // Migration 0074: the database is searched as she types (3+ letters,
-  // short names, at most 10) -- the page never holds the whole list.
+  // The database is searched as she types (2+ letters) -- the page never
+  // holds the whole list, and gets a name only once it fits one person.
   const [results, setResults] = useState<CheckInPerson[]>([]);
+  const [more, setMore] = useState(false);
   const [searching, setSearching] = useState(false);
   const [closed, setClosed] = useState(!isOpen);
   const letters = q.replace(/[^\p{L}]/gu, "").length;
   useEffect(() => {
-    if (closed || letters < 3) return;
+    if (closed || letters < 2) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       setSearching(true);
@@ -157,6 +162,7 @@ export function CheckInFlow({
       if (cancelled) return;
       setSearching(false);
       setResults(res.people);
+      setMore(res.more);
       if (res.closed) setClosed(true);
     }, 250);
     return () => {
@@ -164,7 +170,7 @@ export function CheckInFlow({
       clearTimeout(timer);
     };
   }, [q, letters, closed, token, isServant]);
-  const shown = letters >= 3 ? results : [];
+  const shown = letters >= 2 ? results : [];
 
   async function handleSelect(person: CheckInPerson) {
     // Owner-reported (5 Oct 2026): one check-in at a time.
@@ -380,7 +386,7 @@ export function CheckInFlow({
         type="text"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder={rememberedPerson ? "Not you? Type your name…" : "Type your first or last name…"}
+        placeholder={rememberedPerson ? "Not you? Type your full name…" : "Type your full name…"}
         className="mt-2 w-full rounded-md border border-[#ddd] px-3 py-3 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/10"
       />
       {error && <p className="mt-2 text-sm text-[#dc3545]">{error}</p>}
@@ -398,9 +404,16 @@ export function CheckInFlow({
             </BusyLabel>
           </button>
         ))}
-        {letters < 3 && <p className="px-2 py-3 text-sm text-[#666]">Type at least 3 letters of your name.</p>}
-        {letters >= 3 && !searching && shown.length === 0 && (
-          <p className="px-2 py-3 text-sm text-[#666]">No match. Check the spelling, or register below.</p>
+        {letters < 2 && (
+          <p className="px-2 py-3 text-sm text-[#666]">Type your first name in full, then your last name. Your name appears once it matches only you.</p>
+        )}
+        {letters >= 2 && !searching && shown.length === 0 && more && (
+          <p className="px-2 py-3 text-sm text-[#666]">More than one person has this name. Keep typing your full name.</p>
+        )}
+        {letters >= 2 && !searching && shown.length === 0 && !more && (
+          <p className="px-2 py-3 text-sm text-[#666]">
+            No match yet. Make sure your whole first name is typed, then keep typing your last name. Check the spelling, or register below.
+          </p>
         )}
       </div>
       {registerButton}
